@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"codeberg.org/anaseto/goal"
 	gos "codeberg.org/anaseto/goal/os"
@@ -69,19 +69,6 @@ func replMain() {
 	goalCtx.Log = os.Stderr
 	goalRegisterVariadics(goalCtx)
 
-	// Database
-	dbDriver := "duckdb"                                                                     // TODO Configurable
-	db, err := sql.Open(dbDriver, "/Users/dlg/dev/julia/work-product-data/work_2023.duckdb") // TODO Configurable // TODO FIXME
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open in-memory %v database, error: %v", dbDriver, err) // TODO Include path if persistent
-	}
-	defer db.Close()
-	conn, err := db.Conn(context.Background())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to in-memory %v database, error: %v", dbDriver, err)
-	}
-	defer conn.Close()
-
 	// REPL interface
 	editor := bubbline.New()
 	editor.Placeholder = ""
@@ -89,13 +76,13 @@ func replMain() {
 		return editline.DefaultReflow(x, y, 80)
 	}
 
-	// This program's context
-	ctx := Context{editor: editor, sqlDb: db, sqlDbConn: conn, goalContext: goalCtx}
+	// SQL is initialized the first time )sql is invoked.
+	ctx := Context{editor: editor, sqlDb: nil, sqlDbConn: nil, goalContext: goalCtx}
 
 	modeGoalSetReplDefaults(&ctx)
 
 	// TODO History file from configuration and configure history.
-	// TODO Separate history for each language mode
+	// TODO Separate history for each language mode (maybe a good idea?)
 	historyFile := ".ari.history"
 	if err := editor.LoadHistory(historyFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load history, error: %v\n", err)
@@ -132,8 +119,10 @@ func replMain() {
 			systemCommand := cmdAndArgs[0][1:] // remove leading )
 			switch systemCommand {
 			case "goal":
+				modeSqlClose(&ctx) // NB: Include in every non-"sql" case
 				modeGoalSetReplDefaults(&ctx)
 			case "sql":
+				modeSqlInitialize(&ctx)
 				modeSqlSetReplDefaults(&ctx)
 			default:
 				fmt.Fprintf(os.Stderr, "Unsupported system command '%v'\n", systemCommand)
@@ -151,15 +140,23 @@ func replMain() {
 			}
 			fmt.Fprintln(os.Stdout, value.Sprint(goalCtx, false))
 		case modeSqlEval:
-			rows, err := db.QueryContext(context.Background(), line)
+			rows, err := ctx.sqlDb.QueryContext(context.Background(), line)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:\n%s\n", line, err)
+				// fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:\n%s\n", line, err)
+				fmt.Fprintln(os.Stderr, err)
+				continue
 			}
 			defer rows.Close()
 			colNames, err := rows.Columns()
 			if err != nil {
-				panic(err)
+				fmt.Fprintf(os.Stderr, "Failed to get SQL columns for query %q\nDatabase Error:\n%s", line, err)
+				continue
 			}
+			// NB: For future type introspection, see below.
+			// colTypes, err := rows.ColumnTypes()
+			// if err != nil {
+			// 	panic(err)
+			// }
 			cols := make([]interface{}, len(colNames))
 			colPtrs := make([]interface{}, len(colNames))
 			rowValues := make([][]goal.V, len(cols))
@@ -169,31 +166,72 @@ func replMain() {
 			for rows.Next() {
 				err = rows.Scan(colPtrs...)
 				if err != nil {
-					panic(err)
+					fmt.Fprintf(os.Stderr, "Failed to scan SQL row fro query %q\nDatabase Error:\n%s", line, err)
+					break
 				}
 				for i, col := range cols {
-					fmt.Printf("TYPE!! %v\n", reflect.TypeOf(col))
+					// fmt.Printf("SQL %v // Go %v\n", colTypes[i].DatabaseTypeName(), reflect.TypeOf(col))
 					switch col := col.(type) {
+					case float32:
+						rowValues[i] = append(rowValues[i], goal.NewF(float64(col)))
+					case float64:
+						rowValues[i] = append(rowValues[i], goal.NewF(col))
 					case int32:
 						rowValues[i] = append(rowValues[i], goal.NewI(int64(col)))
 					case int64:
 						rowValues[i] = append(rowValues[i], goal.NewI(col))
+					case string:
+						rowValues[i] = append(rowValues[i], goal.NewS(col))
+					case time.Time:
+						// From DuckDB docs: https://duckdb.org/docs/sql/data_types/timestamp
+						// "DuckDB represents instants as the number of microseconds (µs) since 1970-01-01 00:00:00+00"
+						rowValues[i] = append(rowValues[i], goal.NewI(col.UnixMicro()))
 					default:
 						rowValues[i] = append(rowValues[i], goal.NewS(fmt.Sprintf("%v", col)))
 					}
 				}
 				// values = append(values, goal.NewAV(vs))
 			}
-			fmt.Printf("COLS %v", colNames)
-			fmt.Printf("ROWS %v", rowValues)
+			// NB: For future type introspection, see above.
+			// fmt.Printf("COLS %v\n", colNames)
+			// fmt.Printf("ROWS %v\n", rowValues)
 			dictVs := make([]goal.V, len(rowValues))
 			for i, slc := range rowValues {
+				// NB: Goal's underlying NewArray function specializes for us.
 				dictVs[i] = goal.NewAV(slc)
 			}
 			goalD := goal.NewD(goal.NewAS(colNames), goal.NewAV(dictVs))
-			ctx.goalContext.AssignGlobal("lastSql", goalD)
+			// Last result table as sql.t in Goal:
+			ctx.goalContext.AssignGlobal("sql.t", goalD)
 			fmt.Printf("%v\n", goalD)
 		}
+	}
+}
+
+// Caller is expected to close both ctx.sqlDb and ctx.sqlDbConn
+func modeSqlInitialize(ctx *Context) {
+	exampleDbFile := "/Users/dlg/dev/julia/work-product-data/work_2023.duckdb?access_mode=read_only"
+	dbDriver := "duckdb"                         // TODO Configurable AND accept via system command args
+	db, err := sql.Open(dbDriver, exampleDbFile) // TODO Configurable // TODO FIXME
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open in-memory %v database, error: %v", dbDriver, err) // TODO Include path if persistent
+	}
+	// defer db.Close()
+	conn, err := db.Conn(context.Background())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to connect to in-memory %v database, error: %v", dbDriver, err)
+	}
+	// defer conn.Close()
+	ctx.sqlDb = db
+	ctx.sqlDbConn = conn
+}
+
+func modeSqlClose(ctx *Context) {
+	if ctx.sqlDb != nil {
+		ctx.sqlDb.Close()
+	}
+	if ctx.sqlDbConn != nil {
+		ctx.sqlDbConn.Close()
 	}
 }
 

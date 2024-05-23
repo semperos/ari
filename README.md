@@ -1,6 +1,6 @@
 # ari
 
-**A**rray **R**elational **I**nteractive programming environment.
+**_A_**rray **_R_**elational **_I_**nteractive programming environment.
 
 ## Background
 
