@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.0
 
 require (
-	codeberg.org/anaseto/goal v0.37.1-0.20240521073130-0103e93e5df0
+	codeberg.org/anaseto/goal v0.38.1-0.20240528162522-14d71e385b92
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	// github.com/marcboeker/go-duckdb v1.6.3
 	github.com/spf13/cobra v1.8.0
@@ -13,6 +13,8 @@ require (
 )
 
 require github.com/charmbracelet/bubbletea v0.23.1 // indirect
+
+require github.com/marcboeker/go-duckdb v1.6.5
 
 require (
 	github.com/apache/arrow/go/v14 v14.0.2 // indirect
@@ -30,7 +32,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/marcboeker/go-duckdb v1.6.5 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
