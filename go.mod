@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.0
 
 require (
-	codeberg.org/anaseto/goal v0.38.1-0.20240528162522-14d71e385b92
+	codeberg.org/anaseto/goal v0.38.1-0.20240601115827-2043ac2a95fa
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	// github.com/marcboeker/go-duckdb v1.6.3
 	github.com/spf13/cobra v1.8.0
