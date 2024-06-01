@@ -2,6 +2,16 @@
 
 **_A_**rray **_R_**elational **_I_**nteractive programming environment.
 
+## To Do
+
+- HTTP client (consider https://github.com/go-resty/resty)
+- Plots/charts (consider https://github.com/wcharczuk/go-chart)
+- API Explorer (possibly a project that relies on Ari, but not a part of Ari)
+  - Stateful "current working directory" concept within entities of an API
+  - Contextual command/function invocations (e.g., "ls" inside an epic lists stories/issues)
+  - Formatted table summaries; raw JSON payload details available.
+  - Auto-complete based on API schema and entities
+
 ## Background
 
 I stumbled into a fairly flexible, powerful setup using Julia and DuckDB to do data analysis.

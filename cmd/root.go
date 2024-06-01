@@ -135,17 +135,26 @@ func replMain() {
 			}
 			fmt.Fprintln(os.Stdout, value.Sprint(ctx.goalContext, false))
 		case modeSqlEvalReadOnly:
-			goalDict, err := modeSqlRunQuery(&ctx, line, nil)
+			_, err := modeSqlRunQuery(&ctx, line, nil)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
+			} else {
+				_, err := ctx.goalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to print SQL query results via Goal evaluation: %v\n", err)
+				}
 			}
-			fmt.Printf("%v\n", goalDict)
 		case modeSqlEvalReadWrite:
-			goalDict, err := modeSqlRunQuery(&ctx, line, nil)
+			_, err := modeSqlRunExec(&ctx, line, nil)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
+			} else {
+				// Consider: Making this a table for consistency, but it's better as a dict.
+				_, err := ctx.goalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to print SQL exec results via Goal evaluation: %v\n", err)
+				}
 			}
-			fmt.Printf("%v\n", goalDict)
 		}
 	}
 }
@@ -306,8 +315,10 @@ func modeSqlRunExec(ctx *Context, sqlQuery string, args []any) (goal.V, error) {
 	if err != nil {
 		return goal.V{}, err
 	}
+	// Consider: Formatting this as a table for consistency with )sql, but it's really a simpler dict
 	ks := goal.NewAS([]string{"lastInsertId", "rowsAffected"})
-	vs := goal.NewAI([]int64{lastInsertId, rowsAffected})
+	// vs := goal.NewAI([]int64{lastInsertId, rowsAffected})
+	vs := goal.NewAV([]goal.V{goal.NewAI([]int64{lastInsertId}), goal.NewAI([]int64{rowsAffected})})
 	goalD := goal.NewD(ks, vs)
 	ctx.goalContext.AssignGlobal("sql.t", goalD)
 	return goalD, nil
@@ -419,7 +430,7 @@ func modeSqlCheckInputComplete(v [][]rune, line, _ int) bool {
 }
 
 func modeGoalAutocompleteFn(ctx *goal.Context) func(v [][]rune, line, col int) (msg string, completions editline.Completions) {
-	goalNameRe := regexp.MustCompile("[a-zA-Z]+")
+	goalNameRe := regexp.MustCompile(`[a-zA-Z\.]+`)
 	return func(v [][]rune, line, col int) (msg string, completions editline.Completions) {
 		candidatesPerCategory := map[string][]acEntry{}
 		word, start, end := computil.FindWord(v, line, col)
@@ -427,30 +438,54 @@ func modeGoalAutocompleteFn(ctx *goal.Context) func(v [][]rune, line, col int) (
 		if matchesSystemCommand(word) {
 			acSystemCommandCandidates(strings.ToLower(word), candidatesPerCategory)
 		} else {
-			s := goalNameRe.FindStringIndex(word)
-			word := word[s[0]:s[1]]
-			start = s[0] // Preserve non-word prefix
-			end = s[1]   // Preserve non-word suffix
-			msg = fmt.Sprintf("Matching %v", word)
+			locs := goalNameRe.FindStringIndex(word)
+			if locs != nil {
+				word = word[locs[0]:locs[1]]
+				start = locs[0] // Preserve non-word prefix
+				end = locs[1]   // Preserve non-word suffix
+			}
+			// msg = fmt.Sprintf("Matching %v", word)
 			lword := strings.ToLower(word)
 			goalGlobals := ctx.GlobalNames(nil)
 			category := "Global"
 			for _, goalGlobal := range goalGlobals {
 				if strings.HasPrefix(strings.ToLower(goalGlobal), lword) {
-					candidatesPerCategory[category] = append(candidatesPerCategory[category], acEntry{goalGlobal, "A Goal global"})
+					var help string
+					if val, ok := goalGlobalsHelp[goalGlobal]; ok {
+						help = val
+					} else {
+						help = "A Goal global binding"
+					}
+					candidatesPerCategory[category] = append(candidatesPerCategory[category], acEntry{goalGlobal, help})
 				}
 			}
 			goalKeywords := goalKeywords(ctx)
 			category = "Keyword"
 			for _, goalKeyword := range goalKeywords {
 				if strings.HasPrefix(strings.ToLower(goalKeyword), lword) {
-					candidatesPerCategory[category] = append(candidatesPerCategory[category], acEntry{goalKeyword, "A Goal keyword"})
+					var help string
+					if val, ok := goalKeywordsHelp[goalKeyword]; ok {
+						help = val
+					} else {
+						help = "A Goal keyword"
+					}
+					candidatesPerCategory[category] = append(candidatesPerCategory[category], acEntry{goalKeyword, help})
 				}
 			}
 			category = "Syntax"
-			for name, chstr := range goalNonAsciis {
+			syntaxSet := make(map[string]bool, 0)
+			for name, chstr := range goalSyntax {
 				if strings.HasPrefix(strings.ToLower(name), lword) {
-					candidatesPerCategory[category] = append(candidatesPerCategory[category], acEntry{chstr, "Goal syntax"})
+					if _, ok := syntaxSet[chstr]; !ok {
+						syntaxSet[chstr] = true
+						var help string
+						if val, ok := goalSyntaxHelp[chstr]; ok {
+							help = val
+						} else {
+							help = "Goal syntax"
+						}
+						candidatesPerCategory[category] = append(candidatesPerCategory[category], acEntry{chstr, help})
+					}
 				}
 			}
 		}
@@ -473,7 +508,7 @@ func (e acEntry) Title() string {
 }
 
 func (e acEntry) Description() string {
-	return e.description
+	return "\n" + e.description
 }
 
 func modeSqlAutocomplete(v [][]rune, line, col int) (msg string, completions editline.Completions) {
@@ -498,12 +533,7 @@ func modeSqlAutocomplete(v [][]rune, line, col int) (msg string, completions edi
 
 func acSystemCommandCandidates(lword string, candidatesPerCategory map[string][]acEntry) {
 	if matchesSystemCommand(lword) {
-		keys := make([]string, len(acModeSystemCommands))
-		for k := range acModeSystemCommands {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, mode := range keys {
+		for _, mode := range acModeSystemCommandsKeys {
 			if len(lword) == 0 || strings.HasPrefix(strings.ToLower(mode), lword) {
 				candidatesPerCategory["mode"] = append(candidatesPerCategory["mode"], acEntry{mode, acModeSystemCommands[mode]})
 			}
@@ -533,27 +563,18 @@ var acModeSystemCommands = map[string]string{
 	")goal": "Goal array language mode", ")sql": "Read-only SQL mode (querying)", ")sql!": "Read/write SQL mode",
 }
 
+var acModeSystemCommandsKeys = func() []string {
+	keys := make([]string, len(acModeSystemCommands))
+	for k := range acModeSystemCommands {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}()
+
 func goalRegisterVariadics(ctx *goal.Context) {
 	// From Goal itself
-	ctx.RegisterMonad("chdir", gos.VFChdir)
-	ctx.RegisterMonad("close", gos.VFClose)
-	ctx.RegisterMonad("flush", gos.VFFlush)
-	ctx.RegisterMonad("mkdir", gos.VFMkdir)
-	ctx.RegisterMonad("remove", gos.VFRemove)
-	ctx.RegisterMonad("stat", gos.VFStat)
-	ctx.RegisterDyad("env", gos.VFEnv)
-	ctx.RegisterDyad("import", gos.VFImport)
-	ctx.RegisterDyad("open", gos.VFOpen)
-	ctx.RegisterDyad("print", gos.VFPrint)
-	ctx.RegisterDyad("read", gos.VFRead)
-	ctx.RegisterDyad("rename", gos.VFRename)
-	ctx.RegisterDyad("run", gos.VFRun)
-	ctx.RegisterDyad("say", gos.VFSay)
-	ctx.RegisterDyad("shell", gos.VFShell)
-	ctx.AssignGlobal("STDOUT", gos.NewFileWriter(os.Stdout))
-	ctx.AssignGlobal("STDERR", gos.NewFileWriter(os.Stderr))
-	ctx.AssignGlobal("STDIN", gos.NewFileReader(os.Stdin))
-
+	gos.Import(ctx, "")
 	// Ari
 	ctx.RegisterDyad("sql.q", VFSqlQ)
 }
