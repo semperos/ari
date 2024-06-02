@@ -198,91 +198,59 @@ var goalSyntaxHelp = map[string]string{
 }
 
 var goalGlobalsHelp = map[string]string{
-	"STDERR": "File handle to STDERR",
-	"STDIN":  "File handle to STDIN",
-	"STDOUT": "File handle to STDOUT",
+	"STDERR": "standard error filehandle (buffered)",
+	"STDIN":  "standard input filehandle (buffered)",
+	"STDOUT": "standard output filehandle (buffered)",
 }
-
-// csv s      csv read     csv"a,b\n1,2" → ("a" "1";"b" "2")
-// csv A      csv write    csv("a" "b";1 2) → "a,1\nb,2\n"
-// error x    error        r:error"msg"; (@r;.r) → "e" "msg"
-// eval s     comp/run     a:5;eval"a+2" → 7           (unrestricted variant of .s)
-// firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)
-// json s     parse json   json rq`{"a":true,"b":"text"}` → "a" "b"!1 "text"
-// nan n      isNaN        nan(0n;2;sqrt -1) → 1 0 1             nan 2 0i 3 → 0 1 0
-// ocount X   occur-count  ocount 3 4 5 3 4 4 7 → 0 0 0 1 1 2 0
-// panic s    panic        panic"msg"                (for fatal programming-errors)
-// rx s       comp. regex  rx"[a-z]"       (like rx/[a-z]/ but compiled at runtime)
-// sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1
-
-// s csv s    csv read     " "csv"a b\n1 2" → ("a" "1";"b" "2")  (" " as separator)
-// s csv A    csv write    " "csv("a" "b";1 2) → "a 1\nb 2\n"    (" " as separator)
-// x in s     contained    "bc" "ac"in"abcd" → 1 0                    (same as x¿s)
-// x in Y     member of    2 3 in 8 2 4 → 1 0                         (same as x¿Y)
-// s json y   write json   ""json 1.5 2 → "[1.5,2]" (indent with s;disable with "")
-// S json y   write json   like s json y, but with (pfx;indent) for pretty-printing
-// n nan n    fill NaNs    42.0 nan(1.5;sqrt -1) → 1.5 42.0      42 nan 2 0i → 2 42
-// i rotate Y rotate       2 rotate 7 8 9 → 9 7 8           -2 rotate 7 8 9 → 8 9 7
-
-// sub[r;s]   regsub       sub[rx/[a-z]/;"Z"] "aBc" → "ZBZ"
-// sub[r;f]   regsub       sub[rx/[A-Z]/;_] "aBc" → "abc"
-// sub[s;s]   replace      sub["b";"B"] "abc" → "aBc"
-// sub[s;s;i] replaceN     sub["a";"b";2] "aaa" → "bba"        (stop after 2 times)
-// sub[S]     replaceS     sub["b" "d" "c" "e"] "abc" → "ade"
-// sub[S;S]   replaceS     sub["b" "c";"d" "e"] "abc" → "ade"
-
-// eval[s;loc;pfx]         like eval s, but provide loc as location (usually a
-//                         path), and prefix pfx+"." for globals; does not eval
-//                         same location more than once
 
 var goalKeywordsHelp = map[string]string{
 	"abs":     "abs n    abs -3.0 -1.5 2.0 → 3.0 1.5 2.0",
 	"and":     "and[1;2] → 2    and[1;0;3] → 0",
 	"atan":    "atan[n;n]",
-	"chdir":   "chdir help",
-	"close":   "close help",
+	"chdir":   "chdir s     change current working directory to s, or return an error",
+	"close":   "close h     flush any buffered data, then close handle h",
 	"cos":     "cos n",
-	"csv":     "csv help",
-	"env":     "env help",
-	"error":   "error help",
-	"eval":    "eval help",
+	"csv":     `csv s      csv read     csv"a,b\n1,2" → ("a" "1";"b" "2")` + "\n" + `csv A      csv write    csv("a" "b";1 2) → "a,1\nb,2\n"` + "\n" + `s csv s    csv read     " "csv"a b\n1 2" → ("a" "1";"b" "2")  (" " as separator)` + "\n" + `s csv A    csv write    " "csv("a" "b";1 2) → "a 1\nb 2\n"    (" " as separator)`,
+	"env":     `env s       get environment variable s, or an error if unset` + "\n" + `            return a dictionary representing the whole environment if s~""` + "\n" + `x env s     set environment variable x to s, or return an error` + "\n" + `x env 0     unset environment variable x, or clear environment if x~""`,
+	"error":   `error x    error        r:error"msg"; (@r;.r) → "e" "msg"`,
+	"eval":    `eval s     comp/run     a:5;eval"a+2" → 7           (unrestricted variant of .s)` + "\n" + `eval[s;loc;pfx]         like eval s, but provide loc as location (usually a` + "\n" + `                        path), and prefix pfx+"." for globals; does not eval` + "\n" + `                        same location more than once`,
 	"exp":     "exp n",
-	"firsts":  "firsts help",
-	"flush":   "flush help",
-	"import":  "import help",
-	"in":      "in help",
-	"json":    "json help",
+	"firsts":  `firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`,
+	"flush":   "flush h     flush any buffered data for handle h",
+	"import":  `import s    read/eval wrapper roughly equivalent to eval[read path;path;pfx]` + "\n" + `            where 1) path~s or path~env["GOALLIB"]+s+".goal"` + "\n" + `            2) pfx is path's basename without extension` + "\n" + `x import s  same as import s, but using prefix x for globals`,
+	"in":      `x in s     contained    "bc" "ac"in"abcd" → 1 0                    (same as x¿s)` + "\n" + `x in Y     member of    2 3 in 8 2 4 → 1 0                         (same as x¿Y)`,
+	"json":    "json s     parse json   json rq`" + `{"a":true,"b":"text"}` + "`" + ` → "a" "b"!1 "text"` + "\n" + `s json y   write json   ""json 1.5 2 → "[1.5,2]" (indent with s;disable with "")` + "\n" + `S json y   write json   like s json y, but with (pfx;indent) for pretty-printing`,
 	"log":     "log n",
-	"mkdir":   "mkdir help",
-	"nan":     "nan help",
-	"ocount":  "ocount help",
-	"open":    "open help",
+	"mkdir":   "mkdir s     create new directory named s (parent must already exist)",
+	"nan":     `nan n      isNaN        nan(0n;2;sqrt -1) → 1 0 1             nan 2 0i 3 → 0 1 0` + "\n" + `n nan n    fill NaNs    42.0 nan(1.5;sqrt -1) → 1.5 42.0      42 nan 2 0i → 2 42`,
+	"ocount":  `ocount X   occur-count  ocount 3 4 5 3 4 4 7 → 0 0 0 1 1 2 0`,
+	"open":    "open s      open path s for reading, returning a handle (h)" + "\n" + `x open s    open path s with mode x in "r" "w" "a"` + "\n" + `            or pipe from (x~"-|") or to (x~"|-") command s or S`,
 	"or":      "or[0;2] → 2      or[0;0;0] → 0",
-	"panic":   "panic help",
-	"print":   "print help",
-	"read":    "read help",
-	"remove":  "remove help",
-	"rename":  "rename help",
-	"rotate":  "rotate help",
+	"panic":   `panic s    panic        panic"msg"                (for fatal programming-errors)`,
+	"print":   `print s     print"Hello, world!\n"      (uses implicit $x for non-string values)` + "\n" + `x print s   print s to handle/name x               "/path/to/file"print"content"`,
+	"read":    `read h      read from handle h until EOF or an error occurs` + "\n" + `read s      read file named s into string         lines:=-read"/path/to/file"` + "\n" + `            or "name""dir"!(S;I) if s is a directory` + "\n" + `i read h    read i bytes from reader h or until EOF, or an error occurs` + "\n" + `s read h    read from reader h until 1-byte s, EOF, or an error occurs`,
+	"remove":  "remove s    remove the named file or empty directory",
+	"rename":  `x rename y  renames (moves) old path x (s) to new path y (s)`,
+	"rotate":  `i rotate Y rotate       2 rotate 7 8 9 → 9 7 8           -2 rotate 7 8 9 → 8 9 7`,
 	"round":   "round n",
-	"rshift":  "rshift help",
-	"rt.get":  "rt.get help",
-	"rt.log":  "rt.log help",
-	"rt.ofs":  "rt.ofs help",
-	"rt.seed": "rt.seed help",
-	"rt.time": "rt.time help",
-	"run":     "run help",
-	"rx":      "rx help",
-	"say":     "say help",
-	"shell":   "shell help",
-	"shift":   "shift help",
-	"sign":    "sign help",
+	"rshift":  `»X  rshift      »8 9 → 0 8     »"a" "b" → "" "a"       (ASCII keyword: rshift x)` + "\n" + `x»Y rshift      "a" "b"»1 2 3 → "a" "b" 1`,
+	"rt.get":  `rt.get s        returns various kinds of runtime information` + "\n" + `                "g"   dictionary with copy of all global variables` + "\n" + `                "f"   same but only globals containing functions` + "\n" + `                "v"   same but only non-function globals`,
+	"rt.log":  `rt.log x        like :[x] but logs string representation of x       (same as \x)`,
+	"rt.ofs":  `rt.ofs s        set output field separator for print S and "$S"    (default " ")` + "\n" + `                returns previous value`,
+	"rt.seed": "rt.seed i       set non-secure pseudo-rand seed to i        (used by the ? verb)",
+	"rt.time": `rt.time[s;i]    eval s for i times (default 1), return average time (ns)` + "\n" + `rt.time[f;x;i]  call f. x for i times (default 1), return average time (ns)`,
+	"run":     `run s       run command s or S (with arguments)   run"pwd"          run"ls" "-l"` + "\n" + `            inherits stdin and stderr, returns its standard output or an error` + "\n" + `            dict with keys "code" "msg" "out"` + "\n" + `x run s     same as run s but with input string x as stdin`,
+	"rx":      `rx s       comp. regex  rx"[a-z]"       (like rx/[a-z]/ but compiled at runtime)`,
+	"say":     `say s       same as print, but appends a newline                    say!5` + "\n" + `x say s     same as print, but appends a newline`,
+	"shell":   `shell s     same as run, but through "/bin/sh" (unix systems only)  shell"ls -l"`,
+	"shift":   `«X  shift       «8 9 → 9 0     «"a" "b" → "b" ""        (ASCII keyword: shift x)` + "\n" + `x«Y shift       "a" "b"«1 2 3 → 3 "a" "b"`,
+	"sign":    `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`,
 	"sin":     "sin n",
-	"sql.q":   "sql.q help",
+	"sql.q":   "sql.q s    Run SQL query, results as table.",
 	"sqrt":    "sqrt n",
-	"stat":    "stat help",
-	"sub":     "sub help",
-	"time":    "time help",
+	"stat":    `stat x      returns "dir""mtime""size"!(i;i;i)      (for filehandle h or path s)`,
+	"sub":     `sub[r;s]   regsub       sub[rx/[a-z]/;"Z"] "aBc" → "ZBZ"` + "\n" + `sub[r;f]   regsub       sub[rx/[A-Z]/;_] "aBc" → "abc"` + "\n" + `sub[s;s]   replace      sub["b";"B"] "abc" → "aBc"` + "\n" + `sub[s;s;i] replaceN     sub["a";"b";2] "aaa" → "bba"        (stop after 2 times)` + "\n" + `sub[S]     replaceS     sub["b" "d" "c" "e"] "abc" → "ade"` + "\n" + `sub[S;S]   replaceS     sub["b" "c";"d" "e"] "abc" → "ade"`,
+	"time":    `time cmd              time command with current time` + "\n" + `cmd time t            time command with time t` + "\n" + `time[cmd;t;fmt]       time command with time t in given format` + "\n" + `time[cmd;t;fmt;loc]   time command with time t in given format and location`,
 	"uc":      `uc x       upper/ceil   uc 1.5 → 2.0                             uc"abπ" → "ABΠ"`,
 	"utf8":    `utf8 s     is UTF-8     utf8 "aπc" → 1                          utf8 "a\xff" → 0` + "\n" + `s utf8 s   to UTF-8     "b" utf8 "a\xff" → "ab"       (replace invalid with "b")`,
 }
@@ -320,10 +288,10 @@ const goalFmtSource = `
   using format string f for floating point numbers.
 \
 fmt.dict:{[d;f]
-	nk:#d; say"=== Dict ($nk keys) ==="
-	k:(|/-1+""#k)!k:!d; v:" "/(..?[(@x)¿"nN";p.f$x;$'x])'.d
-	say"\n"/k{"$x| $y"}'v
-  }
+ nk:#d; say"=== Dict ($nk keys) ==="
+ k:(|/-1+""#k)!k:!d; v:" "/(..?[(@x)¿"nN";p.f$x;$'x])'.d
+ say"\n"/k{"$x| $y"}'v
+}
 /
   tbl[t;r;c;f] outputs dict t as table, assuming string keys and flat columns,
   and outputs at most r rows and c columns, using format string f for floating
