@@ -16,6 +16,7 @@ import (
 
 	"codeberg.org/anaseto/goal"
 	gos "codeberg.org/anaseto/goal/os"
+	resty "github.com/go-resty/resty/v2"
 	"github.com/knz/bubbline"
 	"github.com/knz/bubbline/complete"
 	"github.com/knz/bubbline/computil"
@@ -133,7 +134,11 @@ func replMain() {
 			if err != nil {
 				fmt.Fprint(os.Stderr, err)
 			}
-			fmt.Fprintln(os.Stdout, value.Sprint(ctx.goalContext, false))
+			// Suppress printing the value when assigning values to variables.
+			if !ctx.goalContext.AssignedLast() {
+				fmt.Fprintln(os.Stdout, value.Sprint(ctx.goalContext, false))
+			}
+
 		case modeSqlEvalReadOnly:
 			_, err := modeSqlRunQuery(&ctx, line, nil)
 			if err != nil {
@@ -388,6 +393,158 @@ func VFSqlQ(goalContext *goal.Context, args []goal.V) goal.V {
 	}
 }
 
+// HTTP via go-resty
+
+type HttpClient struct {
+	client *resty.Client
+}
+
+// LessT implements goal.BV.
+func (httpClient *HttpClient) LessT(y goal.BV) bool {
+	// Goal falls back to ordering by type name,
+	// and there is no other reasonable way to order
+	// these HttpClient structs.
+	return httpClient.Type() < y.Type()
+}
+
+// Matches implements goal.BV.
+func (httpClient *HttpClient) Matches(y goal.BV) bool {
+	switch yv := y.(type) {
+	case *HttpClient:
+		return httpClient.client == yv.client
+	default:
+		return false
+	}
+}
+
+// Type implements goal.BV.
+func (httpClient *HttpClient) Type() string {
+	return "ari.HttpClient"
+}
+
+// Append implements goal.BV
+func (httpClient *HttpClient) Append(ctx *goal.Context, dst []byte, compact bool) []byte {
+	// Go prints nil as `<nil>` so following suit.
+	return append(dst, "<ari.HttpClient>"...)
+}
+
+func newHttpClient() *HttpClient {
+	// TODO Support options that resty.Client supports
+	// BaseURL               string
+	// HostURL               string // Deprecated: use BaseURL instead. To be removed in v3.0.0 release.
+	// QueryParam            url.Values
+	// FormData              url.Values
+	// PathParams            map[string]string
+	// RawPathParams         map[string]string
+	// Header                http.Header
+	// UserInfo              *User
+	// Token                 string
+	// AuthScheme            string
+	// Cookies               []*http.Cookie
+	// Error                 reflect.Type
+	// Debug                 bool
+	// DisableWarn           bool
+	// AllowGetMethodPayload bool
+	// RetryCount            int
+	// RetryWaitTime         time.Duration
+	// RetryMaxWaitTime      time.Duration
+	// RetryConditions       []RetryConditionFunc
+	// RetryHooks            []OnRetryFunc
+	// RetryAfter            RetryAfterFunc
+	// RetryResetReaders     bool
+	// JSONMarshal           func(v interface{}) ([]byte, error)
+	// JSONUnmarshal         func(data []byte, v interface{}) error
+	// XMLMarshal            func(v interface{}) ([]byte, error)
+	// XMLUnmarshal          func(data []byte, v interface{}) error
+
+	// // HeaderAuthorizationKey is used to set/access Request Authorization header
+	// // value when `SetAuthToken` option is used.
+	// HeaderAuthorizationKey string
+	return &HttpClient{resty.New()}
+}
+
+func VFHttpClient(goalContext *goal.Context, args []goal.V) goal.V {
+	// TODO Support dictionary argument with data that is transformed into options supported by resty.Client
+	return goal.NewV(newHttpClient())
+}
+
+func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	sqlQuery, ok := x.BV().(goal.S)
+	switch len(args) {
+	case 1:
+		if !ok {
+			return panicType("http.get s", "s", x)
+		}
+		hc := newHttpClient()
+		resp, err := hc.client.R().Get(string(sqlQuery))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+			// Continue: Build an error response
+		}
+		// Construct goal.V values for return dict
+		statusS := goal.NewS(resp.Status())
+		headers := resp.Header()
+		headerKeysSlice := make([]string, 0) // TODO Figure out why len(resp.Header()) wasn't correct
+		headerValuesSlice := make([]goal.V, 0)
+		for k, vs := range headers {
+			headerKeysSlice = append(headerKeysSlice, k)
+			valuesAS := goal.NewAS(vs)
+			headerValuesSlice = append(headerValuesSlice, valuesAS)
+		}
+		headerD := goal.NewD(goal.NewAS(headerKeysSlice), goal.NewAV(headerValuesSlice))
+		bodyS := goal.NewS(resp.String())
+		var isOk goal.V
+		if resp.IsSuccess() {
+			isOk = goal.NewI(1)
+		} else {
+			isOk = goal.NewI(0)
+		}
+		ks := goal.NewAS([]string{"status", "headers", "string", "ok"})
+		vs := goal.NewAV([]goal.V{statusS, headerD, bodyS, isOk})
+		return goal.NewD(ks, vs)
+	case 2:
+		if !ok {
+			return panicType("httpclient http.get url", "squery", x)
+		}
+		panic("unimplemented")
+		y := args[0]
+		yv := y.BV()
+		placeholderArgs := make([]interface{}, 1)
+		fmt.Printf("args %q\n", args)
+		switch yv := yv.(type) {
+		case *goal.AB:
+			for i, x := range yv.Slice {
+				placeholderArgs[i] = x
+			}
+		case *goal.AI:
+			for i, x := range yv.Slice {
+				placeholderArgs[i] = x
+			}
+		case *goal.AV:
+			for i, x := range yv.Slice {
+				if x.IsI() {
+					placeholderArgs[i] = x.I()
+				}
+			}
+		case *goal.AS:
+			for i, x := range yv.Slice {
+				placeholderArgs[i] = x
+			}
+		}
+		if !ok {
+			return panicType("squery sql.q sparams", "sparams", y)
+		}
+		queryResult, err := modeSqlRunQuery(&ctx, string(sqlQuery), placeholderArgs)
+		if err != nil {
+			return goal.Errorf("%v", err)
+		}
+		return queryResult
+	default:
+		return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
+	}
+}
+
 // When the REPL mode is switched to Goal, this resets the proper defaults.
 func modeGoalSetReplDefaults(ctx *Context) {
 	ctx.evalMode = modeGoalEval
@@ -576,6 +733,7 @@ func goalRegisterVariadics(ctx *goal.Context) {
 	// From Goal itself
 	gos.Import(ctx, "")
 	// Ari
+	ctx.RegisterDyad("http.get", VFHttpGet)
 	ctx.RegisterDyad("sql.q", VFSqlQ)
 }
 
