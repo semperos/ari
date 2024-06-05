@@ -395,6 +395,9 @@ func VFSqlQ(goalContext *goal.Context, args []goal.V) goal.V {
 
 // HTTP via go-resty
 
+// TODO Research: What would a `reflect` Goal function/lib look like, to grab things like public struct fields on the Goal side?
+//
+//	https://go.dev/blog/laws-of-reflection
 type HttpClient struct {
 	client *resty.Client
 }
@@ -425,33 +428,33 @@ func (httpClient *HttpClient) Type() string {
 // Append implements goal.BV
 func (httpClient *HttpClient) Append(ctx *goal.Context, dst []byte, compact bool) []byte {
 	// Go prints nil as `<nil>` so following suit.
-	return append(dst, "<ari.HttpClient>"...)
+	return append(dst, fmt.Sprintf("<ari.HttpClient %#v>", httpClient.client)...)
 }
 
-func newHttpClient() *HttpClient {
+func newHttpClient(optionsD *goal.D) (*HttpClient, error) {
 	// TODO Support options that resty.Client supports
-	// BaseURL               string
+	// [DONE] BaseURL               string
 	// HostURL               string // Deprecated: use BaseURL instead. To be removed in v3.0.0 release.
 	// QueryParam            url.Values
 	// FormData              url.Values
-	// PathParams            map[string]string
-	// RawPathParams         map[string]string
-	// Header                http.Header
-	// UserInfo              *User
-	// Token                 string
-	// AuthScheme            string
-	// Cookies               []*http.Cookie
+	// [DONE] PathParams            map[string]string
+	// [DONE] RawPathParams         map[string]string
+	// Header                http.Header // Use Add methods; accept dictionary of either single strings or []string
+	// UserInfo              *User // Struct of Username, Password string
+	// [DONE] Token                 string
+	// [DONE] AuthScheme            string
+	// Cookies               []*http.Cookie // Medium-sized struct
 	// Error                 reflect.Type
-	// Debug                 bool
-	// DisableWarn           bool
-	// AllowGetMethodPayload bool
-	// RetryCount            int
-	// RetryWaitTime         time.Duration
+	// [DONE] Debug                 bool
+	// [DONE] DisableWarn           bool
+	// [DONE] AllowGetMethodPayload bool
+	// [DONE] RetryCount            int
+	// RetryWaitTime         time.Duration // Pick canonical unit (millis/micros)
 	// RetryMaxWaitTime      time.Duration
-	// RetryConditions       []RetryConditionFunc
+	// RetryConditions       []RetryConditionFunc // Research: How tough is it to invoke a Goal lambda from Go land?
 	// RetryHooks            []OnRetryFunc
 	// RetryAfter            RetryAfterFunc
-	// RetryResetReaders     bool
+	// [DONE] RetryResetReaders     bool
 	// JSONMarshal           func(v interface{}) ([]byte, error)
 	// JSONUnmarshal         func(data []byte, v interface{}) error
 	// XMLMarshal            func(v interface{}) ([]byte, error)
@@ -460,12 +463,170 @@ func newHttpClient() *HttpClient {
 	// // HeaderAuthorizationKey is used to set/access Request Authorization header
 	// // value when `SetAuthToken` option is used.
 	// HeaderAuthorizationKey string
-	return &HttpClient{resty.New()}
+	restyClient := resty.New()
+	if optionsD.Len() == 0 {
+		return &HttpClient{resty.New()}, nil
+	} else {
+		ka := optionsD.KeyArray()
+		va := optionsD.ValueArray()
+		switch kas := ka.(type) {
+		case *goal.AS:
+			switch vav := va.(type) {
+			// If the user only supplies these entries, Goal will specialize the values array as goal.AS
+			case *goal.AS:
+				for i, k := range kas.Slice {
+					value := vav.Slice[i]
+					switch k {
+					case "BaseUrl":
+						restyClient.BaseURL = value
+					case "Token":
+						restyClient.Token = value
+					case "AuthScheme":
+						restyClient.AuthScheme = value
+					default:
+						return nil, fmt.Errorf("Unsupported ari.HttpClient option: %v\n", k)
+					}
+				}
+			// If at least one of the dict entries is a non-string, this is the type of the values array
+			case *goal.AV:
+				for i, k := range kas.Slice {
+					value := vav.Slice[i]
+					switch k {
+					case "AllowGetMethodPayload":
+						if value.IsTrue() {
+							restyClient.AllowGetMethodPayload = true
+						} else if value.IsFalse() {
+							restyClient.AllowGetMethodPayload = false
+						} else {
+							return nil, fmt.Errorf("http.client expects AllowGetMethodPayload to be 0 or 1, but received: %v\n", value)
+						}
+					case "BaseUrl":
+						switch goalV := value.BV().(type) {
+						case goal.S:
+							restyClient.BaseURL = string(goalV)
+						default:
+							return nil, fmt.Errorf("http.client expects BaseUrl to be a string, but received: %v\n", value)
+						}
+					case "Debug":
+						if value.IsTrue() {
+							restyClient.Debug = true
+						} else if value.IsFalse() {
+							restyClient.Debug = false
+						} else {
+							return nil, fmt.Errorf("http.client expects Debug to be 0 or 1, but received: %v\n", value)
+						}
+					case "DisableWarn":
+						if value.IsTrue() {
+							restyClient.DisableWarn = true
+						} else if value.IsFalse() {
+							restyClient.DisableWarn = false
+						} else {
+							return nil, fmt.Errorf("http.client expects DisableWarn to be 0 or 1, but received: %v\n", value)
+						}
+					case "RetryCount":
+						if value.IsI() {
+							restyClient.RetryCount = int(value.I())
+						} else {
+							return nil, fmt.Errorf("http.client expects RetryCount to be an integer, but received: %v\n", value)
+						}
+					case "RetryResetReaders":
+						if value.IsTrue() {
+							restyClient.RetryResetReaders = true
+						} else if value.IsFalse() {
+							restyClient.RetryResetReaders = false
+						} else {
+							return nil, fmt.Errorf("http.client expects RetryResetReaders to be 0 or 1, but received: %v\n", value)
+						}
+					case "PathParams":
+						switch goalV := value.BV().(type) {
+						case *goal.D:
+							pathParams, err := stringMapFromGoalDict(goalV)
+							if err != nil {
+								return nil, err
+							}
+							restyClient.PathParams = pathParams
+						default:
+							return nil, fmt.Errorf("http.client expects Token to be a string, but received: %v\n", value)
+						}
+					case "RawPathParams":
+						switch goalV := value.BV().(type) {
+						case *goal.D:
+							pathParams, err := stringMapFromGoalDict(goalV)
+							if err != nil {
+								return nil, err
+							}
+							restyClient.RawPathParams = pathParams
+						default:
+							return nil, fmt.Errorf("http.client expects Token to be a string, but received: %v\n", value)
+						}
+					case "Token":
+						switch goalV := value.BV().(type) {
+						case goal.S:
+							restyClient.Token = string(goalV)
+						default:
+							return nil, fmt.Errorf("http.client expects Token to be a string, but received: %v\n", value)
+						}
+					case "AuthScheme":
+						switch goalV := value.BV().(type) {
+						case goal.S:
+							restyClient.AuthScheme = string(goalV)
+						default:
+							return nil, fmt.Errorf("http.client expects AuthScheme to be a string, but received: %v\n", value)
+						}
+					default:
+						return nil, fmt.Errorf("Unsupported ari.HttpClient option: %v\n", k)
+					}
+				}
+			default:
+				return nil, fmt.Errorf("http.client expects a Goal dictionary with string, array, and dict values, but received: %v\n", va)
+			}
+
+		default:
+			return nil, fmt.Errorf("http.client expects a Goal dictionary with string keys, but received keys: %v\n", va)
+		}
+	}
+	return &HttpClient{client: restyClient}, nil
+}
+
+func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
+	ka := d.KeyArray()
+	va := d.ValueArray()
+	m := make(map[string]string, ka.Len())
+	switch kas := ka.(type) {
+	case *goal.AS:
+		switch vas := va.(type) {
+		case *goal.AS:
+			vasSlice := vas.Slice
+			for i, k := range kas.Slice {
+				m[k] = vasSlice[i]
+			}
+		default:
+			return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict with string keys and string values, but received values: %v\n", va)
+		}
+	default:
+		return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict with string keys and string values, but received keys: %v\n", ka)
+	}
+	return m, nil
 }
 
 func VFHttpClient(goalContext *goal.Context, args []goal.V) goal.V {
 	// TODO Support dictionary argument with data that is transformed into options supported by resty.Client
-	return goal.NewV(newHttpClient())
+	x := args[len(args)-1]
+	clientOptions, ok := x.BV().(*goal.D)
+	switch len(args) {
+	case 1:
+		if !ok {
+			return panicType("http.client d", "d", x)
+		}
+		hc, err := newHttpClient(clientOptions)
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		return goal.NewV(hc)
+	default:
+		// TODO Should probably not include prefix
+		return goal.NewPanic("http.client : too many arguments")
+	}
 }
 
 func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
@@ -476,11 +637,16 @@ func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
 		if !ok {
 			return panicType("http.get s", "s", x)
 		}
-		hc := newHttpClient()
+		hc, err := newHttpClient(&goal.D{})
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
 		resp, err := hc.client.R().Get(string(sqlQuery))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
-			// Continue: Build an error response
+			// Continue
+			// error response built below, with
+			// "ok" as false
 		}
 		// Construct goal.V values for return dict
 		statusS := goal.NewS(resp.Status())
@@ -733,9 +899,12 @@ func goalRegisterVariadics(ctx *goal.Context) {
 	// From Goal itself
 	gos.Import(ctx, "")
 	// Ari
+	ctx.RegisterDyad("http.client", VFHttpClient)
 	ctx.RegisterDyad("http.get", VFHttpGet)
 	ctx.RegisterDyad("sql.q", VFSqlQ)
 }
+
+// CLI (Cobra, Viper)
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
