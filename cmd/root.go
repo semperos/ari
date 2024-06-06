@@ -439,7 +439,7 @@ func newHttpClient(optionsD *goal.D) (*HttpClient, error) {
 	// FormData              url.Values
 	// [DONE] PathParams            map[string]string
 	// [DONE] RawPathParams         map[string]string
-	// Header                http.Header // Use Add methods; accept dictionary of either single strings or []string
+	// [DONE] Header                http.Header // Use Add methods; accept dictionary of either single strings or []string
 	// UserInfo              *User // Struct of Username, Password string
 	// [DONE] Token                 string
 	// [DONE] AuthScheme            string
@@ -471,144 +471,137 @@ func newHttpClient(optionsD *goal.D) (*HttpClient, error) {
 		va := optionsD.ValueArray()
 		switch kas := ka.(type) {
 		case *goal.AS:
-			switch vav := va.(type) {
-			case *goal.AV:
-				for i, k := range kas.Slice {
-					value := vav.Slice[i]
-					switch k {
-					case "AllowGetMethodPayload":
-						if value.IsTrue() {
-							restyClient.AllowGetMethodPayload = true
-						} else if value.IsFalse() {
-							restyClient.AllowGetMethodPayload = false
-						} else {
-							return nil, fmt.Errorf("http.client expects AllowGetMethodPayload to be 0 or 1 (falsey/truthy), but received: %v\n", value)
-						}
-					case "BaseUrl":
-						switch goalV := value.BV().(type) {
-						case goal.S:
-							restyClient.BaseURL = string(goalV)
-						default:
-							return nil, fmt.Errorf("http.client expects BaseUrl to be a string, but received: %v\n", value)
-						}
-					case "Debug":
-						if value.IsTrue() {
-							restyClient.Debug = true
-						} else if value.IsFalse() {
-							restyClient.Debug = false
-						} else {
-							return nil, fmt.Errorf("http.client expects Debug to be 0 or 1, but received: %v\n", value)
-						}
-					case "DisableWarn":
-						if value.IsTrue() {
-							restyClient.DisableWarn = true
-						} else if value.IsFalse() {
-							restyClient.DisableWarn = false
-						} else {
-							return nil, fmt.Errorf("http.client expects DisableWarn to be 0 or 1 (falsey/truthy), but received: %v\n", value)
-						}
-					case "Header":
-						var hd http.Header
-						switch goalV := value.BV().(type) {
-						case (*goal.D):
-							headerKeys := goalV.KeyArray()
-							headerValues := goalV.ValueArray()
-							switch hks := headerKeys.(type) {
-							case (*goal.AS):
-								switch hvs := headerValues.(type) {
-								case (*goal.AS):
-									values := hvs.Slice
-									hd = make(http.Header, hks.Len())
-									for i, hk := range hks.Slice {
-										hd.Add(hk, values[i])
-									}
-									restyClient.Header = hd
-								case (*goal.AV):
-									// TODO START HERE
-								default:
-									return nil, fmt.Errorf("http.client expects Header to be a dictionary with values that are strings or lists of strings, but received values: %v\n", hvs)
-								}
-							default:
-								return nil, fmt.Errorf("http.client expects Header to be a dictionary with string keys, but received keys: %v\n", hks)
-							}
-						default:
-							return nil, fmt.Errorf("http.client expects Header to be a dictionary, but received: %v\n", value)
-						}
-					case "PathParams":
-						switch goalV := value.BV().(type) {
-						case *goal.D:
-							pathParams, err := stringMapFromGoalDict(goalV)
-							if err != nil {
-								return nil, err
-							}
-							restyClient.PathParams = pathParams
-						default:
-							return nil, fmt.Errorf("http.client expects Token to be a string, but received: %v\n", value)
-						}
-					case "RawPathParams":
-						switch goalV := value.BV().(type) {
-						case *goal.D:
-							pathParams, err := stringMapFromGoalDict(goalV)
-							if err != nil {
-								return nil, err
-							}
-							restyClient.RawPathParams = pathParams
-						default:
-							return nil, fmt.Errorf("http.client expects Token to be a string, but received: %v\n", value)
-						}
-					case "RetryCount":
-						if value.IsI() {
-							restyClient.RetryCount = int(value.I())
-						} else {
-							return nil, fmt.Errorf("http.client expects RetryCount to be an integer, but received: %v\n", value)
-						}
-					case "RetryMaxWaitTimeMilli":
-						if value.IsI() {
-							restyClient.RetryMaxWaitTime = time.Duration(value.I()) * time.Millisecond
-						} else {
-							return nil, fmt.Errorf("http.client expects RetryMaxWaitTimeMilli to be an integer, but received: %v\n", value)
-						}
-					case "RetryResetReaders":
-						if value.IsTrue() {
-							restyClient.RetryResetReaders = true
-						} else if value.IsFalse() {
-							restyClient.RetryResetReaders = false
-						} else {
-							return nil, fmt.Errorf("http.client expects RetryResetReaders to be 0 or 1 (falsey/truthy), but received: %v\n", value)
-						}
-					case "RetryWaitTimeMilli":
-						if value.IsI() {
-							restyClient.RetryWaitTime = time.Duration(value.I()) * time.Millisecond
-						} else {
-							return nil, fmt.Errorf("http.client expects RetryWaitTimeMilli to be an integer, but received: %v\n", value)
-						}
-					case "Token":
-						switch goalV := value.BV().(type) {
-						case goal.S:
-							restyClient.Token = string(goalV)
-						default:
-							return nil, fmt.Errorf("http.client expects Token to be a string, but received: %v\n", value)
-						}
-					case "AuthScheme":
-						switch goalV := value.BV().(type) {
-						case goal.S:
-							restyClient.AuthScheme = string(goalV)
-						default:
-							return nil, fmt.Errorf("http.client expects AuthScheme to be a string, but received: %v\n", value)
-						}
-					case "αρι":
-						// This is an internal entry that forces the Goal dictionary to be of type *goal.AV
-						continue
-					default:
-						return nil, fmt.Errorf("Unsupported ari.HttpClient option: %v\n", k)
+			for i, k := range kas.Slice {
+				value := va.At(i)
+				switch k {
+				case "AllowGetMethodPayload":
+					if value.IsTrue() {
+						restyClient.AllowGetMethodPayload = true
+					} else if value.IsFalse() {
+						restyClient.AllowGetMethodPayload = false
+					} else {
+						return nil, fmt.Errorf("http.client expects \"AllowGetMethodPayload\" to be 0 or 1 (falsey/truthy), but received: %v\n", value)
 					}
+				case "BaseUrl":
+					switch goalV := value.BV().(type) {
+					case goal.S:
+						restyClient.BaseURL = string(goalV)
+					default:
+						return nil, fmt.Errorf("http.client expects \"BaseUrl\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "Debug":
+					if value.IsTrue() {
+						restyClient.Debug = true
+					} else if value.IsFalse() {
+						restyClient.Debug = false
+					} else {
+						return nil, fmt.Errorf("http.client expects \"Debug\" to be 0 or 1, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "DisableWarn":
+					if value.IsTrue() {
+						restyClient.DisableWarn = true
+					} else if value.IsFalse() {
+						restyClient.DisableWarn = false
+					} else {
+						return nil, fmt.Errorf("http.client expects \"DisableWarn\" to be 0 or 1 (falsey/truthy), but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "Header":
+					switch goalV := value.BV().(type) {
+					case (*goal.D):
+						headerKeys := goalV.KeyArray()
+						headerValues := goalV.ValueArray()
+						switch hks := headerKeys.(type) {
+						case (*goal.AS):
+							hd := make(http.Header, hks.Len())
+							for hvi := 0; hvi < headerValues.Len(); hvi++ {
+								for i, hk := range hks.Slice {
+									headerValue := headerValues.At(i)
+									switch hv := headerValue.BV().(type) {
+									case (goal.S):
+										hd.Add(hk, string(hv))
+									case (*goal.AS):
+										for _, w := range hv.Slice {
+											hd.Add(hk, w)
+										}
+									default:
+										return nil, fmt.Errorf("http.client expects \"Header\" to be a dictionary with values that are strings or lists of strings, but received a %v: %v\n", reflect.TypeOf(hv), hv)
+									}
+								}
+							}
+						default:
+							return nil, fmt.Errorf("http.client expects \"Header\" to be a dictionary with string keys, but received a %v: %v\n", reflect.TypeOf(hks), hks)
+						}
+					default:
+						return nil, fmt.Errorf("http.client expects \"Header\" to be a dictionary, but received a %v inside a %v: %v\n", value.BV(), reflect.TypeOf(value), value)
+					}
+				case "PathParams":
+					switch goalV := value.BV().(type) {
+					case *goal.D:
+						pathParams, err := stringMapFromGoalDict(goalV)
+						if err != nil {
+							return nil, err
+						}
+						restyClient.PathParams = pathParams
+					default:
+						return nil, fmt.Errorf("http.client expects \"Token\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "RawPathParams":
+					switch goalV := value.BV().(type) {
+					case *goal.D:
+						pathParams, err := stringMapFromGoalDict(goalV)
+						if err != nil {
+							return nil, err
+						}
+						restyClient.RawPathParams = pathParams
+					default:
+						return nil, fmt.Errorf("http.client expects \"Token\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "RetryCount":
+					if value.IsI() {
+						restyClient.RetryCount = int(value.I())
+					} else {
+						return nil, fmt.Errorf("http.client expects \"RetryCount\" to be an integer, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "RetryMaxWaitTimeMilli":
+					if value.IsI() {
+						restyClient.RetryMaxWaitTime = time.Duration(value.I()) * time.Millisecond
+					} else {
+						return nil, fmt.Errorf("http.client expects \"RetryMaxWaitTimeMilli\" to be an integer, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "RetryResetReaders":
+					if value.IsTrue() {
+						restyClient.RetryResetReaders = true
+					} else if value.IsFalse() {
+						restyClient.RetryResetReaders = false
+					} else {
+						return nil, fmt.Errorf("http.client expects \"RetryResetReaders\" to be 0 or 1 (falsey/truthy), but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "RetryWaitTimeMilli":
+					if value.IsI() {
+						restyClient.RetryWaitTime = time.Duration(value.I()) * time.Millisecond
+					} else {
+						return nil, fmt.Errorf("http.client expects \"RetryWaitTimeMilli\" to be an integer, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "Token":
+					switch goalV := value.BV().(type) {
+					case goal.S:
+						restyClient.Token = string(goalV)
+					default:
+						return nil, fmt.Errorf("http.client expects \"Token\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "AuthScheme":
+					switch goalV := value.BV().(type) {
+					case goal.S:
+						restyClient.AuthScheme = string(goalV)
+					default:
+						return nil, fmt.Errorf("http.client expects \"AuthScheme\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				default:
+					return nil, fmt.Errorf("Unsupported ari.HttpClient option: %v\n", k)
 				}
-			default:
-				return nil, fmt.Errorf("http.client expects a Goal dictionary with string, array, and/or dict values, but received: %#v\n", va)
 			}
-
 		default:
-			return nil, fmt.Errorf("http.client expects a Goal dictionary with string keys, but received keys: %v\n", va)
+			return nil, fmt.Errorf("http.client expects a Goal dictionary with string keys, but received a %v: %v\n", reflect.TypeOf(va), va)
 		}
 	}
 	return &HttpClient{client: restyClient}, nil
@@ -644,16 +637,7 @@ func VFHttpClient(goalContext *goal.Context, args []goal.V) goal.V {
 		if !ok {
 			return panicType("http.client d", "d", x)
 		}
-		goalContext.AssignGlobal("ari.http.client.d", goal.NewV(clientOptions))
-		goalV, err := goalContext.Eval(`:ari.http.client.d["αρι"]:1"two"`) // force *AV values array
-		if err != nil {
-			goal.NewPanicError(err)
-		}
-		clientOptionsAv, ok := goalV.BV().(*goal.D)
-		if !ok {
-			panic("Developer error: Failed to prepare http.client dict, check VFHttpClient implementation.")
-		}
-		hc, err := newHttpClient(clientOptionsAv)
+		hc, err := newHttpClient(clientOptions)
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
