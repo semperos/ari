@@ -441,6 +441,7 @@ func newHttpClient(optionsD *goal.D) (*HttpClient, error) {
 	// [DONE] PathParams            map[string]string
 	// [DONE] RawPathParams         map[string]string
 	// [DONE] Header                http.Header // Use Add methods; accept dictionary of either single strings or []string
+	// [DONE] HeaderAuthorizationKey string
 	// [DONE] UserInfo              *User // Struct of Username, Password string
 	// [DONE] Token                 string
 	// [DONE] AuthScheme            string
@@ -460,10 +461,6 @@ func newHttpClient(optionsD *goal.D) (*HttpClient, error) {
 	// JSONUnmarshal         func(data []byte, v interface{}) error
 	// XMLMarshal            func(v interface{}) ([]byte, error)
 	// XMLUnmarshal          func(data []byte, v interface{}) error
-
-	// // HeaderAuthorizationKey is used to set/access Request Authorization header
-	// // value when `SetAuthToken` option is used.
-	// HeaderAuthorizationKey string
 	restyClient := resty.New()
 	if optionsD.Len() == 0 {
 		return &HttpClient{resty.New()}, nil
@@ -572,6 +569,13 @@ func newHttpClient(optionsD *goal.D) (*HttpClient, error) {
 						}
 					default:
 						return nil, fmt.Errorf("http.client expects \"Header\" to be a dictionary, but received a %v: %v\n", reflect.TypeOf(value), value)
+					}
+				case "HeaderAuthorizationKey":
+					switch goalV := value.BV().(type) {
+					case goal.S:
+						restyClient.HeaderAuthorizationKey = string(goalV)
+					default:
+						return nil, fmt.Errorf("http.client expects \"HeaderAuthorizationKey\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
 					}
 				case "PathParams":
 					switch goalV := value.BV().(type) {
@@ -742,17 +746,17 @@ func VFHttpClient(goalContext *goal.Context, args []goal.V) goal.V {
 
 func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
-	sqlQuery, ok := x.BV().(goal.S)
 	switch len(args) {
 	case 1:
+		url, ok := x.BV().(goal.S)
 		if !ok {
 			return panicType("http.get s", "s", x)
 		}
-		hc, err := newHttpClient(&goal.D{})
+		httpClient, err := newHttpClient(&goal.D{})
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
-		resp, err := hc.client.R().Get(string(sqlQuery))
+		resp, err := httpClient.client.R().Get(string(url))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
 			// Continue
@@ -781,42 +785,43 @@ func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
 		vs := goal.NewAV([]goal.V{statusS, headerD, bodyS, isOk})
 		return goal.NewD(ks, vs)
 	case 2:
+		httpClient, ok := x.BV().(*HttpClient)
 		if !ok {
-			return panicType("httpclient http.get url", "squery", x)
+			return panicType("HttpClient http.get url", "HttpClient", x)
 		}
-		panic("unimplemented")
 		y := args[0]
-		yv := y.BV()
-		placeholderArgs := make([]interface{}, 1)
-		fmt.Printf("args %q\n", args)
-		switch yv := yv.(type) {
-		case *goal.AB:
-			for i, x := range yv.Slice {
-				placeholderArgs[i] = x
-			}
-		case *goal.AI:
-			for i, x := range yv.Slice {
-				placeholderArgs[i] = x
-			}
-		case *goal.AV:
-			for i, x := range yv.Slice {
-				if x.IsI() {
-					placeholderArgs[i] = x.I()
-				}
-			}
-		case *goal.AS:
-			for i, x := range yv.Slice {
-				placeholderArgs[i] = x
-			}
-		}
+		url, ok := y.BV().(goal.S)
 		if !ok {
-			return panicType("squery sql.q sparams", "sparams", y)
+			return panicType("HttpClient http.get url", "url", y)
 		}
-		queryResult, err := modeSqlRunQuery(&ctx, string(sqlQuery), placeholderArgs)
+		resp, err := httpClient.client.R().Get(string(url))
 		if err != nil {
-			return goal.Errorf("%v", err)
+			fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+			// Continue
+			// error response built below, with
+			// "ok" as false
 		}
-		return queryResult
+		// Construct goal.V values for return dict
+		statusS := goal.NewS(resp.Status())
+		headers := resp.Header()
+		headerKeysSlice := make([]string, 0) // TODO Figure out why len(resp.Header()) wasn't correct
+		headerValuesSlice := make([]goal.V, 0)
+		for k, vs := range headers {
+			headerKeysSlice = append(headerKeysSlice, k)
+			valuesAS := goal.NewAS(vs)
+			headerValuesSlice = append(headerValuesSlice, valuesAS)
+		}
+		headerD := goal.NewD(goal.NewAS(headerKeysSlice), goal.NewAV(headerValuesSlice))
+		bodyS := goal.NewS(resp.String())
+		var isOk goal.V
+		if resp.IsSuccess() {
+			isOk = goal.NewI(1)
+		} else {
+			isOk = goal.NewI(0)
+		}
+		ks := goal.NewAS([]string{"status", "headers", "string", "ok"})
+		vs := goal.NewAV([]goal.V{statusS, headerD, bodyS, isOk})
+		return goal.NewD(ks, vs)
 	default:
 		return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
 	}
