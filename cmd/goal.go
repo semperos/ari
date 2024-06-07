@@ -162,7 +162,6 @@ var goalSyntax = map[string]string{
 	"try":            ".[",
 }
 
-// TODO See how hard it is to change the bubbline help prefix of "<match>:"
 var goalSyntaxHelp = map[string]string{
 	"'":  `f'x    each      #'(4 5;6 7 8) → 2 3` + "\n" + `x F'y  each      2 3#'4 5 → (4 4;5 5 5)      {(x;y;z)}'[1;2 3;4] → (1 2 4;1 3 4)` + "\n" + `x I'y  case      (6 7 8 9)0 1 0 1'"a""b""c""d" → 6 "b" 8 "d"` + "\n" + `I A'I  at each   m:3$!9;p:!2 2;(m').p → 0 1 3 4`,
 	"`":  "x F`" + `y  eachleft  1 2,` + "`" + `"a""b" → (1 "a" "b";2 "a" "b")           (same as F[;y]'x)`,

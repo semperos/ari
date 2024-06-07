@@ -4,8 +4,14 @@
 
 ## To Do
 
-- HTTP client (consider https://github.com/go-resty/resty)
-- Plots/charts (consider https://github.com/wcharczuk/go-chart)
+- IN PROGRESS: HTTP client
+- IN PROGRESS: SQL client
+- TODO: Plots/charts (consider https://github.com/wcharczuk/go-chart)
+
+## Ideas
+
+- Support Prolog https://github.com/ichiban/prolog?tab=readme-ov-file
+  - River Crossing or Learn Datalog Today as examples
 - API Explorer (possibly a project that relies on Ari, but not a part of Ari)
   - Stateful "current working directory" concept within entities of an API
   - Contextual command/function invocations (e.g., "ls" inside an epic lists stories/issues)

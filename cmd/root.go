@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"reflect"
 	"regexp"
 	"sort"
@@ -30,18 +31,18 @@ import (
 
 var cfgFile string
 
+// For now, we only support DuckDB
+const dbDriver = "duckdb"
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "ari",
 	Short: "ari - Array relational interactive environment",
 	Long: `ari is an interactive environment for array + relational programming.
 
-It embeds the Goal array programming language along with extensions for accessing
-DuckDB and SQLite for interacting with a local relational database.`,
+It embeds the Goal array programming language, with extensions for
+working with SQL and HTTP APIs.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// initDb()
-		// goalMain()
-		// cliMain()
 		replMain()
 	},
 }
@@ -54,7 +55,7 @@ const (
 	modeSqlEvalReadWrite
 )
 
-// TODO Support Prolog https://github.com/ichiban/prolog?tab=readme-ov-file
+// TODO Support Prolog https://github.com/ichiban/prolog?tab=readme-ov-file, try River Crossing or Learn Datalog Today examples
 const (
 	modeGoalPrompt             = "goal> "
 	modeGoalNextPrompt         = "    > "
@@ -64,30 +65,28 @@ const (
 	modeSqlReadWriteNextPrompt = "    > "
 )
 
-type Context struct {
+type AriContext struct {
 	editor      *bubbline.Editor
 	evalMode    evalMode
 	goalContext *goal.Context
-	sqlDb       *sql.DB
-	sqlDbConn   *sql.Conn
+	sqlDatabase *SqlDatabase
 }
 
-// See `replMain` for full initialization of this Context
-var ctx = Context{}
+// See `replMain` for full initialization of this Context.
+//
+// This is defined at the top level so that functions which have fixed signatures (e.g., those which are registered as backing definitions for Goal functions) can access it. Functions should still accept an AriContext directly where possible for better testing.
+var globalAriContext = AriContext{}
 
 func replMain() {
-	editorInitialize(&ctx)
-	modeGoalInitialize(&ctx)
-	modeSqlInitialize(&ctx, modeSqlEvalReadOnly)
-	// Goal is the default mode.
-	modeGoalSetReplDefaults(&ctx)
+	editorInitialize(&globalAriContext)
+	modeGoalInitialize(&globalAriContext)
+	modeGoalSetReplDefaults(&globalAriContext)
 
-	// Read-print loop starts here.
+	// REPL starts here
 	for {
-		line, err := ctx.editor.GetLine()
+		line, err := globalAriContext.editor.GetLine()
 		if err != nil {
 			if err == io.EOF {
-				// No more input.
 				break
 			}
 			if errors.Is(err, bubbline.ErrInterrupted) {
@@ -98,8 +97,8 @@ func replMain() {
 			}
 			continue
 		}
-		// Add to REPL history, even if not a legal expression
-		err = ctx.editor.AddHistory(line)
+		// Add to REPL history, even if not a legal expression (thus before we try to evaluate)
+		err = globalAriContext.editor.AddHistory(line)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to write REPL history, error: %v\n", err)
 		}
@@ -110,54 +109,53 @@ func replMain() {
 			systemCommand := cmdAndArgs[0]
 			switch systemCommand {
 			case ")goal":
-				modeSqlClose(&ctx) // NB: Include in every non-"sql" case
-				modeGoalSetReplDefaults(&ctx)
+				modeSqlClose(&globalAriContext) // NB: Include in every non-"sql" case
+				modeGoalSetReplDefaults(&globalAriContext)
 			case ")sql":
 				var mode evalMode
 				mode = modeSqlEvalReadOnly
-				modeSqlInitialize(&ctx, mode)
-				modeSqlSetReplDefaults(&ctx, mode)
+				modeSqlInitialize(&globalAriContext, mode)
+				modeSqlSetReplDefaults(&globalAriContext, mode)
 			case ")sql!":
 				var mode evalMode
 				mode = modeSqlEvalReadWrite
-				modeSqlInitialize(&ctx, mode)
-				modeSqlSetReplDefaults(&ctx, mode)
+				modeSqlInitialize(&globalAriContext, mode)
+				modeSqlSetReplDefaults(&globalAriContext, mode)
 			default:
 				fmt.Fprintf(os.Stderr, "Unsupported system command '%v'\n", systemCommand)
 			}
 			continue
 		}
 
-		// Future: Support user commands with ]
+		// Future: Consider user commands with ]
 
-		switch ctx.evalMode {
+		switch globalAriContext.evalMode {
 		case modeGoalEval:
-			value, err := ctx.goalContext.Eval(line)
+			value, err := globalAriContext.goalContext.Eval(line)
 			if err != nil {
 				fmt.Fprint(os.Stderr, err)
 			}
-			// Suppress printing the value when assigning values to variables.
-			if !ctx.goalContext.AssignedLast() {
-				fmt.Fprintln(os.Stdout, value.Sprint(ctx.goalContext, false))
+			// Suppress printing values for variable assignments
+			if !globalAriContext.goalContext.AssignedLast() {
+				fmt.Fprintln(os.Stdout, value.Sprint(globalAriContext.goalContext, false))
 			}
 
 		case modeSqlEvalReadOnly:
-			_, err := modeSqlRunQuery(&ctx, line, nil)
+			_, err := modeSqlRunQuery(&globalAriContext, line, nil)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
 			} else {
-				_, err := ctx.goalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
+				_, err := globalAriContext.goalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to print SQL query results via Goal evaluation: %v\n", err)
 				}
 			}
 		case modeSqlEvalReadWrite:
-			_, err := modeSqlRunExec(&ctx, line, nil)
+			_, err := modeSqlRunExec(&globalAriContext, line, nil)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
 			} else {
-				// Consider: Making this a table for consistency, but it's better as a dict.
-				_, err := ctx.goalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
+				_, err := globalAriContext.goalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Failed to print SQL exec results via Goal evaluation: %v\n", err)
 				}
@@ -166,77 +164,59 @@ func replMain() {
 	}
 }
 
-func editorInitialize(ctx *Context) {
+func editorInitialize(ariContext *AriContext) {
 	editor := bubbline.New()
 	editor.Placeholder = ""
 	editor.Reflow = func(x bool, y string, _ int) (bool, string, string) {
 		return editline.DefaultReflow(x, y, 80)
 	}
-	// TODO History file from configuration and configure history.
-	// TODO Separate history for each language mode (maybe a good idea?)
-	historyFile := ".ari.history"
+	historyFile := viper.GetString("history")
 	if err := editor.LoadHistory(historyFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load history, error: %v\n", err)
 	}
 	editor.SetAutoSaveHistory(historyFile, true)
 	editor.SetDebugEnabled(true)
 	editor.SetExternalEditorEnabled(true, "goal")
-	ctx.editor = editor
+	ariContext.editor = editor
 }
 
-func modeGoalInitialize(ctx *Context) {
-	// Goal
-	goalCtx := goal.NewContext()
-	goalCtx.Log = os.Stderr
-	goalRegisterVariadics(goalCtx)
-	// TODO Consider making this optional to load
-	_ = goalLoadExtendedPreamble(goalCtx)
-	ctx.goalContext = goalCtx
+func modeGoalInitialize(ariContext *AriContext) {
+	goalContext := goal.NewContext()
+	goalContext.Log = os.Stderr
+	goalRegisterVariadics(goalContext)
+	_ = goalLoadExtendedPreamble(goalContext)
+	ariContext.goalContext = goalContext
 }
 
-// Caller is expected to close both ctx.sqlDb and ctx.sqlDbConn
-func modeSqlInitialize(ctx *Context, evalMode evalMode) {
-	var exampleDbFile string
-	switch evalMode {
-	case modeSqlEvalReadOnly:
-		exampleDbFile = "/Users/dlg/dev/julia/work-product-data/work_2023.duckdb?access_mode=read_only"
-	case modeSqlEvalReadWrite:
-		exampleDbFile = "/Users/dlg/dev/julia/work-product-data/work_2023.duckdb"
+// Caller is expected to close everything
+func modeSqlInitialize(ariContext *AriContext, evalMode evalMode) {
+	dataSourceName := viper.GetString("database")
+	if evalMode == modeSqlEvalReadOnly && len(dataSourceName) != 0 {
+		// In-memory doesn't support read_only access
+		dataSourceName = dataSourceName + "?access_mode=read_only"
 	}
-	dbDriver := "duckdb"                         // TODO Configurable AND accept via system command args
-	db, err := sql.Open(dbDriver, exampleDbFile) // TODO Configurable // TODO FIXME
+	db, err := sql.Open(dbDriver, dataSourceName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to open in-memory %v database, error: %v", dbDriver, err) // TODO Include path if persistent
+		fmt.Fprintf(os.Stderr, "Failed to open database data source %v, error: %v\n", dataSourceName, err)
 	}
-	// defer db.Close()
-	conn, err := db.Conn(context.Background())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect to in-memory %v database, error: %v", dbDriver, err)
-	}
-	// defer conn.Close()
-	ctx.sqlDb = db
-	ctx.sqlDbConn = conn
+	// NB: No `defer db.Close()`, caller must close.
+	ariContext.sqlDatabase = &SqlDatabase{db, true}
 }
 
-func modeSqlClose(ctx *Context) {
-	if ctx.sqlDb != nil {
-		ctx.sqlDb.Close()
-	}
-	if ctx.sqlDbConn != nil {
-		ctx.sqlDbConn.Close()
+func modeSqlClose(ariContext *AriContext) {
+	if ariContext.sqlDatabase != nil {
+		ariContext.sqlDatabase.db.Close()
+		ariContext.sqlDatabase.isOpen = false
 	}
 }
 
-// TODO sql.sq for "statement query"
-// TODO sql.se for "statement execute"
-func modeSqlRunQuery(ctx *Context, sqlQuery string, args []any) (goal.V, error) {
+func sqlRunQuery(sqlDatabase *SqlDatabase, sqlQuery string, args []any) (goal.V, error) {
 	var rows *sql.Rows
 	var err error
-	// TODO Probably unnecessary
 	if len(args) > 0 {
-		rows, err = ctx.sqlDb.QueryContext(context.Background(), sqlQuery, args...)
+		rows, err = sqlDatabase.db.QueryContext(context.Background(), sqlQuery, args...)
 	} else {
-		rows, err = ctx.sqlDb.QueryContext(context.Background(), sqlQuery)
+		rows, err = sqlDatabase.db.QueryContext(context.Background(), sqlQuery)
 	}
 	if err != nil {
 		return goal.V{}, err
@@ -304,13 +284,27 @@ func modeSqlRunQuery(ctx *Context, sqlQuery string, args []any) (goal.V, error) 
 		dictVs[i] = goal.NewAV(slc)
 	}
 	goalD := goal.NewD(goal.NewAS(colNames), goal.NewAV(dictVs))
-	// Last result table as sql.t in Goal, to support switching eval mdoes:
-	ctx.goalContext.AssignGlobal("sql.t", goalD)
 	return goalD, nil
 }
 
-func modeSqlRunExec(ctx *Context, sqlQuery string, args []any) (goal.V, error) {
-	result, err := ctx.sqlDb.Exec(sqlQuery, args...)
+func modeSqlRunQuery(ariContext *AriContext, sqlQuery string, args []any) (goal.V, error) {
+	if ariContext.sqlDatabase == nil || !ariContext.sqlDatabase.isOpen {
+		modeSqlInitialize(ariContext, modeSqlEvalReadOnly)
+	}
+	goalD, err := sqlRunQuery(ariContext.sqlDatabase, sqlQuery, args)
+	if err != nil {
+		return goal.V{}, err
+	}
+	// Last result table as sql.t in Goal, to support switching eval mdoes:
+	ariContext.goalContext.AssignGlobal("sql.t", goalD)
+	return goalD, nil
+}
+
+func modeSqlRunExec(ariContext *AriContext, sqlQuery string, args []any) (goal.V, error) {
+	if ariContext.sqlDatabase == nil || !ariContext.sqlDatabase.isOpen {
+		modeSqlInitialize(ariContext, modeSqlEvalReadWrite)
+	}
+	result, err := ariContext.sqlDatabase.db.Exec(sqlQuery, args...)
 	if err != nil {
 		return goal.V{}, err
 	}
@@ -327,7 +321,7 @@ func modeSqlRunExec(ctx *Context, sqlQuery string, args []any) (goal.V, error) {
 	// vs := goal.NewAI([]int64{lastInsertId, rowsAffected})
 	vs := goal.NewAV([]goal.V{goal.NewAI([]int64{lastInsertId}), goal.NewAI([]int64{rowsAffected})})
 	goalD := goal.NewD(ks, vs)
-	ctx.goalContext.AssignGlobal("sql.t", goalD)
+	ariContext.goalContext.AssignGlobal("sql.t", goalD)
 	return goalD, nil
 }
 
@@ -336,56 +330,91 @@ func panicType(op, sym string, x goal.V) goal.V {
 	return goal.Panicf("%s : bad type %q in %s", op, x.Type(), sym)
 }
 
-// TODO Dyad for sql.e
-// TODO Consider whether a parallel set of these fns should be `cq` and `ce` for "connection query" and "connection execute" and accept a connection as an arg
-// Goal variadic function for SQL query
+type SqlDatabase struct {
+	db     *sql.DB
+	isOpen bool
+}
+
+// Append implements goal.BV.
+func (sqlDatabase *SqlDatabase) Append(ctx *goal.Context, dst []byte, compact bool) []byte {
+	return append(dst, fmt.Sprintf("<%v %#v>", sqlDatabase.Type(), sqlDatabase.db)...)
+}
+
+// LessT implements goal.BV.
+func (sqlDatabase *SqlDatabase) LessT(y goal.BV) bool {
+	// Goal falls back to ordering by type name,
+	// and there is no other reasonable way to order
+	// these HttpClient structs.
+	return sqlDatabase.Type() < y.Type()
+}
+
+// Matches implements goal.BV.
+func (sqlDatabase *SqlDatabase) Matches(y goal.BV) bool {
+	switch yv := y.(type) {
+	case *SqlDatabase:
+		return sqlDatabase.db == yv.db
+	default:
+		return false
+	}
+}
+
+// Type implements goal.BV.
+func (sqlDatabase *SqlDatabase) Type() string {
+	return "ari.SqlDatabase"
+}
+
+// Implements sql.open
+func VFSqlOpen(goalContext *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	dataSourceName, ok := x.BV().(goal.S)
+	switch len(args) {
+	case 1:
+		if !ok {
+			return panicType("sql.open s", "s", x)
+		}
+		dsn := string(dataSourceName)
+		if len(dsn) == 0 {
+			// Empty means use the value from config/CLI args
+			dsn = viper.GetString("database")
+		}
+		db, err := sql.Open(dbDriver, dsn)
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		sqlDb := SqlDatabase{db, true}
+		return goal.NewV(&sqlDb)
+	default:
+		return goal.NewPanic("sql.open : too many arguments")
+	}
+}
+
+// Implements sql.q
 func VFSqlQ(goalContext *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	sqlQuery, ok := x.BV().(goal.S)
 	switch len(args) {
 	case 1:
+		// Uses the database configured at the Ari level
 		if !ok {
 			return panicType("sql.q s", "s", x)
 		}
-		fmt.Printf("QUERY %q\n", string(sqlQuery))
-		queryResult, err := modeSqlRunQuery(&ctx, string(sqlQuery), nil)
+		queryResult, err := modeSqlRunQuery(&globalAriContext, string(sqlQuery), nil)
 		if err != nil {
 			return goal.Errorf("%v", err)
 		}
 		return queryResult
-	// TODO Figure out how to accept a universal array as the right argument.
 	case 2:
+		// Explicit database as first argument
+		sqlDatabase, ok := x.BV().(*SqlDatabase)
 		if !ok {
-			return panicType("squery sql.q sparams", "squery", x)
+			return panicType("ari.SqlDatabase sql.q s", "ari.SqlDatabase", x)
 		}
 		y := args[0]
-		yv := y.BV()
-		placeholderArgs := make([]interface{}, 1)
-		fmt.Printf("args %q\n", args)
-		switch yv := yv.(type) {
-		case *goal.AB:
-			for i, x := range yv.Slice {
-				placeholderArgs[i] = x
-			}
-		case *goal.AI:
-			for i, x := range yv.Slice {
-				placeholderArgs[i] = x
-			}
-		case *goal.AV:
-			for i, x := range yv.Slice {
-				if x.IsI() {
-					placeholderArgs[i] = x.I()
-				}
-			}
-		case *goal.AS:
-			for i, x := range yv.Slice {
-				placeholderArgs[i] = x
-			}
-		}
+		sqlQuery, ok := y.BV().(goal.S)
 		if !ok {
-			return panicType("squery sql.q sparams", "sparams", y)
+			return panicType("ari.SqlDatabase sql.q s", "s", y)
 		}
-		queryResult, err := modeSqlRunQuery(&ctx, string(sqlQuery), placeholderArgs)
+		queryResult, err := sqlRunQuery(sqlDatabase, string(sqlQuery), nil)
 		if err != nil {
 			return goal.Errorf("%v", err)
 		}
@@ -397,9 +426,6 @@ func VFSqlQ(goalContext *goal.Context, args []goal.V) goal.V {
 
 // HTTP via go-resty
 
-// TODO Research: What would a `reflect` Goal function/lib look like, to grab things like public struct fields on the Goal side?
-//
-//	https://go.dev/blog/laws-of-reflection
 type HttpClient struct {
 	client *resty.Client
 }
@@ -428,13 +454,12 @@ func (httpClient *HttpClient) Type() string {
 }
 
 // Append implements goal.BV
-func (httpClient *HttpClient) Append(ctx *goal.Context, dst []byte, compact bool) []byte {
+func (httpClient *HttpClient) Append(goalContext *goal.Context, dst []byte, compact bool) []byte {
 	// Go prints nil as `<nil>` so following suit.
-	return append(dst, fmt.Sprintf("<ari.HttpClient %#v>", httpClient.client)...)
+	return append(dst, fmt.Sprintf("<%v %#v>", httpClient.Type(), httpClient.client)...)
 }
 
 func newHttpClient(optionsD *goal.D) (*HttpClient, error) {
-	// TODO Support options that resty.Client supports
 	// [DONE] BaseURL               string
 	// [DONE] QueryParam            url.Values //  type Values map[string][]string
 	// [DONE] FormData              url.Values
@@ -725,7 +750,6 @@ func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
 }
 
 func VFHttpClient(goalContext *goal.Context, args []goal.V) goal.V {
-	// TODO Support dictionary argument with data that is transformed into options supported by resty.Client
 	x := args[len(args)-1]
 	clientOptions, ok := x.BV().(*goal.D)
 	switch len(args) {
@@ -739,7 +763,6 @@ func VFHttpClient(goalContext *goal.Context, args []goal.V) goal.V {
 		}
 		return goal.NewV(hc)
 	default:
-		// TODO Should probably not include prefix
 		return goal.NewPanic("http.client : too many arguments")
 	}
 }
@@ -766,7 +789,7 @@ func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
 		// Construct goal.V values for return dict
 		statusS := goal.NewS(resp.Status())
 		headers := resp.Header()
-		headerKeysSlice := make([]string, 0) // TODO Figure out why len(resp.Header()) wasn't correct
+		headerKeysSlice := make([]string, 0)
 		headerValuesSlice := make([]goal.V, 0)
 		for k, vs := range headers {
 			headerKeysSlice = append(headerKeysSlice, k)
@@ -804,7 +827,7 @@ func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
 		// Construct goal.V values for return dict
 		statusS := goal.NewS(resp.Status())
 		headers := resp.Header()
-		headerKeysSlice := make([]string, 0) // TODO Figure out why len(resp.Header()) wasn't correct
+		headerKeysSlice := make([]string, 0)
 		headerValuesSlice := make([]goal.V, 0)
 		for k, vs := range headers {
 			headerKeysSlice = append(headerKeysSlice, k)
@@ -828,28 +851,28 @@ func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
 }
 
 // When the REPL mode is switched to Goal, this resets the proper defaults.
-func modeGoalSetReplDefaults(ctx *Context) {
-	ctx.evalMode = modeGoalEval
-	ctx.editor.Prompt = modeGoalPrompt
-	ctx.editor.NextPrompt = modeGoalNextPrompt
-	ctx.editor.AutoComplete = modeGoalAutocompleteFn(ctx.goalContext)
-	ctx.editor.CheckInputComplete = nil // TODO Configurable
-	ctx.editor.SetExternalEditorEnabled(true, "goal")
+func modeGoalSetReplDefaults(ariContext *AriContext) {
+	ariContext.evalMode = modeGoalEval
+	ariContext.editor.Prompt = modeGoalPrompt
+	ariContext.editor.NextPrompt = modeGoalNextPrompt
+	ariContext.editor.AutoComplete = modeGoalAutocompleteFn(ariContext.goalContext)
+	ariContext.editor.CheckInputComplete = nil
+	ariContext.editor.SetExternalEditorEnabled(true, "goal")
 }
 
 // When the REPL mode is switched to SQL, this resets the proper defaults. Separate modes for read-only and read/write SQL evaluation.
-func modeSqlSetReplDefaults(ctx *Context, evalMode evalMode) {
-	ctx.evalMode = evalMode
-	ctx.editor.CheckInputComplete = modeSqlCheckInputComplete
-	ctx.editor.AutoComplete = modeSqlAutocomplete
-	ctx.editor.SetExternalEditorEnabled(true, "sql")
-	switch ctx.evalMode {
+func modeSqlSetReplDefaults(ariContext *AriContext, evalMode evalMode) {
+	ariContext.evalMode = evalMode
+	ariContext.editor.CheckInputComplete = modeSqlCheckInputComplete
+	ariContext.editor.AutoComplete = modeSqlAutocomplete
+	ariContext.editor.SetExternalEditorEnabled(true, "sql")
+	switch ariContext.evalMode {
 	case modeSqlEvalReadOnly:
-		ctx.editor.Prompt = modeSqlReadOnlyPrompt
-		ctx.editor.NextPrompt = modeSqlReadOnlyNextPrompt
+		ariContext.editor.Prompt = modeSqlReadOnlyPrompt
+		ariContext.editor.NextPrompt = modeSqlReadOnlyNextPrompt
 	case modeSqlEvalReadWrite:
-		ctx.editor.Prompt = modeSqlReadWritePrompt
-		ctx.editor.NextPrompt = modeSqlReadWriteNextPrompt
+		ariContext.editor.Prompt = modeSqlReadWritePrompt
+		ariContext.editor.NextPrompt = modeSqlReadWriteNextPrompt
 	}
 }
 
@@ -868,7 +891,7 @@ func modeSqlCheckInputComplete(v [][]rune, line, _ int) bool {
 	return false
 }
 
-func modeGoalAutocompleteFn(ctx *goal.Context) func(v [][]rune, line, col int) (msg string, completions editline.Completions) {
+func modeGoalAutocompleteFn(goalContext *goal.Context) func(v [][]rune, line, col int) (msg string, completions editline.Completions) {
 	goalNameRe := regexp.MustCompile(`[a-zA-Z\.]+`)
 	return func(v [][]rune, line, col int) (msg string, completions editline.Completions) {
 		candidatesPerCategory := map[string][]acEntry{}
@@ -885,7 +908,7 @@ func modeGoalAutocompleteFn(ctx *goal.Context) func(v [][]rune, line, col int) (
 			}
 			// msg = fmt.Sprintf("Matching %v", word)
 			lword := strings.ToLower(word)
-			goalGlobals := ctx.GlobalNames(nil)
+			goalGlobals := goalContext.GlobalNames(nil)
 			category := "Global"
 			for _, goalGlobal := range goalGlobals {
 				if strings.HasPrefix(strings.ToLower(goalGlobal), lword) {
@@ -898,7 +921,7 @@ func modeGoalAutocompleteFn(ctx *goal.Context) func(v [][]rune, line, col int) (
 					candidatesPerCategory[category] = append(candidatesPerCategory[category], acEntry{goalGlobal, help})
 				}
 			}
-			goalKeywords := goalKeywords(ctx)
+			goalKeywords := goalKeywords(goalContext)
 			category = "Keyword"
 			for _, goalKeyword := range goalKeywords {
 				if strings.HasPrefix(strings.ToLower(goalKeyword), lword) {
@@ -1011,13 +1034,14 @@ var acModeSystemCommandsKeys = func() []string {
 	return keys
 }()
 
-func goalRegisterVariadics(ctx *goal.Context) {
+func goalRegisterVariadics(goalContext *goal.Context) {
 	// From Goal itself
-	gos.Import(ctx, "")
+	gos.Import(goalContext, "")
 	// Ari
-	ctx.RegisterDyad("http.client", VFHttpClient)
-	ctx.RegisterDyad("http.get", VFHttpGet)
-	ctx.RegisterDyad("sql.q", VFSqlQ)
+	goalContext.RegisterDyad("http.client", VFHttpClient)
+	goalContext.RegisterDyad("http.get", VFHttpGet)
+	goalContext.RegisterDyad("sql.open", VFSqlOpen)
+	goalContext.RegisterDyad("sql.q", VFSqlQ)
 }
 
 // CLI (Cobra, Viper)
@@ -1038,11 +1062,33 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ari.yaml)")
+	home, err := os.UserHomeDir()
+	cobra.CheckErr(err)
+	cfgDir := path.Join(home, ".config", "ari")
+
+	defaultHistFile := path.Join(cfgDir, "ari-history.txt")
+	defaultCfgFile := path.Join(cfgDir, "ari-config.yaml")
+
+	// Config file has processing in initConfig outside of viper lifecycle, so it's a separate variable.
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", defaultCfgFile, "ari configuration")
+
+	// Everything else should go through viper for consistency.
+	pFlags := rootCmd.PersistentFlags()
+
+	flagNameHistory := "history"
+	flagNameDatabase := "database"
+
+	pFlags.String(flagNameHistory, defaultHistFile, "history of REPL entries")
+	pFlags.String(flagNameDatabase, "", "DuckDB database (default: in-memory)")
+
+	err = viper.BindPFlag(flagNameHistory, pFlags.Lookup(flagNameHistory))
+	cobra.CheckErr(err)
+	err = viper.BindPFlag(flagNameDatabase, pFlags.Lookup(flagNameDatabase))
+	cobra.CheckErr(err)
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
 
 func initConfig() {
@@ -1053,17 +1099,19 @@ func initConfig() {
 		// Find home directory.
 		home, err := os.UserHomeDir()
 		cobra.CheckErr(err)
+		cfgDir := path.Join(home, ".config", "ari")
+		err = os.MkdirAll(cfgDir, 0o755)
+		cobra.CheckErr(err)
 
-		// Search config in home directory with name ".ari" (without extension).
-		viper.AddConfigPath(home)
+		viper.AddConfigPath(cfgDir)
+		viper.SetConfigName("ari-config")
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".ari")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+		fmt.Fprintln(os.Stderr, "[INFO] Using config file:", viper.ConfigFileUsed())
 	}
 }
