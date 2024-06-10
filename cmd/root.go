@@ -55,7 +55,6 @@ const (
 	modeSqlEvalReadWrite
 )
 
-// TODO Support Prolog https://github.com/ichiban/prolog?tab=readme-ov-file, try River Crossing or Learn Datalog Today examples
 const (
 	modeGoalPrompt             = "goal> "
 	modeGoalNextPrompt         = "    > "
@@ -111,12 +110,12 @@ func replMain() {
 			case ")goal":
 				modeSqlClose(&globalAriContext) // NB: Include in every non-"sql" case
 				modeGoalSetReplDefaults(&globalAriContext)
-			case ")sql":
+			case ")sql": // TODO Accept data source name as argument
 				var mode evalMode
 				mode = modeSqlEvalReadOnly
 				modeSqlInitialize(&globalAriContext, mode)
 				modeSqlSetReplDefaults(&globalAriContext, mode)
-			case ")sql!":
+			case ")sql!": // TODO Accept data source name as argument
 				var mode evalMode
 				mode = modeSqlEvalReadWrite
 				modeSqlInitialize(&globalAriContext, mode)
@@ -384,7 +383,7 @@ func VFSqlOpen(goalContext *goal.Context, args []goal.V) goal.V {
 		sqlDb := SqlDatabase{db, true}
 		return goal.NewV(&sqlDb)
 	default:
-		return goal.NewPanic("sql.open : too many arguments")
+		return goal.Panicf("sql.open : too many arguments (%d), expects 1 argument", len(args))
 	}
 }
 
@@ -767,87 +766,264 @@ func VFHttpClient(goalContext *goal.Context, args []goal.V) goal.V {
 	}
 }
 
-func VFHttpGet(goalContext *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
-	switch len(args) {
-	case 1:
-		url, ok := x.BV().(goal.S)
-		if !ok {
-			return panicType("http.get s", "s", x)
+func VFHTTPMaker(method string) func(goalContext *goal.Context, args []goal.V) goal.V {
+	methodLower := strings.ToLower(method)
+	methodUpper := strings.ToUpper(method)
+	return func(goalContext *goal.Context, args []goal.V) goal.V {
+		x := args[len(args)-1]
+		switch len(args) {
+		case 1:
+			url, ok := x.BV().(goal.S)
+			if !ok {
+				return panicType(fmt.Sprintf("http.%s s", methodLower), "s", x)
+			}
+			httpClient, err := newHttpClient(&goal.D{})
+			if err != nil {
+				return goal.NewPanicError(err)
+			}
+			req := httpClient.client.R()
+			resp, err := req.Execute(methodUpper, string(url))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+				// Continue
+				// error response built below, with
+				// "ok" as false
+			}
+			// Construct goal.V values for return dict
+			return goalDictFromResponse(resp)
+		case 2:
+			var httpClient *HttpClient
+			switch clientOpts := x.BV().(type) {
+			case *HttpClient:
+				httpClient = clientOpts
+			case *goal.D:
+				var err error
+				httpClient, err = newHttpClient(clientOpts)
+				if err != nil {
+					return goal.NewPanicError(err)
+				}
+			default:
+				return goal.NewPanic(fmt.Sprintf("client http.%s url : client must be a dict or HttpClient instance, but received a %v: %v", methodLower, reflect.TypeOf(clientOpts), clientOpts))
+			}
+			y := args[0]
+			urlS, ok := y.BV().(goal.S)
+			if !ok {
+				return panicType(fmt.Sprintf("HttpClient http.%s url", methodLower), "url", y)
+			}
+			req := httpClient.client.R()
+			resp, err := req.Execute(methodUpper, string(urlS))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+				// Continue
+				// error response built below, with
+				// "ok" as false
+			}
+			return goalDictFromResponse(resp)
+		case 3:
+			var httpClient *HttpClient
+			switch clientOpts := x.BV().(type) {
+			case *HttpClient:
+				httpClient = clientOpts
+			case *goal.D:
+				var err error
+				httpClient, err = newHttpClient(clientOpts)
+				if err != nil {
+					return goal.NewPanicError(err)
+				}
+			default:
+				return goal.NewPanic(fmt.Sprintf("client http.%s url optionsDict : client must be a dict or HttpClient instance, but received a %v: %v", methodLower, reflect.TypeOf(clientOpts), clientOpts))
+			}
+			y := args[1]
+			urlS, ok := y.BV().(goal.S)
+			if !ok {
+				return panicType(fmt.Sprintf("HttpClient http.%s url", methodLower), "url", y)
+			}
+			z := args[0]
+			optionsD, ok := z.BV().(*goal.D)
+			if !ok {
+				return panicType(fmt.Sprintf("http.%s[HttpClient;url;optionsDict]", methodLower), "optionsDict", z)
+			}
+			req := httpClient.client.R()
+			req, err := augmentRequestWithOptions(req, optionsD)
+			if err != nil {
+				return goal.NewPanicError(err)
+			}
+			resp, err := req.Execute(methodUpper, string(urlS))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+				// Continue
+				// error response built below, with
+				// "ok" as false
+			}
+			return goalDictFromResponse(resp)
+		default:
+			return goal.Panicf("http.%s : too many arguments (%d), expects 1, 2, or 3 arguments", methodLower, len(args))
 		}
-		httpClient, err := newHttpClient(&goal.D{})
-		if err != nil {
-			return goal.NewPanicError(err)
-		}
-		resp, err := httpClient.client.R().Get(string(url))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
-			// Continue
-			// error response built below, with
-			// "ok" as false
-		}
-		// Construct goal.V values for return dict
-		statusS := goal.NewS(resp.Status())
-		headers := resp.Header()
-		headerKeysSlice := make([]string, 0)
-		headerValuesSlice := make([]goal.V, 0)
-		for k, vs := range headers {
-			headerKeysSlice = append(headerKeysSlice, k)
-			valuesAS := goal.NewAS(vs)
-			headerValuesSlice = append(headerValuesSlice, valuesAS)
-		}
-		headerD := goal.NewD(goal.NewAS(headerKeysSlice), goal.NewAV(headerValuesSlice))
-		bodyS := goal.NewS(resp.String())
-		var isOk goal.V
-		if resp.IsSuccess() {
-			isOk = goal.NewI(1)
-		} else {
-			isOk = goal.NewI(0)
-		}
-		ks := goal.NewAS([]string{"status", "headers", "string", "ok"})
-		vs := goal.NewAV([]goal.V{statusS, headerD, bodyS, isOk})
-		return goal.NewD(ks, vs)
-	case 2:
-		httpClient, ok := x.BV().(*HttpClient)
-		if !ok {
-			return panicType("HttpClient http.get url", "HttpClient", x)
-		}
-		y := args[0]
-		url, ok := y.BV().(goal.S)
-		if !ok {
-			return panicType("HttpClient http.get url", "url", y)
-		}
-		resp, err := httpClient.client.R().Get(string(url))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
-			// Continue
-			// error response built below, with
-			// "ok" as false
-		}
-		// Construct goal.V values for return dict
-		statusS := goal.NewS(resp.Status())
-		headers := resp.Header()
-		headerKeysSlice := make([]string, 0)
-		headerValuesSlice := make([]goal.V, 0)
-		for k, vs := range headers {
-			headerKeysSlice = append(headerKeysSlice, k)
-			valuesAS := goal.NewAS(vs)
-			headerValuesSlice = append(headerValuesSlice, valuesAS)
-		}
-		headerD := goal.NewD(goal.NewAS(headerKeysSlice), goal.NewAV(headerValuesSlice))
-		bodyS := goal.NewS(resp.String())
-		var isOk goal.V
-		if resp.IsSuccess() {
-			isOk = goal.NewI(1)
-		} else {
-			isOk = goal.NewI(0)
-		}
-		ks := goal.NewAS([]string{"status", "headers", "string", "ok"})
-		vs := goal.NewAV([]goal.V{statusS, headerD, bodyS, isOk})
-		return goal.NewD(ks, vs)
-	default:
-		return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
 	}
+}
+
+func goalDictFromResponse(resp *resty.Response) goal.V {
+	statusS := goal.NewS(resp.Status())
+	headers := resp.Header()
+	headerKeysSlice := make([]string, 0)
+	headerValuesSlice := make([]goal.V, 0)
+	for k, vs := range headers {
+		headerKeysSlice = append(headerKeysSlice, k)
+		valuesAS := goal.NewAS(vs)
+		headerValuesSlice = append(headerValuesSlice, valuesAS)
+	}
+	headerD := goal.NewD(goal.NewAS(headerKeysSlice), goal.NewAV(headerValuesSlice))
+	bodyS := goal.NewS(resp.String())
+	var isOk goal.V
+	if resp.IsSuccess() {
+		isOk = goal.NewI(1)
+	} else {
+		isOk = goal.NewI(0)
+	}
+	ks := goal.NewAS([]string{"status", "headers", "string", "ok"})
+	vs := goal.NewAV([]goal.V{statusS, headerD, bodyS, isOk})
+	// TODO Consider whether this should be a pointer.
+	return goal.NewD(ks, vs)
+}
+
+func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D) (*resty.Request, error) {
+	optionsKeys := optionsD.KeyArray()
+	optionsValues := optionsD.ValueArray()
+	switch kas := optionsKeys.(type) {
+	case (*goal.AS):
+		for i, k := range kas.Slice {
+			value := optionsValues.At(i)
+			switch k {
+			case "QueryParam":
+				switch goalV := value.BV().(type) {
+				case (*goal.D):
+					queryParamKeys := goalV.KeyArray()
+					queryParamValues := goalV.ValueArray()
+					switch qpks := queryParamKeys.(type) {
+					case (*goal.AS):
+						urlValues := make(url.Values, qpks.Len())
+						for qpvi := 0; qpvi < queryParamValues.Len(); qpvi++ {
+							for i, hk := range qpks.Slice {
+								queryParamValue := queryParamValues.At(i)
+								switch hv := queryParamValue.BV().(type) {
+								case (goal.S):
+									urlValues.Add(hk, string(hv))
+								case (*goal.AS):
+									for _, w := range hv.Slice {
+										urlValues.Add(hk, w)
+									}
+								default:
+									return nil, fmt.Errorf("http.client expects \"QueryParam\" to be a dictionary with values that are strings or lists of strings, but received a %v: %v\n", reflect.TypeOf(hv), hv)
+								}
+							}
+						}
+						req.QueryParam = urlValues
+					default:
+						return nil, fmt.Errorf("http.client expects \"QueryParam\" to be a dictionary with string keys, but received a %v: %v\n", reflect.TypeOf(qpks), qpks)
+					}
+				default:
+					return nil, fmt.Errorf("http.client expects \"QueryParam\" to be a dictionary, but received a %v: %v\n", reflect.TypeOf(value), value)
+				}
+			case "FormData":
+				switch goalV := value.BV().(type) {
+				case (*goal.D):
+					formDataKeys := goalV.KeyArray()
+					formDataValues := goalV.ValueArray()
+					switch fdks := formDataKeys.(type) {
+					case (*goal.AS):
+						urlValues := make(url.Values, fdks.Len())
+						for hvi := 0; hvi < formDataValues.Len(); hvi++ {
+							for i, hk := range fdks.Slice {
+								formDataValue := formDataValues.At(i)
+								switch hv := formDataValue.BV().(type) {
+								case (goal.S):
+									urlValues.Add(hk, string(hv))
+								case (*goal.AS):
+									for _, w := range hv.Slice {
+										urlValues.Add(hk, w)
+									}
+								default:
+									return nil, fmt.Errorf("http.client expects \"FormData\" to be a dictionary with values that are strings or lists of strings, but received a %v: %v\n", reflect.TypeOf(hv), hv)
+								}
+							}
+						}
+						req.FormData = urlValues
+					default:
+						return nil, fmt.Errorf("http.client expects \"FormData\" to be a dictionary with string keys, but received a %v: %v\n", reflect.TypeOf(fdks), fdks)
+					}
+				default:
+					return nil, fmt.Errorf("http.client expects \"FormData\" to be a dictionary, but received a %v: %v\n", reflect.TypeOf(value), value)
+				}
+			case "Header":
+				switch goalV := value.BV().(type) {
+				case (*goal.D):
+					headerKeys := goalV.KeyArray()
+					headerValues := goalV.ValueArray()
+					switch hks := headerKeys.(type) {
+					case (*goal.AS):
+						hd := make(http.Header, hks.Len())
+						for hvi := 0; hvi < headerValues.Len(); hvi++ {
+							for i, hk := range hks.Slice {
+								headerValue := headerValues.At(i)
+								switch hv := headerValue.BV().(type) {
+								case (goal.S):
+									hd.Add(hk, string(hv))
+								case (*goal.AS):
+									for _, w := range hv.Slice {
+										hd.Add(hk, w)
+									}
+								default:
+									return nil, fmt.Errorf("http.client expects \"Header\" to be a dictionary with values that are strings or lists of strings, but received a %v: %v\n", reflect.TypeOf(hv), hv)
+								}
+							}
+						}
+						req.Header = hd
+					default:
+						return nil, fmt.Errorf("http.client expects \"Header\" to be a dictionary with string keys, but received a %v: %v\n", reflect.TypeOf(hks), hks)
+					}
+				default:
+					return nil, fmt.Errorf("http.client expects \"Header\" to be a dictionary, but received a %v: %v\n", reflect.TypeOf(value), value)
+				}
+			case "Cookies":
+				panic("not yet implemented")
+			case "PathParams":
+				switch goalV := value.BV().(type) {
+				case *goal.D:
+					pathParams, err := stringMapFromGoalDict(goalV)
+					if err != nil {
+						return nil, err
+					}
+					req.PathParams = pathParams
+				default:
+					return nil, fmt.Errorf("http.client expects \"PathParams\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
+				}
+			case "RawPathParams":
+				switch goalV := value.BV().(type) {
+				case *goal.D:
+					pathParams, err := stringMapFromGoalDict(goalV)
+					if err != nil {
+						return nil, err
+					}
+					req.RawPathParams = pathParams
+				default:
+					return nil, fmt.Errorf("http.client expects \"RawPathParams\" to be a string, but received a %v: %v\n", reflect.TypeOf(value), value)
+				}
+			case "Debug":
+				if value.IsTrue() {
+					req.Debug = true
+				} else if value.IsFalse() {
+					req.Debug = false
+				} else {
+					return nil, fmt.Errorf("http.client expects \"Debug\" to be 0 or 1, but received a %v: %v\n", reflect.TypeOf(value), value)
+				}
+			default:
+				return nil, fmt.Errorf("Unsupported resty.Request option: %v\n", k)
+			}
+		}
+	default:
+		return nil, fmt.Errorf("http.client expects a Goal dictionary with string keys, but received a %v: %v\n", reflect.TypeOf(kas), kas)
+	}
+	return req, nil
 }
 
 // When the REPL mode is switched to Goal, this resets the proper defaults.
@@ -1039,7 +1215,13 @@ func goalRegisterVariadics(goalContext *goal.Context) {
 	gos.Import(goalContext, "")
 	// Ari
 	goalContext.RegisterDyad("http.client", VFHttpClient)
-	goalContext.RegisterDyad("http.get", VFHttpGet)
+	goalContext.RegisterDyad("http.get", VFHTTPMaker("GET"))
+	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
+	goalContext.RegisterDyad("http.put", VFHTTPMaker("PUT"))
+	goalContext.RegisterDyad("http.delete", VFHTTPMaker("DELETE"))
+	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
+	goalContext.RegisterDyad("http.head", VFHTTPMaker("HEAD"))
+	goalContext.RegisterDyad("http.options", VFHTTPMaker("OPTIONS"))
 	goalContext.RegisterDyad("sql.open", VFSqlOpen)
 	goalContext.RegisterDyad("sql.q", VFSqlQ)
 }
