@@ -1,8 +1,6 @@
-package cmd
+package ari
 
 import (
-	"fmt"
-	"os"
 	"sort"
 
 	"codeberg.org/anaseto/goal"
@@ -10,15 +8,15 @@ import (
 
 var goalKeywordsFromCtx []string
 
-func goalKeywords(ctx *goal.Context) []string {
+func GoalKeywords(goalContext *goal.Context) []string {
 	if goalKeywordsFromCtx == nil {
-		goalKeywordsFromCtx = ctx.Keywords(nil)
+		goalKeywordsFromCtx = goalContext.Keywords(nil)
 		sort.Strings(goalKeywordsFromCtx)
 	}
 	return goalKeywordsFromCtx
 }
 
-var goalSyntax = map[string]string{
+var GoalSyntax = map[string]string{
 	"each":           "'",
 	"eachleft":       "`", // this is ASCII, but for completeness and less surprise
 	"eachright":      "´",
@@ -162,7 +160,7 @@ var goalSyntax = map[string]string{
 	"try":            ".[",
 }
 
-var goalSyntaxHelp = map[string]string{
+var GoalSyntaxHelp = map[string]string{
 	"'":  `f'x    each      #'(4 5;6 7 8) → 2 3` + "\n" + `x F'y  each      2 3#'4 5 → (4 4;5 5 5)      {(x;y;z)}'[1;2 3;4] → (1 2 4;1 3 4)` + "\n" + `x I'y  case      (6 7 8 9)0 1 0 1'"a""b""c""d" → 6 "b" 8 "d"` + "\n" + `I A'I  at each   m:3$!9;p:!2 2;(m').p → 0 1 3 4`,
 	"`":  "x F`" + `y  eachleft  1 2,` + "`" + `"a""b" → (1 "a" "b";2 "a" "b")           (same as F[;y]'x)`,
 	"´":  `x F` + "´y  eachright 1 2,´" + `"a""b" → (1 2 "a";1 2 "b")               (same as F[x;]'y)`,
@@ -196,13 +194,13 @@ var goalSyntaxHelp = map[string]string{
 	".[": `.[X;y;f]    deep amend  .[(6 7;8 9);0 1;-] → (6 -7;8 9)` + "\n" + `.[X;y;F;z]  deep amend  .[(6 7;8 9);(0 1 0;1);+;10] → (6 27;8 19)` + "\n" + `                        .[(6 7;8 9);(*;1);:;42] → (6 42;8 42)` + "\n" + `.[f;x;f]    try         .[+;2 3;{"msg"}] → 5          .[+;2 "a";{"msg"}] → "msg"`,
 }
 
-var goalGlobalsHelp = map[string]string{
+var GoalGlobalsHelp = map[string]string{
 	"STDERR": "standard error filehandle (buffered)",
 	"STDIN":  "standard input filehandle (buffered)",
 	"STDOUT": "standard output filehandle (buffered)",
 }
 
-var goalKeywordsHelp = map[string]string{
+var GoalKeywordsHelp = map[string]string{
 	"abs":     "abs n    abs -3.0 -1.5 2.0 → 3.0 1.5 2.0",
 	"and":     "and[1;2] → 2    and[1;0;3] → 0",
 	"atan":    "atan[n;n]",
@@ -258,12 +256,12 @@ var goalKeywordsHelp = map[string]string{
 
 // Goal Preamble in Goal
 
-func goalLoadExtendedPreamble(ctx *goal.Context) goal.V {
-	val, err := ctx.Eval(goalFmtSource)
+func goalLoadExtendedPreamble(ctx *goal.Context) error {
+	_, err := ctx.Eval(goalFmtSource)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load Goal fmt code, error: %v", err)
+		return err
 	}
-	return val
+	return nil
 }
 
 const goalFmtSource = `
