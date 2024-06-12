@@ -24,7 +24,7 @@ import (
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "ari",
 	Short: "ari - Array relational interactive environment",
@@ -32,7 +32,7 @@ var rootCmd = &cobra.Command{
 
 It embeds the Goal array programming language, with extensions for
 working with SQL and HTTP APIs.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		replMain()
 	},
 }
@@ -41,17 +41,17 @@ type cliEvalMode int
 
 const (
 	cliModeGoalEval = iota
-	cliModeSqlEvalReadOnly
-	cliModeSqlEvalReadWrite
+	cliModeSQLEvalReadOnly
+	cliModeSQLEvalReadWrite
 )
 
 const (
 	cliModeGoalPrompt             = "goal> "
 	cliModeGoalNextPrompt         = "    > "
-	cliModeSqlReadOnlyPrompt      = "sql> "
-	cliModeSqlReadOnlyNextPrompt  = "   > "
-	cliModeSqlReadWritePrompt     = "sql!> "
-	cliModeSqlReadWriteNextPrompt = "    > "
+	cliModeSQLReadOnlyPrompt      = "sql> "
+	cliModeSQLReadOnlyNextPrompt  = "   > "
+	cliModeSQLReadWritePrompt     = "sql!> "
+	cliModeSQLReadWriteNextPrompt = "    > "
 )
 
 type CliContext struct {
@@ -60,34 +60,33 @@ type CliContext struct {
 	ariContext  *ari.Context
 }
 
-var cliContext CliContext
-
 func replMain() {
-	cliEditorInitialize(&cliContext)
+	mainCliContext := CliContext{}
+	cliEditorInitialize(&mainCliContext)
 	err := ari.ContextInitGoal(&ari.GlobalContext)
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
-	cliContext.ariContext = &ari.GlobalContext
-	cliModeGoalSetReplDefaults(&cliContext)
+	mainCliContext.ariContext = &ari.GlobalContext
+	cliModeGoalSetReplDefaults(&mainCliContext)
 
 	// REPL starts here
 	for {
-		line, err := cliContext.cliEditor.GetLine()
+		line, err := mainCliContext.cliEditor.GetLine()
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			if errors.Is(err, bubbline.ErrInterrupted) {
 				// Entered Ctrl+C to cancel input.
-				fmt.Println("^C")
+				fmt.Fprintln(os.Stdout, "^C")
 			} else {
-				fmt.Println("error:", err)
+				fmt.Fprintln(os.Stderr, "error:", err)
 			}
 			continue
 		}
 		// Add to REPL history, even if not a legal expression (thus before we try to evaluate)
-		err = cliContext.cliEditor.AddHistory(line)
+		err = mainCliContext.cliEditor.AddHistory(line)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to write REPL history, error: %v\n", err)
 		}
@@ -98,24 +97,24 @@ func replMain() {
 			systemCommand := cmdAndArgs[0]
 			switch systemCommand {
 			case ")goal":
-				cliModeSqlClose(&cliContext) // NB: Include in every non-"sql" case
-				cliModeGoalSetReplDefaults(&cliContext)
+				cliModeSQLClose(&mainCliContext) // NB: Include in every non-"sql" case
+				cliModeGoalSetReplDefaults(&mainCliContext)
 			case ")sql": // TODO Accept data source name as argument
 				var mode cliEvalMode
-				mode = cliModeSqlEvalReadOnly
-				err := cliModeSqlInitialize(&cliContext, mode)
+				mode = cliModeSQLEvalReadOnly
+				err := cliModeSQLInitialize(&mainCliContext, mode)
 				if err != nil {
 					log.Fatalf("%v", err)
 				}
-				cliModeSqlSetReplDefaults(&cliContext, mode)
+				cliModeSQLSetReplDefaults(&mainCliContext, mode)
 			case ")sql!": // TODO Accept data source name as argument
 				var mode cliEvalMode
-				mode = cliModeSqlEvalReadWrite
-				err := cliModeSqlInitialize(&cliContext, mode)
+				mode = cliModeSQLEvalReadWrite
+				err := cliModeSQLInitialize(&mainCliContext, mode)
 				if err != nil {
 					log.Fatalf("%v", err)
 				}
-				cliModeSqlSetReplDefaults(&cliContext, mode)
+				cliModeSQLSetReplDefaults(&mainCliContext, mode)
 			default:
 				fmt.Fprintf(os.Stderr, "Unsupported system command '%v'\n", systemCommand)
 			}
@@ -124,20 +123,20 @@ func replMain() {
 
 		// Future: Consider user commands with ]
 
-		goalContext := cliContext.ariContext.GoalContext
+		goalContext := mainCliContext.ariContext.GoalContext
 
-		switch cliContext.cliEvalMode {
+		switch mainCliContext.cliEvalMode {
 		case cliModeGoalEval:
 			value, err := goalContext.Eval(line)
 			if err != nil {
 				fmt.Fprint(os.Stderr, err)
 			}
 			// Suppress printing values for variable assignments
-			if !cliContext.ariContext.GoalContext.AssignedLast() {
+			if !mainCliContext.ariContext.GoalContext.AssignedLast() {
 				fmt.Fprintln(os.Stdout, value.Sprint(goalContext, false))
 			}
-		case cliModeSqlEvalReadOnly:
-			_, err := cliModeSqlRunQuery(&cliContext, line, nil)
+		case cliModeSQLEvalReadOnly:
+			_, err := cliModeSQLRunQuery(&mainCliContext, line, nil)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
 			} else {
@@ -146,8 +145,8 @@ func replMain() {
 					fmt.Fprintf(os.Stderr, "Failed to print SQL query results via Goal evaluation: %v\n", err)
 				}
 			}
-		case cliModeSqlEvalReadWrite:
-			_, err := cliModeSqlRunExec(&cliContext, line, nil)
+		case cliModeSQLEvalReadWrite:
+			_, err := cliModeSQLRunExec(&mainCliContext, line, nil)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
 			} else {
@@ -160,11 +159,13 @@ func replMain() {
 	}
 }
 
+const cliDefaultReflowWidth = 80
+
 func cliEditorInitialize(cliContext *CliContext) {
 	editor := bubbline.New()
 	editor.Placeholder = ""
 	editor.Reflow = func(x bool, y string, _ int) (bool, string, string) {
-		return editline.DefaultReflow(x, y, 80)
+		return editline.DefaultReflow(x, y, cliDefaultReflowWidth)
 	}
 	historyFile := viper.GetString("history")
 	if err := editor.LoadHistory(historyFile); err != nil {
@@ -176,34 +177,37 @@ func cliEditorInitialize(cliContext *CliContext) {
 	cliContext.cliEditor = editor
 }
 
-// Caller is expected to close everything
-func cliModeSqlInitialize(cliContext *CliContext, evalMode cliEvalMode) error {
+// Caller is expected to close everything.
+func cliModeSQLInitialize(_ *CliContext, evalMode cliEvalMode) error {
 	dataSourceName := viper.GetString("database")
-	if evalMode == cliModeSqlEvalReadOnly && len(dataSourceName) != 0 {
+	if evalMode == cliModeSQLEvalReadOnly && len(dataSourceName) != 0 {
 		// In-memory doesn't support read_only access
-		dataSourceName = dataSourceName + "?access_mode=read_only"
+		dataSourceName += "?access_mode=read_only"
 	}
-	err := ari.ContextInitSql(&ari.GlobalContext, dataSourceName)
+	err := ari.ContextInitSQL(&ari.GlobalContext, dataSourceName)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func cliModeSqlClose(cliContext *CliContext) {
-	sqlDatabase := cliContext.ariContext.SqlDatabase
+func cliModeSQLClose(cliContext *CliContext) {
+	sqlDatabase := cliContext.ariContext.SQLDatabase
 	if sqlDatabase != nil {
 		sqlDatabase.DB.Close()
 		sqlDatabase.IsOpen = false
 	}
 }
 
-func cliModeSqlRunQuery(cliContext *CliContext, sqlQuery string, args []any) (goal.V, error) {
-	sqlDatabase := cliContext.ariContext.SqlDatabase
+func cliModeSQLRunQuery(cliContext *CliContext, sqlQuery string, args []any) (goal.V, error) {
+	sqlDatabase := cliContext.ariContext.SQLDatabase
 	if sqlDatabase == nil || !sqlDatabase.IsOpen {
-		cliModeSqlInitialize(cliContext, cliModeSqlEvalReadOnly)
+		err := cliModeSQLInitialize(cliContext, cliModeSQLEvalReadOnly)
+		if err != nil {
+			return goal.V{}, err
+		}
 	}
-	goalD, err := ari.SqlQueryContext(sqlDatabase, sqlQuery, args)
+	goalD, err := ari.SQLQueryContext(sqlDatabase, sqlQuery, args)
 	if err != nil {
 		return goal.V{}, err
 	}
@@ -212,12 +216,15 @@ func cliModeSqlRunQuery(cliContext *CliContext, sqlQuery string, args []any) (go
 	return goalD, nil
 }
 
-func cliModeSqlRunExec(cliContext *CliContext, sqlQuery string, args []any) (goal.V, error) {
-	sqlDatabase := cliContext.ariContext.SqlDatabase
+func cliModeSQLRunExec(cliContext *CliContext, sqlQuery string, args []any) (goal.V, error) {
+	sqlDatabase := cliContext.ariContext.SQLDatabase
 	if sqlDatabase == nil || !sqlDatabase.IsOpen {
-		cliModeSqlInitialize(cliContext, cliModeSqlEvalReadOnly)
+		err := cliModeSQLInitialize(cliContext, cliModeSQLEvalReadOnly)
+		if err != nil {
+			return goal.V{}, err
+		}
 	}
-	goalD, err := ari.SqlExec(sqlDatabase, sqlQuery, args)
+	goalD, err := ari.SQLExec(sqlDatabase, sqlQuery, args)
 	if err != nil {
 		return goal.V{}, err
 	}
@@ -235,19 +242,19 @@ func cliModeGoalSetReplDefaults(cliContext *CliContext) {
 	cliContext.cliEditor.SetExternalEditorEnabled(true, "goal")
 }
 
-// When the REPL mode is switched to SQL, this resets the proper defaults. Separate modes for read-only and read/write SQL evaluation.
-func cliModeSqlSetReplDefaults(cliContext *CliContext, evalMode cliEvalMode) {
+// When the REPL mode is switched to SQL, this resets the proper defaults.
+func cliModeSQLSetReplDefaults(cliContext *CliContext, evalMode cliEvalMode) {
 	cliContext.cliEvalMode = evalMode
-	cliContext.cliEditor.CheckInputComplete = modeSqlCheckInputComplete
-	cliContext.cliEditor.AutoComplete = modeSqlAutocomplete
+	cliContext.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
+	cliContext.cliEditor.AutoComplete = modeSQLAutocomplete
 	cliContext.cliEditor.SetExternalEditorEnabled(true, "sql")
 	switch cliContext.cliEvalMode {
-	case cliModeSqlEvalReadOnly:
-		cliContext.cliEditor.Prompt = cliModeSqlReadOnlyPrompt
-		cliContext.cliEditor.NextPrompt = cliModeSqlReadOnlyNextPrompt
-	case cliModeSqlEvalReadWrite:
-		cliContext.cliEditor.Prompt = cliModeSqlReadWritePrompt
-		cliContext.cliEditor.NextPrompt = cliModeSqlReadWriteNextPrompt
+	case cliModeSQLEvalReadOnly:
+		cliContext.cliEditor.Prompt = cliModeSQLReadOnlyPrompt
+		cliContext.cliEditor.NextPrompt = cliModeSQLReadOnlyNextPrompt
+	case cliModeSQLEvalReadWrite:
+		cliContext.cliEditor.Prompt = cliModeSQLReadWritePrompt
+		cliContext.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
 	}
 }
 
@@ -255,20 +262,20 @@ func matchesSystemCommand(s string) bool {
 	return strings.HasPrefix(s, ")")
 }
 
-func modeSqlCheckInputComplete(v [][]rune, line, _ int) bool {
+func modeSQLCheckInputComplete(v [][]rune, line, _ int) bool {
 	if len(v) == 1 && matchesSystemCommand(string(v[0])) {
 		return true
 	}
 	if line == len(v)-1 && // Enter on last row.
-		strings.HasSuffix(string(v[len(v)-1]), ";") { // Semicolon at end of last row.
+		strings.HasSuffix(string(v[len(v)-1]), ";") { // Semicolon at end of last row.;
 		return true
 	}
 	return false
 }
 
-func modeGoalAutocompleteFn(goalContext *goal.Context) func(v [][]rune, line, col int) (msg string, completions editline.Completions) {
+func modeGoalAutocompleteFn(goalContext *goal.Context) func(v [][]rune, line, col int) (string, editline.Completions) {
 	goalNameRe := regexp.MustCompile(`[a-zA-Z\.]+`)
-	return func(v [][]rune, line, col int) (msg string, completions editline.Completions) {
+	return func(v [][]rune, line, col int) (string, editline.Completions) {
 		candidatesPerCategory := map[string][]acEntry{}
 		word, start, end := computil.FindWord(v, line, col)
 		// N.B. Matching system commands must come first.
@@ -327,11 +334,12 @@ func modeGoalAutocompleteFn(goalContext *goal.Context) func(v [][]rune, line, co
 			}
 		}
 		// msg = fmt.Sprintf("Type is %v")
-		completions = &multiComplete{
+		completions := &multiComplete{
 			Values:     complete.MapValues(candidatesPerCategory, nil),
 			moveRight:  end - col,
 			deleteLeft: end - start,
 		}
+		msg := ""
 		return msg, completions
 	}
 }
@@ -348,23 +356,24 @@ func (e acEntry) Description() string {
 	return "\n" + e.description
 }
 
-func modeSqlAutocomplete(v [][]rune, line, col int) (msg string, completions editline.Completions) {
+func modeSQLAutocomplete(v [][]rune, line, col int) (string, editline.Completions) {
 	word, wstart, wend := computil.FindWord(v, line, col)
 	// msg = fmt.Sprintf("Matching '%v'", word)
 	candidatesPerCategory := map[string][]acEntry{}
 	lword := strings.ToLower(word)
 	// N.B. Matching system commands must come first.
 	acSystemCommandCandidates(lword, candidatesPerCategory)
-	for _, sqlWord := range acSqlKeywords {
+	for _, sqlWord := range acSQLKeywords {
 		if strings.HasPrefix(strings.ToLower(sqlWord), lword) {
 			candidatesPerCategory["sql"] = append(candidatesPerCategory["sql"], acEntry{sqlWord, "SQL help"})
 		}
 	}
-	completions = &multiComplete{
+	completions := &multiComplete{
 		Values:     complete.MapValues(candidatesPerCategory, nil),
 		moveRight:  wend - col,
 		deleteLeft: wend - wstart,
 	}
+	msg := ""
 	return msg, completions
 }
 
@@ -401,7 +410,7 @@ var acModeSystemCommands = map[string]string{
 }
 
 var acModeSystemCommandsKeys = func() []string {
-	keys := make([]string, len(acModeSystemCommands))
+	keys := make([]string, 0, len(acModeSystemCommands))
 	for k := range acModeSystemCommands {
 		keys = append(keys, k)
 	}

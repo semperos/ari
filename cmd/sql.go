@@ -3,7 +3,7 @@ package cmd
 import "sort"
 
 // From https://en.wikipedia.org/wiki/List_of_SQL_reserved_words
-var acSqlKeywords = func() []string {
+var acSQLKeywords = func() []string {
 	s := []string{
 		"ABORT",
 		"ABORTSESSION",

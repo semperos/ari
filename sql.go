@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"os"
 	"reflect"
 	"time"
 
@@ -12,22 +13,21 @@ import (
 	"github.com/spf13/viper"
 )
 
-type SqlDatabase struct {
+type SQLDatabase struct {
 	DataSource string
 	DB         *sql.DB
 	IsOpen     bool
 }
 
-// For now, we only support DuckDB
 const dbDriver = "duckdb"
 
 // Append implements goal.BV.
-func (sqlDatabase *SqlDatabase) Append(ctx *goal.Context, dst []byte, compact bool) []byte {
+func (sqlDatabase *SQLDatabase) Append(_ *goal.Context, dst []byte, _ bool) []byte {
 	return append(dst, fmt.Sprintf("<%v %#v>", sqlDatabase.Type(), sqlDatabase.DB)...)
 }
 
 // LessT implements goal.BV.
-func (sqlDatabase *SqlDatabase) LessT(y goal.BV) bool {
+func (sqlDatabase *SQLDatabase) LessT(y goal.BV) bool {
 	// Goal falls back to ordering by type name,
 	// and there is no other reasonable way to order
 	// these HttpClient structs.
@@ -35,9 +35,9 @@ func (sqlDatabase *SqlDatabase) LessT(y goal.BV) bool {
 }
 
 // Matches implements goal.BV.
-func (sqlDatabase *SqlDatabase) Matches(y goal.BV) bool {
+func (sqlDatabase *SQLDatabase) Matches(y goal.BV) bool {
 	switch yv := y.(type) {
-	case *SqlDatabase:
+	case *SQLDatabase:
 		return sqlDatabase.DB == yv.DB
 	default:
 		return false
@@ -45,19 +45,19 @@ func (sqlDatabase *SqlDatabase) Matches(y goal.BV) bool {
 }
 
 // Type implements goal.BV.
-func (sqlDatabase *SqlDatabase) Type() string {
+func (sqlDatabase *SQLDatabase) Type() string {
 	return "ari.SqlDatabase"
 }
 
-func sqlOpen(dbDriver string, dataSourceName string) (*SqlDatabase, error) {
+func sqlOpen(dbDriver string, dataSourceName string) (*SQLDatabase, error) {
 	db, err := sql.Open(dbDriver, dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	return &SqlDatabase{DB: db, IsOpen: true}, nil
+	return &SQLDatabase{DB: db, IsOpen: true}, nil
 }
 
-func SqlQueryContext(sqlDatabase *SqlDatabase, sqlQuery string, args []any) (goal.V, error) {
+func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
 	var rows *sql.Rows
 	var err error
 	if len(args) > 0 {
@@ -68,7 +68,7 @@ func SqlQueryContext(sqlDatabase *SqlDatabase, sqlQuery string, args []any) (goa
 	if err != nil {
 		return goal.V{}, err
 	}
-	defer rows.Close()
+	// defer rows.Close()
 	colNames, err := rows.Columns()
 	if err != nil {
 		return goal.V{}, err
@@ -116,11 +116,17 @@ func SqlQueryContext(sqlDatabase *SqlDatabase, sqlQuery string, args []any) (goa
 					// "DuckDB represents instants as the number of microseconds (µs) since 1970-01-01 00:00:00+00"
 					rowValues[i] = append(rowValues[i], goal.NewI(col.UnixMicro()))
 				default:
-					fmt.Printf("Go Type %v\n", reflect.TypeOf(col))
+					fmt.Fprintf(os.Stderr, "Go Type %v\n", reflect.TypeOf(col))
 					rowValues[i] = append(rowValues[i], goal.NewS(fmt.Sprintf("%v", col)))
 				}
 			}
 		}
+	}
+	if err = rows.Close(); err != nil {
+		return goal.V{}, err
+	}
+	if err = rows.Err(); err != nil {
+		return goal.V{}, err
 	}
 	// NB: For future type introspection, see above.
 	// fmt.Printf("COLS %v\n", colNames)
@@ -134,12 +140,12 @@ func SqlQueryContext(sqlDatabase *SqlDatabase, sqlQuery string, args []any) (goa
 	return goalD, nil
 }
 
-func SqlExec(sqlDatabase *SqlDatabase, sqlQuery string, args []any) (goal.V, error) {
+func SQLExec(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
 	result, err := sqlDatabase.DB.Exec(sqlQuery, args...)
 	if err != nil {
 		return goal.V{}, err
 	}
-	lastInsertId, err := result.LastInsertId()
+	lastInsertID, err := result.LastInsertId()
 	if err != nil {
 		return goal.V{}, err
 	}
@@ -150,17 +156,17 @@ func SqlExec(sqlDatabase *SqlDatabase, sqlQuery string, args []any) (goal.V, err
 	// Consider: Formatting this as a table for consistency with )sql, but it's really a simpler dict
 	ks := goal.NewAS([]string{"lastInsertId", "rowsAffected"})
 	// vs := goal.NewAI([]int64{lastInsertId, rowsAffected})
-	vs := goal.NewAV([]goal.V{goal.NewAI([]int64{lastInsertId}), goal.NewAI([]int64{rowsAffected})})
+	vs := goal.NewAV([]goal.V{goal.NewAI([]int64{lastInsertID}), goal.NewAI([]int64{rowsAffected})})
 	return goal.NewD(ks, vs), nil
 }
 
-// Copied from Goal's implementation
+// Copied from Goal's implementation, a panic value for type mismatches.
 func panicType(op, sym string, x goal.V) goal.V {
 	return goal.Panicf("%s : bad type %q in %s", op, x.Type(), sym)
 }
 
-// Implements sql.open
-func VFSqlOpen(goalContext *goal.Context, args []goal.V) goal.V {
+// Implements sql.open to open a SQL DB.
+func VFSqlOpen(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	dataSourceName, ok := x.BV().(goal.S)
 	switch len(args) {
@@ -173,39 +179,42 @@ func VFSqlOpen(goalContext *goal.Context, args []goal.V) goal.V {
 			// Empty means use the value from config/CLI args
 			dsn = viper.GetString("database")
 		}
-		sqlDb, err := sqlOpen(dbDriver, dsn)
+		sqlDB, err := sqlOpen(dbDriver, dsn)
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
-		return goal.NewV(sqlDb)
+		return goal.NewV(sqlDB)
 	default:
 		return goal.Panicf("sql.open : too many arguments (%d), expects 1 argument", len(args))
 	}
 }
 
-// Implements sql.q
+// Implements sql.q for SQL querying.
 func VFSqlQ(goalContext *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	sqlQuery, ok := x.BV().(goal.S)
 	switch len(args) {
-	case 1:
+	case monadic:
 		// Uses the database configured at the Ari level, initializing if not open.
 		if !ok {
 			return panicType("sql.q s", "s", x)
 		}
-		if GlobalContext.SqlDatabase == nil || !GlobalContext.SqlDatabase.IsOpen {
-			ContextInitSql(&GlobalContext, GlobalContext.SqlDatabase.DataSource)
+		if GlobalContext.SQLDatabase == nil || !GlobalContext.SQLDatabase.IsOpen {
+			err := ContextInitSQL(&GlobalContext, GlobalContext.SQLDatabase.DataSource)
+			if err != nil {
+				return goal.NewPanicError(err)
+			}
 		}
-		goalD, err := SqlQueryContext(GlobalContext.SqlDatabase, string(sqlQuery), nil)
+		goalD, err := SQLQueryContext(GlobalContext.SQLDatabase, string(sqlQuery), nil)
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
 		// Last result table as sql.t in Goal, to support switching eval mdoes:
 		goalContext.AssignGlobal("sql.t", goalD)
 		return goalD
-	case 2:
+	case dyadic:
 		// Explicit database as first argument
-		sqlDatabase, ok := x.BV().(*SqlDatabase)
+		sqlDatabase, ok := x.BV().(*SQLDatabase)
 		if !ok {
 			return panicType("ari.SqlDatabase sql.q s", "ari.SqlDatabase", x)
 		}
@@ -214,7 +223,7 @@ func VFSqlQ(goalContext *goal.Context, args []goal.V) goal.V {
 		if !ok {
 			return panicType("ari.SqlDatabase sql.q s", "s", y)
 		}
-		queryResult, err := SqlQueryContext(sqlDatabase, string(sqlQuery), nil)
+		queryResult, err := SQLQueryContext(sqlDatabase, string(sqlQuery), nil)
 		if err != nil {
 			return goal.Errorf("%v", err)
 		}

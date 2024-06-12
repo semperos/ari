@@ -6,6 +6,12 @@ import (
 	"codeberg.org/anaseto/goal"
 )
 
+const (
+	monadic = 1
+	dyadic  = 2
+	triadic = 3
+)
+
 var goalKeywordsFromCtx []string
 
 func GoalKeywords(goalContext *goal.Context) []string {

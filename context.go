@@ -12,7 +12,7 @@ var GlobalContext Context
 
 type Context struct {
 	GoalContext *goal.Context
-	SqlDatabase *SqlDatabase
+	SQLDatabase *SQLDatabase
 }
 
 // Initialize a Goal language context and set the corresponding Context field.
@@ -31,11 +31,11 @@ func ContextInitGoal(context *Context) error {
 // Initialize an SQL database and set the corresponding Context field.
 //
 // Note that the underlying sql.DB is open, and the caller is responsible for closing it.
-func ContextInitSql(context *Context, dataSourceName string) error {
+func ContextInitSQL(context *Context, dataSourceName string) error {
 	db, err := sql.Open(dbDriver, dataSourceName)
 	if err != nil {
 		return err
 	}
-	context.SqlDatabase = &SqlDatabase{DataSource: dataSourceName, DB: db, IsOpen: true}
+	context.SQLDatabase = &SQLDatabase{DataSource: dataSourceName, DB: db, IsOpen: true}
 	return nil
 }
