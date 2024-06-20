@@ -1,9 +1,11 @@
-package cmd
+package main
 
 import "sort"
 
 // From https://en.wikipedia.org/wiki/List_of_SQL_reserved_words
-var acSQLKeywords = func() []string {
+//
+//nolint:funlen
+func sqlKeywords() []string {
 	s := []string{
 		"ABORT",
 		"ABORTSESSION",
@@ -935,4 +937,4 @@ var acSQLKeywords = func() []string {
 	}
 	sort.Strings(s)
 	return s
-}()
+}

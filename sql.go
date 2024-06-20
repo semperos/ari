@@ -57,6 +57,7 @@ func sqlOpen(dbDriver string, dataSourceName string) (*SQLDatabase, error) {
 	return &SQLDatabase{DB: db, IsOpen: true}, nil
 }
 
+//nolint:gocognit
 func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
 	var rows *sql.Rows
 	var err error
@@ -190,45 +191,54 @@ func VFSqlOpen(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements sql.q for SQL querying.
-func VFSqlQ(goalContext *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
+func VFSqlQ(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
+	return func(goalContext *goal.Context, args []goal.V) goal.V {
+		x := args[len(args)-1]
+		switch len(args) {
+		case monadic:
+			return sqlQMonadic(x, sqlDatabase, goalContext)
+		case dyadic:
+			return sqlQDyadic(x, args)
+		default:
+			return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
+		}
+	}
+}
+
+func sqlQDyadic(x goal.V, args []goal.V) goal.V {
+	sqlDatabase, ok := x.BV().(*SQLDatabase)
+	if !ok {
+		return panicType("ari.SqlDatabase sql.q s", "ari.SqlDatabase", x)
+	}
+	y := args[0]
+	sqlQuery, ok := y.BV().(goal.S)
+	if !ok {
+		return panicType("ari.SqlDatabase sql.q s", "s", y)
+	}
+	queryResult, err := SQLQueryContext(sqlDatabase, string(sqlQuery), nil)
+	if err != nil {
+		return goal.Errorf("%v", err)
+	}
+	return queryResult
+}
+
+func sqlQMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Context) goal.V {
 	sqlQuery, ok := x.BV().(goal.S)
-	switch len(args) {
-	case monadic:
-		// Uses the database configured at the Ari level, initializing if not open.
-		if !ok {
-			return panicType("sql.q s", "s", x)
-		}
-		if GlobalContext.SQLDatabase == nil || !GlobalContext.SQLDatabase.IsOpen {
-			err := ContextInitSQL(&GlobalContext, GlobalContext.SQLDatabase.DataSource)
-			if err != nil {
-				return goal.NewPanicError(err)
-			}
-		}
-		goalD, err := SQLQueryContext(GlobalContext.SQLDatabase, string(sqlQuery), nil)
+	if !ok {
+		return panicType("sql.q s", "s", x)
+	}
+	var err error
+	if sqlDatabase == nil || !sqlDatabase.IsOpen {
+		sqlDatabase, err = InitializeSQL(sqlDatabase.DataSource)
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
-		// Last result table as sql.t in Goal, to support switching eval mdoes:
-		goalContext.AssignGlobal("sql.t", goalD)
-		return goalD
-	case dyadic:
-		// Explicit database as first argument
-		sqlDatabase, ok := x.BV().(*SQLDatabase)
-		if !ok {
-			return panicType("ari.SqlDatabase sql.q s", "ari.SqlDatabase", x)
-		}
-		y := args[0]
-		sqlQuery, ok := y.BV().(goal.S)
-		if !ok {
-			return panicType("ari.SqlDatabase sql.q s", "s", y)
-		}
-		queryResult, err := SQLQueryContext(sqlDatabase, string(sqlQuery), nil)
-		if err != nil {
-			return goal.Errorf("%v", err)
-		}
-		return queryResult
-	default:
-		return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
 	}
+	goalD, err := SQLQueryContext(sqlDatabase, string(sqlQuery), nil)
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+
+	goalContext.AssignGlobal("sql.t", goalD)
+	return goalD
 }
