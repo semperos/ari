@@ -1,6 +1,9 @@
 package ari
 
 import (
+	"bufio"
+	"fmt"
+	"os"
 	"strings"
 
 	"codeberg.org/anaseto/goal"
@@ -414,6 +417,13 @@ func GoalKeywordsHelp() map[string]string {
 		"exp":    "exp n",
 		"firsts": `firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`,
 		"flush":  "flush h     flush any buffered data for handle h",
+		// Ari extension: help
+		"help": strings.Join([]string{
+			`help s                      help string for keyword s`,
+			`help ""                     all ari help as a dictionary`,
+			`s1 help s2                  set s2 as the help string for keyword s1`,
+			`help[category;keyword;s]    set s as the help string for keyword in category (all strings)`,
+		}, "\n"),
 		"import": strings.Join([]string{
 			`import s    read/eval wrapper roughly equivalent to eval[read path;path;pfx]`,
 			`            where 1) path~s or path~env["GOALLIB"]+s+".goal"`,
@@ -570,12 +580,167 @@ fmt.tbl:{[t;r;c;f]
 }
 `
 
+// Goal functions implemented in Go
+
+// printV adapted from Goal's implementation of os.go
+func printV(ctx *goal.Context, x goal.V) error {
+	switch xv := x.BV().(type) {
+	case goal.S:
+		_, err := fmt.Fprint(os.Stdout, string(xv))
+		return err
+	case *goal.AS:
+		buf := bufio.NewWriter(os.Stdout)
+		imax := xv.Len() - 1
+		for i, s := range xv.Slice {
+			buf.WriteString(s)
+			if i < imax {
+				buf.WriteByte(' ')
+			}
+		}
+		return buf.Flush()
+	default:
+		_, err := fmt.Fprintf(os.Stdout, "%s", x.Append(ctx, nil, false))
+		return err
+	}
+}
+
+func VFHelpFn(help Help) func(goalContext *goal.Context, args []goal.V) goal.V {
+	return func(goalContext *goal.Context, args []goal.V) goal.V {
+		x := args[len(args)-1]
+		switch len(args) {
+		case monadic:
+			return helpMonadic(goalContext, help, x)
+		case dyadic:
+			return helpDyadic(help, x, args)
+		case triadic:
+			return helpTriadic(help, x, args)
+		default:
+			return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
+		}
+	}
+}
+
+func helpMonadic(goalContext *goal.Context, help Help, x goal.V) goal.V {
+	helpKeyword, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("help s", "s", x)
+	}
+	helpKeywordString := string(helpKeyword)
+	if helpKeywordString == "" {
+		categories := make([]string, 0, len(help))
+		categoryDicts := make([]goal.V, 0)
+		for category, v := range help {
+			categories = append(categories, category)
+			categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
+		}
+		return goal.NewD(goal.NewAS(categories), goal.NewAV(categoryDicts))
+	}
+	goalHelp := help["goal"]
+	var err error
+	if helpString, ok := goalHelp[string(helpKeyword)]; ok {
+		err = printV(goalContext, goal.NewS(helpString))
+	} else {
+		err = printV(goalContext, goal.NewS("(no help)"))
+	}
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+	fmt.Fprintln(os.Stdout)
+	return goal.NewI(1)
+}
+
+func helpDyadic(help Help, x goal.V, args []goal.V) goal.V {
+	helpKeyword, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("s1 help s2", "s1", x)
+	}
+	y := args[0]
+	helpString, ok := y.BV().(goal.S)
+	if !ok {
+		return panicType("s1 help s2", "s2", y)
+	}
+	goalHelp := help["goal"]
+	goalHelp[string(helpKeyword)] = string(helpString)
+	return goal.NewI(1)
+}
+
+func helpTriadic(help Help, x goal.V, args []goal.V) goal.V {
+	helpCategory, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("help[category;keyword;helpstring]", "category", x)
+	}
+	y := args[1]
+	helpKeyword, ok := y.BV().(goal.S)
+	if !ok {
+		return panicType("help[category;keyword;helpstring]", "keyword", y)
+	}
+	z := args[0]
+	helpString, ok := z.BV().(goal.S)
+	if !ok {
+		return panicType("help[category;keyword;helpstring]", "helpstring", z)
+	}
+	categoryHelp, ok := help["goal"]
+	if !ok {
+		help[string(helpCategory)] = map[string]string{string(helpKeyword): string(helpString)}
+	} else {
+		categoryHelp[string(helpKeyword)] = string(helpString)
+	}
+	return goal.NewI(1)
+}
+
+// Go <> Goal helpers
+
+func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
+	ka := d.KeyArray()
+	va := d.ValueArray()
+	m := make(map[string]string, ka.Len())
+	switch kas := ka.(type) {
+	case *goal.AS:
+		switch vas := va.(type) {
+		case *goal.AS:
+			vasSlice := vas.Slice
+			for i, k := range kas.Slice {
+				m[k] = vasSlice[i]
+			}
+		default:
+			return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
+				"with string keys and string values, but received values: %v", va)
+		}
+	default:
+		return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
+			"with string keys and string values, but received keys: %v", ka)
+	}
+	return m, nil
+}
+
+func stringMapToGoalDict(m map[string]string) goal.V {
+	keys := make([]string, 0, len(m))
+	values := make([]string, 0, len(m))
+	for k, v := range m {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	ks := goal.NewAS(keys)
+	vs := goal.NewAS(values)
+	return goal.NewD(ks, vs)
+}
+
+func goalNewDictEmpty() *goal.D {
+	dv := goal.NewD(goal.NewAV(nil), goal.NewAV(nil))
+	d, ok := dv.BV().(*goal.D)
+	if !ok {
+		panic("Developer error: Empty Goal dictionary expected.")
+	}
+	return d
+}
+
 // Integration with other parts of Ari
 
-func goalRegisterVariadics(goalContext *goal.Context, sqlDatabase *SQLDatabase) {
+func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
 	// From Goal itself
 	gos.Import(goalContext, "")
 	// Ari
+	goalContext.RegisterDyad("help", VFHelpFn(help))
 	goalContext.RegisterDyad("http.client", VFHttpClient)
 	goalContext.RegisterDyad("http.get", VFHTTPMaker("GET"))
 	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
@@ -584,6 +749,7 @@ func goalRegisterVariadics(goalContext *goal.Context, sqlDatabase *SQLDatabase) 
 	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
 	goalContext.RegisterDyad("http.head", VFHTTPMaker("HEAD"))
 	goalContext.RegisterDyad("http.options", VFHTTPMaker("OPTIONS"))
-	goalContext.RegisterDyad("sql.open", VFSqlOpen)
-	goalContext.RegisterDyad("sql.q", VFSqlQ(sqlDatabase))
+	goalContext.RegisterDyad("sql.open", VFSqlOpenFn(sqlDatabase))
+	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
+	// TODO Add help entries via goalContext.Eval here, using dyadic help
 }

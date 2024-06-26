@@ -72,7 +72,7 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 }
 
 func (cliSystem *CliSystem) switchModeToSQLReadOnly() {
-	err := cliSystem.sqlInitialize(cliSystem.ariContext.SQLDatabase.DataSource, cliModeSQLReadOnly)
+	err := cliSystem.ariContext.SQLDatabase.Open(cliSystem.ariContext.SQLDatabase.DataSource)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -85,7 +85,7 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly() {
 }
 
 func (cliSystem *CliSystem) switchModeToSQLReadWrite() {
-	err := cliSystem.sqlInitialize(cliSystem.ariContext.SQLDatabase.DataSource, cliModeSQLReadWrite)
+	err := cliSystem.ariContext.SQLDatabase.Open(cliSystem.ariContext.SQLDatabase.DataSource)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -217,7 +217,7 @@ func (cliSystem *CliSystem) sqlInitialize(dataSourceName string, cliMode cliMode
 		// In-memory doesn't support read_only access
 		dataSourceName += "?access_mode=read_only"
 	}
-	sqlDatabase, err := ari.InitializeSQL(dataSourceName)
+	sqlDatabase, err := ari.NewSQLDatabase(dataSourceName)
 	if err != nil {
 		return err
 	}

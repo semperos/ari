@@ -76,6 +76,7 @@ func newHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 	// XMLUnmarshal          func(data []byte, v interface{}) error
 	goalFnName := "http.client"
 	restyClient := resty.New()
+	// fmt.Printf("OPTS: %q", dict)
 	if optionsD.Len() == 0 {
 		return &HTTPClient{resty.New()}, nil
 	}
@@ -342,29 +343,6 @@ func newHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 	return &HTTPClient{client: restyClient}, nil
 }
 
-func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
-	ka := d.KeyArray()
-	va := d.ValueArray()
-	m := make(map[string]string, ka.Len())
-	switch kas := ka.(type) {
-	case *goal.AS:
-		switch vas := va.(type) {
-		case *goal.AS:
-			vasSlice := vas.Slice
-			for i, k := range kas.Slice {
-				m[k] = vasSlice[i]
-			}
-		default:
-			return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
-				"with string keys and string values, but received values: %v", va)
-		}
-	default:
-		return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
-			"with string keys and string values, but received keys: %v", ka)
-	}
-	return m, nil
-}
-
 func VFHttpClient(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	clientOptions, ok := x.BV().(*goal.D)
@@ -406,7 +384,7 @@ func httpMakerMonadic(x goal.V, methodLower string, methodUpper string) goal.V {
 	if !ok {
 		return panicType(fmt.Sprintf("http.%s s", methodLower), "s", x)
 	}
-	httpClient, err := newHTTPClient(&goal.D{})
+	httpClient, err := newHTTPClient(goalNewDictEmpty())
 	if err != nil {
 		return goal.NewPanicError(err)
 	}

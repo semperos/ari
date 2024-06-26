@@ -85,10 +85,6 @@ func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, 
 	if autoCompleter.goalSyntaxKeys == nil {
 		autoCompleter.cacheGoalSyntax()
 	}
-	// if autoCompleter.goalKeywordsKeys == nil {
-	// 	ari.GoalKeywordsHelp()
-	// 	autoCompleter.goalKeywordsKeys ==
-	// }
 	return func(v [][]rune, line, col int) (string, editline.Completions) {
 		perCategory := map[string][]acEntry{}
 		word, start, end := computil.FindWord(v, line, col)
@@ -102,7 +98,7 @@ func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, 
 			start = locs[0] // Preserve non-word prefix
 			end = locs[1]   // Preserve non-word suffix
 		}
-		// msg = fmt.Sprintf("Matching %v", word)
+		msg := fmt.Sprintf("Matching %v", word)
 		lword := strings.ToLower(word)
 		autoCompleteGoalGlobals(goalContext, lword, perCategory)
 		autoCompleteGoalKeywords(autoCompleter, lword, perCategory)
@@ -113,7 +109,7 @@ func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, 
 			moveRight:  end - col,
 			deleteLeft: end - start,
 		}
-		msg := ""
+		// msg := ""
 		return msg, completions
 	}
 }
@@ -141,7 +137,7 @@ func autoCompleteGoalSyntax(autoCompleter *AutoCompleter, lword string, perCateg
 func autoCompleteGoalKeywords(autoCompleter *AutoCompleter, lword string, perCategory map[string][]acEntry) {
 	// Keywords can be user-defined via Go, but they are all present once Goal is initialized.
 	if autoCompleter.goalKeywordsKeys == nil {
-		autoCompleter.cacheGoalKeywords()
+		autoCompleter.cacheGoalKeywords(autoCompleter.ariContext.GoalContext)
 	}
 	category := "Keyword"
 	for _, goalKeyword := range autoCompleter.goalKeywordsKeys {
@@ -191,7 +187,7 @@ func (autoCompleter *AutoCompleter) sqlAutoCompleteFn() func(v [][]rune, line, c
 		}
 		for _, sqlWord := range autoCompleter.sqlKeywords {
 			if strings.HasPrefix(strings.ToLower(sqlWord), lword) {
-				perCategory["sql"] = append(perCategory["sql"], acEntry{sqlWord, "SQL help"})
+				perCategory["sql"] = append(perCategory["sql"], acEntry{sqlWord, "A SQL keyword"})
 			}
 		}
 		completions := &multiComplete{
@@ -204,12 +200,15 @@ func (autoCompleter *AutoCompleter) sqlAutoCompleteFn() func(v [][]rune, line, c
 	}
 }
 
-func (autoCompleter *AutoCompleter) cacheGoalKeywords() {
+func (autoCompleter *AutoCompleter) cacheGoalKeywords(goalContext *goal.Context) {
+	// TODO Work out abstraction for adding help to user-defined Goal keywords.
+	goalKeywords := goalContext.Keywords(nil)
 	goalKeywordsHelp := ari.GoalKeywordsHelp()
 	keys := make([]string, 0)
 	for k := range goalKeywordsHelp {
 		keys = append(keys, k)
 	}
+	keys = append(keys, goalKeywords...)
 	sort.Strings(keys)
 	autoCompleter.goalKeywordsKeys = keys
 	autoCompleter.goalKeywordsHelp = goalKeywordsHelp
@@ -228,7 +227,7 @@ func (autoCompleter *AutoCompleter) cacheGoalSyntax() {
 }
 
 func (autoCompleter *AutoCompleter) cacheSQL() {
-	autoCompleter.sqlKeywords = sqlKeywords()
+	autoCompleter.sqlKeywords = ari.SQLKeywords()
 }
 
 func (autoCompleter *AutoCompleter) cacheSystemCommands() {
