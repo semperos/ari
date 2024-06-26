@@ -20,9 +20,9 @@ func TestGoalOk(t *testing.T) {
 		"multiline goal expression": {
 			input: `(1 2
 			3 4)`,
-			result: strings.Trim(`
+			result: strings.TrimSpace(`
 (1 2
- 3 4)`, "\n"),
+ 3 4)`),
 		},
 		"goal json, marshal": {
 			input:  `""json -0w`,

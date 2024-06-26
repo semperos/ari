@@ -424,6 +424,29 @@ func GoalKeywordsHelp() map[string]string {
 			`s1 help s2                  set s2 as the help string for keyword s1`,
 			`help[category;keyword;s]    set s as the help string for keyword in category (all strings)`,
 		}, "\n"),
+		// Ari extension: http.client
+		"http.client": strings.Join([]string{
+			`http.client d    HTTP client configured by entries in d, based on go-resty.`,
+			`                 All entries optional. Dict values for Header, FormData, QueryParam`,
+			`                 must be strings or lists of strings:`,
+			`                  - AllowGetMethodPayload     i`,
+			`                  - AuthScheme                s`,
+			`                  - BaseUrl                   s`,
+			`                  - Debug                     i`,
+			`                  - DisableWarn               i`,
+			`                  - FormData                  d`,
+			`                  - Header                    d`,
+			`                  - HeaderAuthorizationKey    s`,
+			`                  - PathParams                d`,
+			`                  - QueryParam                d`,
+			`                  - RawPathParams             d`,
+			`                  - RetryCount                i`,
+			`                  - RetryMaxWaitTimeMilli     i`,
+			`                  - RetryResetReaders         i`,
+			`                  - RetryWaitTimeMilli        i`,
+			`                  - Token                     s`,
+			`                  - UserInfo                  ..[Username:"user";Password:"pass"]`,
+		}, "\n"),
 		"import": strings.Join([]string{
 			`import s    read/eval wrapper roughly equivalent to eval[read path;path;pfx]`,
 			`            where 1) path~s or path~env["GOALLIB"]+s+".goal"`,
@@ -503,8 +526,9 @@ func GoalKeywordsHelp() map[string]string {
 			`«X  shift       «8 9 → 9 0     «"a" "b" → "b" ""        (ASCII keyword: shift x)`,
 			`x«Y shift       "a" "b"«1 2 3 → 3 "a" "b"`,
 		}, "\n"),
-		"sign":  `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`,
-		"sin":   "sin n",
+		"sign": `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`,
+		"sin":  "sin n",
+		// Ari extension: sql.q
 		"sql.q": "sql.q s    Run SQL query, results as table.",
 		"sqrt":  "sqrt n",
 		"stat":  `stat x      returns "dir""mtime""size"!(i;i;i)      (for filehandle h or path s)`,
@@ -529,8 +553,6 @@ func GoalKeywordsHelp() map[string]string {
 		}, "\n"),
 	}
 }
-
-// Goal Extensions in Go
 
 // Goal Preamble in Goal
 
@@ -620,33 +642,55 @@ func VFHelpFn(help Help) func(goalContext *goal.Context, args []goal.V) goal.V {
 	}
 }
 
+const noHelpString = "(no help)"
+
 func helpMonadic(goalContext *goal.Context, help Help, x goal.V) goal.V {
-	helpKeyword, ok := x.BV().(goal.S)
-	if !ok {
+	switch helpKeyword := x.BV().(type) {
+	case goal.S:
+		helpKeywordString := string(helpKeyword)
+		if helpKeywordString == "" {
+			categories := make([]string, 0, len(help))
+			categoryDicts := make([]goal.V, 0)
+			for category, v := range help {
+				categories = append(categories, category)
+				categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
+			}
+			return goal.NewD(goal.NewAS(categories), goal.NewAV(categoryDicts))
+		}
+		goalHelp := help["goal"]
+		if helpString, ok := goalHelp[string(helpKeyword)]; ok {
+			err := printV(goalContext, goal.NewS(helpString))
+			if err != nil {
+				return goal.NewPanicError(err)
+			}
+			fmt.Fprintln(os.Stdout)
+			return goal.NewI(1)
+		} else {
+			err := printV(goalContext, goal.NewS(noHelpString))
+			if err != nil {
+				return goal.NewPanicError(err)
+			}
+			fmt.Fprintln(os.Stdout)
+			return goal.NewI(0)
+		}
+	case *goal.R:
+		r := helpKeyword.Regexp
+		goalHelp := help["goal"]
+		anyMatches := false
+		for k, v := range goalHelp {
+			if r.MatchString(k) || r.MatchString(v) {
+				fmt.Fprintln(os.Stdout, v)
+				anyMatches = true
+			}
+		}
+		if anyMatches {
+			return goal.NewI(1)
+		}
+		fmt.Fprintln(os.Stdout, "(no help matches)")
+		return goal.NewI(0)
+	default:
 		return panicType("help s", "s", x)
 	}
-	helpKeywordString := string(helpKeyword)
-	if helpKeywordString == "" {
-		categories := make([]string, 0, len(help))
-		categoryDicts := make([]goal.V, 0)
-		for category, v := range help {
-			categories = append(categories, category)
-			categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
-		}
-		return goal.NewD(goal.NewAS(categories), goal.NewAV(categoryDicts))
-	}
-	goalHelp := help["goal"]
-	var err error
-	if helpString, ok := goalHelp[string(helpKeyword)]; ok {
-		err = printV(goalContext, goal.NewS(helpString))
-	} else {
-		err = printV(goalContext, goal.NewS("(no help)"))
-	}
-	if err != nil {
-		return goal.NewPanicError(err)
-	}
-	fmt.Fprintln(os.Stdout)
-	return goal.NewI(1)
 }
 
 func helpDyadic(help Help, x goal.V, args []goal.V) goal.V {
@@ -751,5 +795,4 @@ func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQ
 	goalContext.RegisterDyad("http.options", VFHTTPMaker("OPTIONS"))
 	goalContext.RegisterDyad("sql.open", VFSqlOpenFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
-	// TODO Add help entries via goalContext.Eval here, using dyadic help
 }

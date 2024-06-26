@@ -204,13 +204,8 @@ func (autoCompleter *AutoCompleter) cacheGoalKeywords(goalContext *goal.Context)
 	// TODO Work out abstraction for adding help to user-defined Goal keywords.
 	goalKeywords := goalContext.Keywords(nil)
 	goalKeywordsHelp := ari.GoalKeywordsHelp()
-	keys := make([]string, 0)
-	for k := range goalKeywordsHelp {
-		keys = append(keys, k)
-	}
-	keys = append(keys, goalKeywords...)
-	sort.Strings(keys)
-	autoCompleter.goalKeywordsKeys = keys
+	sort.Strings(goalKeywords)
+	autoCompleter.goalKeywordsKeys = goalKeywords
 	autoCompleter.goalKeywordsHelp = goalKeywordsHelp
 }
 
