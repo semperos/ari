@@ -17,6 +17,266 @@ const (
 	triadic = 3
 )
 
+// Goal Preamble in Goal
+
+func goalLoadExtendedPreamble(ctx *goal.Context) error {
+	_, err := ctx.Eval(goalFmtSource)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+const goalFmtSource = `
+/
+  Copyright (c) 2022 Yon <anaseto@bardinflor.perso.aquilenet.fr>
+
+  Permission to use, copy, modify, and distribute this software for any
+  purpose with or without fee is hereby granted, provided that the above
+  copyright notice and this permission notice appear in all copies.
+
+  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+  WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+  MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+  ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+\
+/
+  dict[d;f] outputs dict d, assuming string keys and atom or flat array values,
+  using format string f for floating point numbers.
+\
+fmt.dict:{[d;f]
+ nk:#d; say"=== Dict ($nk keys) ==="
+ k:(|/-1+""#k)!k:!d; v:" "/(..?[(@x)¿"nN";p.f$x;$'x])'.d
+ say"\n"/k{"$x| $y"}'v
+}
+/
+  tbl[t;r;c;f] outputs dict t as table, assuming string keys and flat columns,
+  and outputs at most r rows and c columns, using format string f for floating
+  point numbers. Example: tbl[t;5;8;"%.1f"].
+\
+fmt.tbl:{[t;r;c;f]
+  (nr;nc):(#*t;#t); say"=== Table ${nr}x$nc ==="
+  t:t[!r&nr;(c&nc)@!t] / keep up to r rows and c columns
+  k:!t; v:(..?[(@x)¿"nN";p.f$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
+  (k;v):(-w)!'´(k;v); say"\n"/,/" "/(k;"-"*w;+v)
+}
+`
+
+// Goal functions implemented in Go
+
+// printV adapted from Goal's implementation found in the os.go file.
+func printV(ctx *goal.Context, x goal.V) error {
+	switch xv := x.BV().(type) {
+	case goal.S:
+		_, err := fmt.Fprint(os.Stdout, string(xv))
+		return err
+	case *goal.AS:
+		buf := bufio.NewWriter(os.Stdout)
+		imax := xv.Len() - 1
+		for i, s := range xv.Slice {
+			_, err := buf.WriteString(s)
+			if err != nil {
+				return err
+			}
+			if i < imax {
+				err := buf.WriteByte(' ')
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return buf.Flush()
+	default:
+		_, err := fmt.Fprintf(os.Stdout, "%s", x.Append(ctx, nil, false))
+		return err
+	}
+}
+
+func VFHelpFn(help Help) func(goalContext *goal.Context, args []goal.V) goal.V {
+	return func(goalContext *goal.Context, args []goal.V) goal.V {
+		x := args[len(args)-1]
+		switch len(args) {
+		case monadic:
+			return helpMonadic(goalContext, help, x)
+		case dyadic:
+			return helpDyadic(help, x, args)
+		case triadic:
+			return helpTriadic(help, x, args)
+		default:
+			return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
+		}
+	}
+}
+
+const noHelpString = "(no help)"
+
+func helpMonadic(goalContext *goal.Context, help Help, x goal.V) goal.V {
+	switch helpKeyword := x.BV().(type) {
+	case goal.S:
+		helpKeywordString := string(helpKeyword)
+		if helpKeywordString == "" {
+			return helpReturnAsDict(help)
+		}
+		return helpPrintExactMatch(help, helpKeyword, goalContext)
+	case *goal.R:
+		anyMatches := helpPrintRegexMatches(help, helpKeyword.Regexp)
+		if anyMatches {
+			return goal.NewI(1)
+		}
+		fmt.Fprintln(os.Stdout, "(no help matches)")
+		return goal.NewI(0)
+	default:
+		return panicType("help s-or-rx", "s-or-rx", x)
+	}
+}
+
+func helpPrintExactMatch(help Help, helpKeyword goal.S, goalContext *goal.Context) goal.V {
+	goalHelp := help["goal"]
+	if helpString, ok := goalHelp[string(helpKeyword)]; ok {
+		err := printV(goalContext, goal.NewS(helpString))
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		fmt.Fprintln(os.Stdout)
+		return goal.NewI(1)
+	}
+	err := printV(goalContext, goal.NewS(noHelpString))
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+	fmt.Fprintln(os.Stdout)
+	return goal.NewI(0)
+}
+
+func helpReturnAsDict(help Help) goal.V {
+	categories := make([]string, 0, len(help))
+	categoryDicts := make([]goal.V, 0)
+	for category, v := range help {
+		categories = append(categories, category)
+		categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
+	}
+	return goal.NewD(goal.NewAS(categories), goal.NewAV(categoryDicts))
+}
+
+func helpPrintRegexMatches(help Help, r *regexp.Regexp) bool {
+	goalHelp := help["goal"]
+	anyMatches := false
+	for k, v := range goalHelp {
+		if r.MatchString(k) || r.MatchString(v) {
+			fmt.Fprintln(os.Stdout, v)
+			anyMatches = true
+		}
+	}
+	return anyMatches
+}
+
+func helpDyadic(help Help, x goal.V, args []goal.V) goal.V {
+	helpKeyword, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("s1 help s2", "s1", x)
+	}
+	y := args[0]
+	helpString, ok := y.BV().(goal.S)
+	if !ok {
+		return panicType("s1 help s2", "s2", y)
+	}
+	goalHelp := help["goal"]
+	goalHelp[string(helpKeyword)] = string(helpString)
+	return goal.NewI(1)
+}
+
+func helpTriadic(help Help, x goal.V, args []goal.V) goal.V {
+	helpCategory, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("help[category;keyword;helpstring]", "category", x)
+	}
+	y := args[1]
+	helpKeyword, ok := y.BV().(goal.S)
+	if !ok {
+		return panicType("help[category;keyword;helpstring]", "keyword", y)
+	}
+	z := args[0]
+	helpString, ok := z.BV().(goal.S)
+	if !ok {
+		return panicType("help[category;keyword;helpstring]", "helpstring", z)
+	}
+	categoryHelp, ok := help["goal"]
+	if !ok {
+		help[string(helpCategory)] = map[string]string{string(helpKeyword): string(helpString)}
+	} else {
+		categoryHelp[string(helpKeyword)] = string(helpString)
+	}
+	return goal.NewI(1)
+}
+
+// Go <> Goal helpers
+
+func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
+	ka := d.KeyArray()
+	va := d.ValueArray()
+	m := make(map[string]string, ka.Len())
+	switch kas := ka.(type) {
+	case *goal.AS:
+		switch vas := va.(type) {
+		case *goal.AS:
+			vasSlice := vas.Slice
+			for i, k := range kas.Slice {
+				m[k] = vasSlice[i]
+			}
+		default:
+			return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
+				"with string keys and string values, but received values: %v", va)
+		}
+	default:
+		return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
+			"with string keys and string values, but received keys: %v", ka)
+	}
+	return m, nil
+}
+
+func stringMapToGoalDict(m map[string]string) goal.V {
+	keys := make([]string, 0, len(m))
+	values := make([]string, 0, len(m))
+	for k, v := range m {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	ks := goal.NewAS(keys)
+	vs := goal.NewAS(values)
+	return goal.NewD(ks, vs)
+}
+
+func goalNewDictEmpty() *goal.D {
+	dv := goal.NewD(goal.NewAV(nil), goal.NewAV(nil))
+	d, ok := dv.BV().(*goal.D)
+	if !ok {
+		panic("Developer error: Empty Goal dictionary expected.")
+	}
+	return d
+}
+
+// Integration with other parts of Ari
+
+func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
+	// From Goal itself
+	gos.Import(goalContext, "")
+	// Ari
+	goalContext.RegisterDyad("help", VFHelpFn(help))
+	goalContext.RegisterDyad("http.client", VFHTTPClient)
+	goalContext.RegisterDyad("http.delete", VFHTTPMaker("DELETE"))
+	goalContext.RegisterDyad("http.get", VFHTTPMaker("GET"))
+	goalContext.RegisterDyad("http.head", VFHTTPMaker("HEAD"))
+	goalContext.RegisterDyad("http.options", VFHTTPMaker("OPTIONS"))
+	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
+	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
+	goalContext.RegisterDyad("http.put", VFHTTPMaker("PUT"))
+	goalContext.RegisterDyad("sql.open", VFSqlOpenFn(sqlDatabase))
+	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
+}
+
 //nolint:funlen
 func GoalSyntax() map[string]string {
 	return map[string]string{
@@ -389,185 +649,311 @@ func GoalGlobalsHelp() map[string]string {
 
 //nolint:funlen
 func GoalKeywordsHelp() map[string]string {
+	// Some help strings are used for individual entries and topic-based ones.
+	// TODO Finish topic-based entries from Goal's help"" and help"TOPIC" output
+	rtget := strings.Join([]string{
+		`rt.get s        returns various kinds of runtime information`,
+		`                "g"   dictionary with copy of all global variables`,
+		`                "f"   same but only globals containing functions`,
+		`                "v"   same but only non-function globals`,
+	}, "\n")
+	rtlog := `rt.log x        like :[x] but logs string representation of x       (same as \x)`
+	rtseed := "rt.seed i       set non-secure pseudo-rand seed to i        (used by the ? verb)"
+	rttime := strings.Join([]string{
+		`rt.time[s;i]    eval s for i times (default 1), return average time (ns)`,
+		`rt.time[f;x;i]  call f. x for i times (default 1), return average time (ns)`,
+	}, "\n")
+	abs := `abs n    abs -3.0 -1.5 2.0 → 3.0 1.5 2.0`
+	and := `and[1;2] → 2    and[1;0;3] → 0`
+	atan := `atan[n;n]`
+	chdir := `chdir s     change current working directory to s, or return an error`
+	closeHelp := `close h     flush any buffered data, then close handle h`
+	cos := `cos n    cos 0 → 1.0`
+	csv := strings.Join([]string{
+		`csv s      csv read     csv"a,b\n1,2" → ("a" "1";"b" "2")`,
+		`csv A      csv write    csv("a" "b";1 2) → "a,1\nb,2\n"`,
+		`s csv s    csv read     " "csv"a b\n1 2" → ("a" "1";"b" "2")  (" " as separator)`,
+		`s csv A    csv write    " "csv("a" "b";1 2) → "a 1\nb 2\n"    (" " as separator)`,
+	}, "\n")
+	env := strings.Join([]string{
+		`env s       get environment variable s, or an error if unset`,
+		`            return a dictionary representing the whole environment if s~""`,
+		`x env s     set environment variable x to s, or return an error`,
+		`x env 0     unset environment variable x, or clear environment if x~""`,
+	}, "\n")
+	errorHelp := `error x    error        r:error"msg"; (@r;.r) → "e" "msg"`
+	eval := strings.Join([]string{
+		`eval s     comp/run     a:5;eval"a+2" → 7           (unrestricted variant of .s)`,
+		`eval[s;loc;pfx]         like eval s, but provide loc as location (usually a`,
+		`                        path), and prefix pfx+"." for globals; does not eval`,
+		`                        same location more than once`,
+	}, "\n")
+	exp := `exp n    exp 1 → 2.718281828459045`
+	firsts := `firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`
+	flush := `flush h     flush any buffered data for handle h`
+	help := strings.Join([]string{
+		`help s                      help string for keyword s`,
+		`help ""                     all ari help as a dictionary`,
+		`s1 help s2                  set s2 as the help string for keyword s1`,
+		`help[category;keyword;s]    set s as the help string for keyword in category (all strings)`,
+	}, "\n")
+	goalHelp := strings.Join([]string{
+		`GOAL HELP`,
+		``,
+		`Enter help"ari" for info on ari as a whole, or help"goal" for this help`,
+		``,
+		`Add your own help with "myvar"help"mydoc"`,
+		``,
+		`GOAL HELP TOPICS`,
+		`Enter help"TOPIC" where TOPIC is one of:`,
+		``,
+		`"goal:s"     syntax`,
+		`"goal:t"     value types`,
+		`"goal:v"     verbs (like +*-%,)`,
+		`"goal:nv"    named verbs (like in, sign)`,
+		`"goal:a"     adverbs (/\')`,
+		`"goal:tm"    time handling`,
+		`"goal:rt"    runtime system`,
+		`"goal:io"    IO verbs (like say, open, read)`,
+		`op           where op is a builtin's name (like "+" or "in")`,
+		``,
+		`Notations:`,
+		`        i (integer) n (number) s (string) r (regexp)`,
+		`        d (dict) t (dict S!Y) h (handle) e (error)`,
+		`        f (function) F (dyadic function)`,
+		`        x,y,z (any other) I,N,S,X,Y,A (arrays)`,
+	}, "\n")
+	goalrt := strings.Join([]string{
+		rtlog, rtseed, rttime, rtget,
+	}, "\n")
+	goals := strings.Join([]string{
+		`GOAL SYNTAX HELP`,
+		`numbers         1     1.5     0b0110     1.7e-3     0xab     0n     0w     3h2m`,
+		`strings         "text\x2c\u00FF\n"     "\""     "\u65e5"     "interpolated $var"`,
+		"                qq/$var\n or ${var}/   qq#text#  (delimiters :+-*%!&|=~,^#_?@`/)",
+		`raw strings     rq/anything until single slash/         rq#doubling ## escapes #`,
+		`arrays          1 2 -3 4      1 "ab" -2 "cd"      (1 2;"a";3 "b";(4 2;"c");*)`,
+		`regexps         rx/[a-z]/      (see https://pkg.go.dev/regexp/syntax for syntax)`,
+		`dyadic verbs    : + - * % ! & | < > = ~ , ^ # _ $ ? @ .     (right-associative)`,
+		`monadic verbs   :: +: -: abs uc error ...`,
+		`adverbs         / \ ' (alone or after expr. with no space)    (left-associative)`,
+		`expressions     2*3+4 → 14       1+|2 3 4 → 5 4 3        +/'(1 2 3;4 5 6) → 6 15`,
+		`separator       ; or newline except when ignored after {[( and before )]}`,
+		`variables       x  y.z  f  data  t1  π               (. only allowed in globals)`,
+		`assign          x:2 (local within lambda, global otherwise)        x::2 (global)`,
+		`op assign       x+:1 (sugar for x:x+1 or x::x+1)          x-:2 (sugar for x:x-2)`,
+		`list assign     (x;y;z):e (where 2<#e)         (x;y):1 2;y → 2`,
+		`eval. order     apply:f[e1;e2]   apply:e1 op e2                      (e2 before)`,
+		`                list:(e1;e2)     seq: [e1;e2]     lambda:{e1;e2}     (e1 before)`,
+		`sequence        [x:2;y:x+3;x*y] → 10        (bracket not following noun tightly)`,
+		`index/apply     x[y] or x y is sugar for x@y; x[] ~ x[*] ~ x[!#x] ~ x (arrays)`,
+		`index deep      x[y;z;...] → x.(y;z;...)            (except for x in (?;and;or))`,
+		`index assign    x[y]:z → x:@[x;y;:;z]                      (or . for x[y;...]:z)`,
+		`index op assign x[y]op:z → x:@[x;y;op;z]                         (for symbol op)`,
+		`lambdas         {x+y-z}[3;5;7] → 1        {[a;b;c]a+b-c}[3;5;7] → 1`,
+		`                {?[x>1;x*o x-1;1]}5 → 120        (o is recursive self-reference)`,
+		`projections     +[2;] 3 → 5               (2+) 3 → 5       (partial application)`,
+		`compositions    ~0> → {~0>x}      -+ → {-x+y}      *|: → {*|:x}`,
+		`index at field  x..a → x["a"]       (.. binds identifiers tightly, interpolable)`,
+		`field expr.     ..a+b → {x["a"]+x["b"]} (field names without . and not in x,y,z)`,
+		`                ..p.a+b+q.c → {[p0;x]p0+x["b"]+c}[a;]   (p. projects; q. quotes)`,
+		`field expr. at  x.. a+b → {x["a"]+x["b"]}[x]                  (same as (..a+b)x)`,
+		`dict fields     ..[a:e1;b:e2;c] → "a""b""c"!(e1;e2;c)`,
+		`amend fields    x..[a:e1;b:e2] → @[x;"a""b";:;x..(e1;e2)]`,
+		`cond            ?[1;2;3] → 2      ?[0;2;3] → 3     ?[0;2;"";3;4] → 4`,
+		`and/or          and[1;2] → 2    and[1;0;3] → 0    or[0;2] → 2      or[0;0;0] → 0`,
+		`return          [1;:2;3] → 2                        (a : at start of expression)`,
+		`try             'x is sugar for ?["e"~@x;:x;x]         (return if it's an error)`,
+		`log             \x logs a string representation of x        (debug/display tool)`,
+		`comments        from line with a single / until line with a single \`,
+		`                or from / (after space or start of line) to end of line`,
+	}, "\n")
+	goalt := strings.Join([]string{
+		`GOAL TYPES HELP`,
+		`atom    array   name            examples`,
+		`i       I       integer         0         -2        !5          4 3 -2 5 0i`,
+		`n       N       number          0.0       1.5       0.0+!5      1.2 3 0n 1e+10`,
+		`s       S       string          "abc"     "d"       "a" "b" "c"`,
+		`r               regexp          rx/[a-z]/           rx/\s+/`,
+		`d               dictionary      "a""b"!1 2          keys!values`,
+		`f               function        +         {x-1}     2*          %[;2]`,
+		`h               handle          open"/path/to/file"    "w"open"/path/to/file"`,
+		`e               error           error"msg"`,
+		`A       generic array   ("a" 1;"b" 2;"c" 3)     (+;-;*;"any")`,
+	}, "\n")
+	httpclient := strings.Join([]string{
+		`http.client d    HTTP client configured by entries in d, based on go-resty.`,
+		`                 All entries optional. Dict values for Header, FormData, QueryParam`,
+		`                 must be strings or lists of strings:`,
+		`                  - AllowGetMethodPayload     i`,
+		`                  - AuthScheme                s`,
+		`                  - BaseUrl                   s`,
+		`                  - Debug                     i`,
+		`                  - DisableWarn               i`,
+		`                  - FormData                  d`,
+		`                  - Header                    d`,
+		`                  - HeaderAuthorizationKey    s`,
+		`                  - PathParams                d`,
+		`                  - QueryParam                d`,
+		`                  - RawPathParams             d`,
+		`                  - RetryCount                i`,
+		`                  - RetryMaxWaitTimeMilli     i`,
+		`                  - RetryResetReaders         i`,
+		`                  - RetryWaitTimeMilli        i`,
+		`                  - Token                     s`,
+		`                  - UserInfo                  ..[Username:"user";Password:"pass"]`,
+	}, "\n")
+	importHelp := strings.Join([]string{
+		`import s    read/eval wrapper roughly equivalent to eval[read path;path;pfx]`,
+		`            where 1) path~s or path~env["GOALLIB"]+s+".goal"`,
+		`            2) pfx is path's basename without extension`,
+		`x import s  same as import s, but using prefix x for globals`,
+	}, "\n")
+	in := strings.Join([]string{
+		`x in s     contained    "bc" "ac"in"abcd" → 1 0                    (same as x¿s)`,
+		`x in Y     member of    2 3 in 8 2 4 → 1 0                         (same as x¿Y)`,
+	}, "\n")
+	json := strings.Join([]string{
+		"json s     parse json   json rq`" + `{"a":true,"b":"text"}` + "`" + ` → "a" "b"!1 "text"`,
+		`s json y   write json   ""json 1.5 2 → "[1.5,2]" (indent with s;disable with "")`,
+		`S json y   write json   like s json y, but with (pfx;indent) for pretty-printing`,
+	}, "\n")
+	logHelp := `log n    log 2.718281828459045 → 1.0`
+	mkdir := `mkdir s     create new directory named s (parent must already exist)`
+	nan := strings.Join([]string{
+		`nan n      isNaN        nan(0n;2;sqrt -1) → 1 0 1             nan 2 0i 3 → 0 1 0`,
+		`n nan n    fill NaNs    42.0 nan(1.5;sqrt -1) → 1.5 42.0      42 nan 2 0i → 2 42`,
+	}, "\n")
+	ocount := `ocount X   occur-count  ocount 3 4 5 3 4 4 7 → 0 0 0 1 1 2 0`
+	open := strings.Join([]string{
+		"open s      open path s for reading, returning a handle (h)", `x open s    open path s with mode x in "r" "w" "a"`,
+		`            or pipe from (x~"-|") or to (x~"|-") command s or S`,
+	}, "\n")
+	or := `or[0;2] → 2      or[0;0;0] → 0`
+	panicHelp := `panic s    panic        panic"msg"                (for fatal programming-errors)`
+	printHelp := strings.Join([]string{
+		`print s     print"Hello, world!\n"      (uses implicit  for non-string values)`,
+		`x print s   print s to handle/name x               "/path/to/file"print"content"`,
+	}, "\n")
+	read := strings.Join([]string{
+		`read h      read from handle h until EOF or an error occurs`,
+		`read s      read file named s into string         lines:=-read"/path/to/file"`,
+		`            or "name""dir"!(S;I) if s is a directory`,
+		`i read h    read i bytes from reader h or until EOF, or an error occurs`,
+		`s read h    read from reader h until 1-byte s, EOF, or an error occurs`,
+	}, "\n")
+	remove := `remove s    remove the named file or empty directory`
+	rename := `x rename y  renames (moves) old path x (s) to new path y (s)`
+	rotate := `i rotate Y rotate       2 rotate 7 8 9 → 9 7 8           -2 rotate 7 8 9 → 8 9 7`
+	round := `round n    round 3.4 → 3.0    round 3.5 → 4.0`
+	rshift := strings.Join([]string{
+		`»X  rshift      »8 9 → 0 8     »"a" "b" → "" "a"       (ASCII keyword: rshift x)`,
+		`x»Y rshift      "a" "b"»1 2 3 → "a" "b" 1`,
+	}, "\n")
+	run := strings.Join([]string{
+		`run s       run command s or S (with arguments)   run"pwd"          run"ls" "-l"`,
+		`            inherits stdin and stderr, returns its standard output or an error`,
+		`            dict with keys "code" "msg" "out"`,
+		`x run s     same as run s but with input string x as stdin`,
+	}, "\n")
+	rx := `rx s       comp. regex  rx"[a-z]"       (like rx/[a-z]/ but compiled at runtime)`
+	say := strings.Join([]string{
+		`say s       same as print, but appends a newline                    say!5`,
+		`x say s     same as print, but appends a newline`,
+	}, "\n")
+	shell := `shell s     same as run, but through "/bin/sh" (unix systems only)  shell"ls -l"`
+	shift := strings.Join([]string{
+		`«X  shift       «8 9 → 9 0     «"a" "b" → "b" ""        (ASCII keyword: shift x)`,
+		`x«Y shift       "a" "b"«1 2 3 → 3 "a" "b"`,
+	}, "\n")
+	sign := `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`
+	sin := `sin n    sin 3.141592653589793%2 → 1.0`
+	sqlopen := `sql.open s    Open DuckDB database with data source name s`
+	sqlq := `sql.q s    Run SQL query, results as table.`
+	sqrt := `sqrt n    sqrt 9 → 3.0    sqrt -1 → 0n`
+	stat := `stat x      returns "dir""mtime""size"!(i;i;i)      (for filehandle h or path s)`
+	sub := strings.Join([]string{
+		`sub[r;s]   regsub       sub[rx/[a-z]/;"Z"] "aBc" → "ZBZ"`,
+		`sub[r;f]   regsub       sub[rx/[A-Z]/;_] "aBc" → "abc"`,
+		`sub[s;s]   replace      sub["b";"B"] "abc" → "aBc"`,
+		`sub[s;s;i] replaceN     sub["a";"b";2] "aaa" → "bba"        (stop after 2 times)`,
+		`sub[S]     replaceS     sub["b" "d" "c" "e"] "abc" → "ade"`,
+		`sub[S;S]   replaceS     sub["b" "c";"d" "e"] "abc" → "ade"`,
+	}, "\n")
+	time := strings.Join([]string{
+		`time cmd              time command with current time`,
+		`cmd time t            time command with time t`,
+		`time[cmd;t;fmt]       time command with time t in given format`,
+		`time[cmd;t;fmt;loc]   time command with time t in given format and location`,
+	}, "\n")
+	uc := `uc x       upper/ceil   uc 1.5 → 2.0                             uc"abπ" → "ABΠ"`
+	utf8 := strings.Join([]string{
+		`utf8 s     is UTF-8     utf8 "aπc" → 1                          utf8 "a\xff" → 0`,
+		`s utf8 s   to UTF-8     "b" utf8 "a\xff" → "ab"       (replace invalid with "b")`,
+	}, "\n")
 	return map[string]string{
-		"abs":   "abs n    abs -3.0 -1.5 2.0 → 3.0 1.5 2.0",
-		"and":   "and[1;2] → 2    and[1;0;3] → 0",
-		"atan":  "atan[n;n]",
-		"chdir": "chdir s     change current working directory to s, or return an error",
-		"close": "close h     flush any buffered data, then close handle h",
-		"cos":   "cos n",
-		"csv": strings.Join([]string{
-			`csv s      csv read     csv"a,b\n1,2" → ("a" "1";"b" "2")`,
-			`csv A      csv write    csv("a" "b";1 2) → "a,1\nb,2\n"`,
-			`s csv s    csv read     " "csv"a b\n1 2" → ("a" "1";"b" "2")  (" " as separator)`,
-			`s csv A    csv write    " "csv("a" "b";1 2) → "a 1\nb 2\n"    (" " as separator)`,
-		}, "\n"),
-		"env": strings.Join([]string{
-			`env s       get environment variable s, or an error if unset`,
-			`            return a dictionary representing the whole environment if s~""`,
-			`x env s     set environment variable x to s, or return an error`,
-			`x env 0     unset environment variable x, or clear environment if x~""`,
-		}, "\n"),
-		"error": `error x    error        r:error"msg"; (@r;.r) → "e" "msg"`,
-		"eval": strings.Join([]string{
-			`eval s     comp/run     a:5;eval"a+2" → 7           (unrestricted variant of .s)`,
-			`eval[s;loc;pfx]         like eval s, but provide loc as location (usually a`,
-			`                        path), and prefix pfx+"." for globals; does not eval`,
-			`                        same location more than once`,
-		}, "\n"),
-		"exp":    "exp n",
-		"firsts": `firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`,
-		"flush":  "flush h     flush any buffered data for handle h",
-		// Ari extension: help
-		"help": strings.Join([]string{
-			`help s                      help string for keyword s`,
-			`help ""                     all ari help as a dictionary`,
-			`s1 help s2                  set s2 as the help string for keyword s1`,
-			`help[category;keyword;s]    set s as the help string for keyword in category (all strings)`,
-		}, "\n"),
-		// Ari extension: http.client
-		"http.client": strings.Join([]string{
-			`http.client d    HTTP client configured by entries in d, based on go-resty.`,
-			`                 All entries optional. Dict values for Header, FormData, QueryParam`,
-			`                 must be strings or lists of strings:`,
-			`                  - AllowGetMethodPayload     i`,
-			`                  - AuthScheme                s`,
-			`                  - BaseUrl                   s`,
-			`                  - Debug                     i`,
-			`                  - DisableWarn               i`,
-			`                  - FormData                  d`,
-			`                  - Header                    d`,
-			`                  - HeaderAuthorizationKey    s`,
-			`                  - PathParams                d`,
-			`                  - QueryParam                d`,
-			`                  - RawPathParams             d`,
-			`                  - RetryCount                i`,
-			`                  - RetryMaxWaitTimeMilli     i`,
-			`                  - RetryResetReaders         i`,
-			`                  - RetryWaitTimeMilli        i`,
-			`                  - Token                     s`,
-			`                  - UserInfo                  ..[Username:"user";Password:"pass"]`,
-		}, "\n"),
-		// Ari extension: http.delete
-		"http.delete": helpForHTTPFn("delete"),
-		// Ari extension: http.get
-		"http.get": helpForHTTPFn("get"),
-		// Ari extension: http.head
-		"http.head": helpForHTTPFn("head"),
-		// Ari extension: http.options
+		"abs":          abs,
+		"and":          and,
+		"atan":         atan,
+		"chdir":        chdir,
+		"close":        closeHelp,
+		"cos":          cos,
+		"csv":          csv,
+		"env":          env,
+		"error":        errorHelp,
+		"eval":         eval,
+		"exp":          exp,
+		"firsts":       firsts,
+		"flush":        flush,
+		"help":         help,
+		"goal":         goalHelp,
+		"goal:rt":      goalrt,
+		"goal:s":       goals,
+		"goal:t":       goalt,
+		"http.client":  httpclient,
+		"http.delete":  helpForHTTPFn("delete"),
+		"http.get":     helpForHTTPFn("get"),
+		"http.head":    helpForHTTPFn("head"),
 		"http.options": helpForHTTPFn("options"),
-		// Ari extension: http.patch
-		"http.patch": helpForHTTPFn("patch"),
-		// Ari extension: http.post
-		"http.post": helpForHTTPFn("post"),
-		// Ari extension: http.put
-		"http.put": helpForHTTPFn("put"),
-		"import": strings.Join([]string{
-			`import s    read/eval wrapper roughly equivalent to eval[read path;path;pfx]`,
-			`            where 1) path~s or path~env["GOALLIB"]+s+".goal"`,
-			`            2) pfx is path's basename without extension`,
-			`x import s  same as import s, but using prefix x for globals`,
-		}, "\n"),
-		"in": strings.Join([]string{
-			`x in s     contained    "bc" "ac"in"abcd" → 1 0                    (same as x¿s)`,
-			`x in Y     member of    2 3 in 8 2 4 → 1 0                         (same as x¿Y)`,
-		}, "\n"),
-		"json": strings.Join([]string{
-			"json s     parse json   json rq`" + `{"a":true,"b":"text"}` + "`" + ` → "a" "b"!1 "text"`,
-			`s json y   write json   ""json 1.5 2 → "[1.5,2]" (indent with s;disable with "")`,
-			`S json y   write json   like s json y, but with (pfx;indent) for pretty-printing`,
-		}, "\n"),
-		"log":   "log n",
-		"mkdir": "mkdir s     create new directory named s (parent must already exist)",
-		"nan": strings.Join([]string{
-			`nan n      isNaN        nan(0n;2;sqrt -1) → 1 0 1             nan 2 0i 3 → 0 1 0`,
-			`n nan n    fill NaNs    42.0 nan(1.5;sqrt -1) → 1.5 42.0      42 nan 2 0i → 2 42`,
-		}, "\n"),
-		"ocount": `ocount X   occur-count  ocount 3 4 5 3 4 4 7 → 0 0 0 1 1 2 0`,
-		"open": strings.Join([]string{
-			"open s      open path s for reading, returning a handle (h)", `x open s    open path s with mode x in "r" "w" "a"`,
-			`            or pipe from (x~"-|") or to (x~"|-") command s or S`,
-		}, "\n"),
-		"or":    "or[0;2] → 2      or[0;0;0] → 0",
-		"panic": `panic s    panic        panic"msg"                (for fatal programming-errors)`,
-		"print": strings.Join([]string{
-			`print s     print"Hello, world!\n"      (uses implicit  for non-string values)`,
-			`x print s   print s to handle/name x               "/path/to/file"print"content"`,
-		}, "\n"),
-		"read": strings.Join([]string{
-			`read h      read from handle h until EOF or an error occurs`,
-			`read s      read file named s into string         lines:=-read"/path/to/file"`,
-			`            or "name""dir"!(S;I) if s is a directory`,
-			`i read h    read i bytes from reader h or until EOF, or an error occurs`,
-			`s read h    read from reader h until 1-byte s, EOF, or an error occurs`,
-		}, "\n"),
-		"remove": "remove s    remove the named file or empty directory",
-		"rename": `x rename y  renames (moves) old path x (s) to new path y (s)`,
-		"rotate": `i rotate Y rotate       2 rotate 7 8 9 → 9 7 8           -2 rotate 7 8 9 → 8 9 7`,
-		"round":  "round n",
-		"rshift": strings.Join([]string{
-			`»X  rshift      »8 9 → 0 8     »"a" "b" → "" "a"       (ASCII keyword: rshift x)`,
-			`x»Y rshift      "a" "b"»1 2 3 → "a" "b" 1`,
-		}, "\n"),
-		"rt.get": strings.Join([]string{
-			`rt.get s        returns various kinds of runtime information`,
-			`                "g"   dictionary with copy of all global variables`,
-			`                "f"   same but only globals containing functions`,
-			`                "v"   same but only non-function globals`,
-		}, "\n"),
-		"rt.log": `rt.log x        like :[x] but logs string representation of x       (same as \x)`,
-		"rt.ofs": strings.Join([]string{
-			`rt.ofs s        set output field separator for print S and ""    (default " ")`,
-			`                returns previous value`,
-		}, "\n"),
-		"rt.seed": "rt.seed i       set non-secure pseudo-rand seed to i        (used by the ? verb)",
-		"rt.time": strings.Join([]string{
-			`rt.time[s;i]    eval s for i times (default 1), return average time (ns)`,
-			`rt.time[f;x;i]  call f. x for i times (default 1), return average time (ns)`,
-		}, "\n"),
-		"run": strings.Join([]string{
-			`run s       run command s or S (with arguments)   run"pwd"          run"ls" "-l"`,
-			`            inherits stdin and stderr, returns its standard output or an error`,
-			`            dict with keys "code" "msg" "out"`,
-			`x run s     same as run s but with input string x as stdin`,
-		}, "\n"),
-		"rx": `rx s       comp. regex  rx"[a-z]"       (like rx/[a-z]/ but compiled at runtime)`,
-		"say": strings.Join([]string{
-			`say s       same as print, but appends a newline                    say!5`,
-			`x say s     same as print, but appends a newline`,
-		}, "\n"),
-		"shell": `shell s     same as run, but through "/bin/sh" (unix systems only)  shell"ls -l"`,
-		"shift": strings.Join([]string{
-			`«X  shift       «8 9 → 9 0     «"a" "b" → "b" ""        (ASCII keyword: shift x)`,
-			`x«Y shift       "a" "b"«1 2 3 → 3 "a" "b"`,
-		}, "\n"),
-		"sign": `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`,
-		"sin":  "sin n",
-		// Ari extension: sql.open
-		"sql.open": "sql.open s    Open DuckDB database with data source name s",
-		// Ari extension: sql.q
-		"sql.q": "sql.q s    Run SQL query, results as table.",
-		"sqrt":  "sqrt n",
-		"stat":  `stat x      returns "dir""mtime""size"!(i;i;i)      (for filehandle h or path s)`,
-		"sub": strings.Join([]string{
-			`sub[r;s]   regsub       sub[rx/[a-z]/;"Z"] "aBc" → "ZBZ"`,
-			`sub[r;f]   regsub       sub[rx/[A-Z]/;_] "aBc" → "abc"`,
-			`sub[s;s]   replace      sub["b";"B"] "abc" → "aBc"`,
-			`sub[s;s;i] replaceN     sub["a";"b";2] "aaa" → "bba"        (stop after 2 times)`,
-			`sub[S]     replaceS     sub["b" "d" "c" "e"] "abc" → "ade"`,
-			`sub[S;S]   replaceS     sub["b" "c";"d" "e"] "abc" → "ade"`,
-		}, "\n"),
-		"time": strings.Join([]string{
-			`time cmd              time command with current time`,
-			`cmd time t            time command with time t`,
-			`time[cmd;t;fmt]       time command with time t in given format`,
-			`time[cmd;t;fmt;loc]   time command with time t in given format and location`,
-		}, "\n"),
-		"uc": `uc x       upper/ceil   uc 1.5 → 2.0                             uc"abπ" → "ABΠ"`,
-		"utf8": strings.Join([]string{
-			`utf8 s     is UTF-8     utf8 "aπc" → 1                          utf8 "a\xff" → 0`,
-			`s utf8 s   to UTF-8     "b" utf8 "a\xff" → "ab"       (replace invalid with "b")`,
-		}, "\n"),
+		"http.patch":   helpForHTTPFn("patch"),
+		"http.post":    helpForHTTPFn("post"),
+		"http.put":     helpForHTTPFn("put"),
+		"import":       importHelp,
+		"in":           in,
+		"json":         json,
+		"log":          logHelp,
+		"mkdir":        mkdir,
+		"nan":          nan,
+		"ocount":       ocount,
+		"open":         open,
+		"or":           or,
+		"panic":        panicHelp,
+		"print":        printHelp,
+		"read":         read,
+		"remove":       remove,
+		"rename":       rename,
+		"rotate":       rotate,
+		"round":        round,
+		"rshift":       rshift,
+		"rt.get":       rtget,
+		"rt.log":       rtlog,
+		"rt.seed":      rtseed,
+		"rt.time":      rttime,
+		"run":          run,
+		"rx":           rx,
+		"say":          say,
+		"shell":        shell,
+		"shift":        shift,
+		"sign":         sign,
+		"sin":          sin,
+		"sql.open":     sqlopen,
+		"sql.q":        sqlq,
+		"sqrt":         sqrt,
+		"stat":         stat,
+		"sub":          sub,
+		"time":         time,
+		"uc":           uc,
+		"utf8":         utf8,
 	}
 }
 
@@ -589,264 +975,4 @@ func helpForHTTPFn(s string) string {
 		"                          - QueryParam",
 		"                          - RawPathParams",
 	}, "\n")
-}
-
-// Goal Preamble in Goal
-
-func goalLoadExtendedPreamble(ctx *goal.Context) error {
-	_, err := ctx.Eval(goalFmtSource)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-const goalFmtSource = `
-/
-  Copyright (c) 2022 Yon <anaseto@bardinflor.perso.aquilenet.fr>
-
-  Permission to use, copy, modify, and distribute this software for any
-  purpose with or without fee is hereby granted, provided that the above
-  copyright notice and this permission notice appear in all copies.
-
-  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-  WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-  MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-  ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-  WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-  ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-  OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-\
-/
-  dict[d;f] outputs dict d, assuming string keys and atom or flat array values,
-  using format string f for floating point numbers.
-\
-fmt.dict:{[d;f]
- nk:#d; say"=== Dict ($nk keys) ==="
- k:(|/-1+""#k)!k:!d; v:" "/(..?[(@x)¿"nN";p.f$x;$'x])'.d
- say"\n"/k{"$x| $y"}'v
-}
-/
-  tbl[t;r;c;f] outputs dict t as table, assuming string keys and flat columns,
-  and outputs at most r rows and c columns, using format string f for floating
-  point numbers. Example: tbl[t;5;8;"%.1f"].
-\
-fmt.tbl:{[t;r;c;f]
-  (nr;nc):(#*t;#t); say"=== Table ${nr}x$nc ==="
-  t:t[!r&nr;(c&nc)@!t] / keep up to r rows and c columns
-  k:!t; v:(..?[(@x)¿"nN";p.f$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
-  (k;v):(-w)!'´(k;v); say"\n"/,/" "/(k;"-"*w;+v)
-}
-`
-
-// Goal functions implemented in Go
-
-// printV adapted from Goal's implementation found in the os.go file.
-func printV(ctx *goal.Context, x goal.V) error {
-	switch xv := x.BV().(type) {
-	case goal.S:
-		_, err := fmt.Fprint(os.Stdout, string(xv))
-		return err
-	case *goal.AS:
-		buf := bufio.NewWriter(os.Stdout)
-		imax := xv.Len() - 1
-		for i, s := range xv.Slice {
-			_, err := buf.WriteString(s)
-			if err != nil {
-				return err
-			}
-			if i < imax {
-				err := buf.WriteByte(' ')
-				if err != nil {
-					return err
-				}
-			}
-		}
-		return buf.Flush()
-	default:
-		_, err := fmt.Fprintf(os.Stdout, "%s", x.Append(ctx, nil, false))
-		return err
-	}
-}
-
-func VFHelpFn(help Help) func(goalContext *goal.Context, args []goal.V) goal.V {
-	return func(goalContext *goal.Context, args []goal.V) goal.V {
-		x := args[len(args)-1]
-		switch len(args) {
-		case monadic:
-			return helpMonadic(goalContext, help, x)
-		case dyadic:
-			return helpDyadic(help, x, args)
-		case triadic:
-			return helpTriadic(help, x, args)
-		default:
-			return goal.Panicf("sql.q : too many arguments (%d), expects 1 or 2 arguments", len(args))
-		}
-	}
-}
-
-const noHelpString = "(no help)"
-
-func helpMonadic(goalContext *goal.Context, help Help, x goal.V) goal.V {
-	switch helpKeyword := x.BV().(type) {
-	case goal.S:
-		helpKeywordString := string(helpKeyword)
-		if helpKeywordString == "" {
-			return helpReturnAsDict(help)
-		}
-		return helpPrintExactMatch(help, helpKeyword, goalContext)
-	case *goal.R:
-		anyMatches := helpPrintRegexMatches(help, helpKeyword.Regexp)
-		if anyMatches {
-			return goal.NewI(1)
-		}
-		fmt.Fprintln(os.Stdout, "(no help matches)")
-		return goal.NewI(0)
-	default:
-		return panicType("help s-or-rx", "s-or-rx", x)
-	}
-}
-
-func helpPrintExactMatch(help Help, helpKeyword goal.S, goalContext *goal.Context) goal.V {
-	goalHelp := help["goal"]
-	if helpString, ok := goalHelp[string(helpKeyword)]; ok {
-		err := printV(goalContext, goal.NewS(helpString))
-		if err != nil {
-			return goal.NewPanicError(err)
-		}
-		fmt.Fprintln(os.Stdout)
-		return goal.NewI(1)
-	}
-	err := printV(goalContext, goal.NewS(noHelpString))
-	if err != nil {
-		return goal.NewPanicError(err)
-	}
-	fmt.Fprintln(os.Stdout)
-	return goal.NewI(0)
-}
-
-func helpReturnAsDict(help Help) goal.V {
-	categories := make([]string, 0, len(help))
-	categoryDicts := make([]goal.V, 0)
-	for category, v := range help {
-		categories = append(categories, category)
-		categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
-	}
-	return goal.NewD(goal.NewAS(categories), goal.NewAV(categoryDicts))
-}
-
-func helpPrintRegexMatches(help Help, r *regexp.Regexp) bool {
-	goalHelp := help["goal"]
-	anyMatches := false
-	for k, v := range goalHelp {
-		if r.MatchString(k) || r.MatchString(v) {
-			fmt.Fprintln(os.Stdout, v)
-			anyMatches = true
-		}
-	}
-	return anyMatches
-}
-
-func helpDyadic(help Help, x goal.V, args []goal.V) goal.V {
-	helpKeyword, ok := x.BV().(goal.S)
-	if !ok {
-		return panicType("s1 help s2", "s1", x)
-	}
-	y := args[0]
-	helpString, ok := y.BV().(goal.S)
-	if !ok {
-		return panicType("s1 help s2", "s2", y)
-	}
-	goalHelp := help["goal"]
-	goalHelp[string(helpKeyword)] = string(helpString)
-	return goal.NewI(1)
-}
-
-func helpTriadic(help Help, x goal.V, args []goal.V) goal.V {
-	helpCategory, ok := x.BV().(goal.S)
-	if !ok {
-		return panicType("help[category;keyword;helpstring]", "category", x)
-	}
-	y := args[1]
-	helpKeyword, ok := y.BV().(goal.S)
-	if !ok {
-		return panicType("help[category;keyword;helpstring]", "keyword", y)
-	}
-	z := args[0]
-	helpString, ok := z.BV().(goal.S)
-	if !ok {
-		return panicType("help[category;keyword;helpstring]", "helpstring", z)
-	}
-	categoryHelp, ok := help["goal"]
-	if !ok {
-		help[string(helpCategory)] = map[string]string{string(helpKeyword): string(helpString)}
-	} else {
-		categoryHelp[string(helpKeyword)] = string(helpString)
-	}
-	return goal.NewI(1)
-}
-
-// Go <> Goal helpers
-
-func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
-	ka := d.KeyArray()
-	va := d.ValueArray()
-	m := make(map[string]string, ka.Len())
-	switch kas := ka.(type) {
-	case *goal.AS:
-		switch vas := va.(type) {
-		case *goal.AS:
-			vasSlice := vas.Slice
-			for i, k := range kas.Slice {
-				m[k] = vasSlice[i]
-			}
-		default:
-			return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
-				"with string keys and string values, but received values: %v", va)
-		}
-	default:
-		return nil, fmt.Errorf("[Developer Error] stringMapFromGoalDict expects a Goal dict "+
-			"with string keys and string values, but received keys: %v", ka)
-	}
-	return m, nil
-}
-
-func stringMapToGoalDict(m map[string]string) goal.V {
-	keys := make([]string, 0, len(m))
-	values := make([]string, 0, len(m))
-	for k, v := range m {
-		keys = append(keys, k)
-		values = append(values, v)
-	}
-	ks := goal.NewAS(keys)
-	vs := goal.NewAS(values)
-	return goal.NewD(ks, vs)
-}
-
-func goalNewDictEmpty() *goal.D {
-	dv := goal.NewD(goal.NewAV(nil), goal.NewAV(nil))
-	d, ok := dv.BV().(*goal.D)
-	if !ok {
-		panic("Developer error: Empty Goal dictionary expected.")
-	}
-	return d
-}
-
-// Integration with other parts of Ari
-
-func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
-	// From Goal itself
-	gos.Import(goalContext, "")
-	// Ari
-	goalContext.RegisterDyad("help", VFHelpFn(help))
-	goalContext.RegisterDyad("http.client", VFHTTPClient)
-	goalContext.RegisterDyad("http.delete", VFHTTPMaker("DELETE"))
-	goalContext.RegisterDyad("http.get", VFHTTPMaker("GET"))
-	goalContext.RegisterDyad("http.head", VFHTTPMaker("HEAD"))
-	goalContext.RegisterDyad("http.options", VFHTTPMaker("OPTIONS"))
-	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
-	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
-	goalContext.RegisterDyad("http.put", VFHTTPMaker("PUT"))
-	goalContext.RegisterDyad("sql.open", VFSqlOpenFn(sqlDatabase))
-	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 }
