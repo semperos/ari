@@ -668,7 +668,7 @@ func GoalKeywordsHelp() map[string]string {
 	atan := `atan[n;n]`
 	chdir := `chdir s     change current working directory to s, or return an error`
 	closeHelp := `close h     flush any buffered data, then close handle h`
-	cos := `cos n    cos 0 → 1.0`
+	cos := `cos n      cos 0 → 1.0`
 	csv := strings.Join([]string{
 		`csv s      csv read     csv"a,b\n1,2" → ("a" "1";"b" "2")`,
 		`csv A      csv write    csv("a" "b";1 2) → "a,1\nb,2\n"`,
@@ -688,7 +688,7 @@ func GoalKeywordsHelp() map[string]string {
 		`                        path), and prefix pfx+"." for globals; does not eval`,
 		`                        same location more than once`,
 	}, "\n")
-	exp := `exp n    exp 1 → 2.718281828459045`
+	exp := `exp n      exp 1 → 2.718281828459045`
 	firsts := `firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`
 	flush := `flush h     flush any buffered data for handle h`
 	help := strings.Join([]string{
@@ -709,9 +709,9 @@ func GoalKeywordsHelp() map[string]string {
 		``,
 		`"goal:s"     syntax`,
 		`"goal:t"     value types`,
-		`"goal:v"     verbs (like +*-%,)`,
+		`TODO NOT IMPLEMENTED "goal:v"     verbs (like +*-%,)`,
 		`"goal:nv"    named verbs (like in, sign)`,
-		`"goal:a"     adverbs (/\')`,
+		`TODO NOT IMPLEMENTED "goal:a"     adverbs (/\')`,
 		`"goal:tm"    time handling`,
 		`"goal:rt"    runtime system`,
 		`"goal:io"    IO verbs (like say, open, read)`,
@@ -724,7 +724,7 @@ func GoalKeywordsHelp() map[string]string {
 		`        x,y,z (any other) I,N,S,X,Y,A (arrays)`,
 	}, "\n")
 	goalrt := strings.Join([]string{
-		rtlog, rtseed, rttime, rtget,
+		"GOAL RUNTIME HELP", rtlog, rtseed, rttime, rtget,
 	}, "\n")
 	goals := strings.Join([]string{
 		`GOAL SYNTAX HELP`,
@@ -818,7 +818,7 @@ func GoalKeywordsHelp() map[string]string {
 		`s json y   write json   ""json 1.5 2 → "[1.5,2]" (indent with s;disable with "")`,
 		`S json y   write json   like s json y, but with (pfx;indent) for pretty-printing`,
 	}, "\n")
-	logHelp := `log n    log 2.718281828459045 → 1.0`
+	logHelp := `log n      log 2.718281828459045 → 1.0`
 	mkdir := `mkdir s     create new directory named s (parent must already exist)`
 	nan := strings.Join([]string{
 		`nan n      isNaN        nan(0n;2;sqrt -1) → 1 0 1             nan 2 0i 3 → 0 1 0`,
@@ -867,10 +867,10 @@ func GoalKeywordsHelp() map[string]string {
 		`x«Y shift       "a" "b"«1 2 3 → 3 "a" "b"`,
 	}, "\n")
 	sign := `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`
-	sin := `sin n    sin 3.141592653589793%2 → 1.0`
+	sin := `sin n      sin 3.141592653589793%2 → 1.0`
 	sqlopen := `sql.open s    Open DuckDB database with data source name s`
 	sqlq := `sql.q s    Run SQL query, results as table.`
-	sqrt := `sqrt n    sqrt 9 → 3.0    sqrt -1 → 0n`
+	sqrt := `sqrt n     sqrt 9 → 3.0    sqrt -1 → 0n`
 	stat := `stat x      returns "dir""mtime""size"!(i;i;i)      (for filehandle h or path s)`
 	sub := strings.Join([]string{
 		`sub[r;s]   regsub       sub[rx/[a-z]/;"Z"] "aBc" → "ZBZ"`,
@@ -891,6 +891,49 @@ func GoalKeywordsHelp() map[string]string {
 		`utf8 s     is UTF-8     utf8 "aπc" → 1                          utf8 "a\xff" → 0`,
 		`s utf8 s   to UTF-8     "b" utf8 "a\xff" → "ab"       (replace invalid with "b")`,
 	}, "\n")
+	goalnv := strings.Join([]string{
+		"GOAL NAMED VERBS HELP", abs, atan, cos, csv, errorHelp, exp, eval, firsts, in,
+		json, logHelp, nan, ocount, panicHelp, rotate, round, rx, sign, sin, sqrt, sub, uc, utf8,
+	}, "\n")
+	goalio := strings.Join([]string{
+		"GOAL IO/OS HELP", chdir, closeHelp, env, flush, importHelp, mkdir, open,
+		printHelp, read, remove, run, say, shell, stat, "",
+		strings.Join([]string{
+			`ARGS        command-line arguments, starting with script name`,
+			`STDIN       standard input filehandle (buffered)`,
+			`STDOUT      standard output filehandle (buffered)`,
+			`STDERR      standard error filehandle (buffered)`,
+		}, "\n"),
+	}, "\n")
+	goaltm := strings.Join([]string{
+		"GOAL TIME HELP", time,
+		`Time t should consist either of integers or strings in the given format ("unix"`,
+		`is the default for integers and RFC3339 layout "2006-01-02T15:04:05Z07:00" is`,
+		`the default for strings), with optional location (default is "UTC"). See`,
+		`https://pkg.go.dev/time for information on layouts and locations, as Goal uses`,
+		`the same conventions as Go's time package.  Supported values for cmd are as`,
+		`follows:`,
+		``,
+		`    cmd (s)       result (type)                                 fmt`,
+		`    -------       -------------                                 ---`,
+		`    "clock"       hour, minute, second (I)`,
+		`    "date"        year, month, day (I)                          yes`,
+		`    "day"         day number (i)`,
+		`    "hour"        0-23 hour (i)`,
+		`    "minute"      0-59 minute (i)`,
+		`    "month"       0-12 month (i)`,
+		`    "second"      0-59 second (i)`,
+		`    "unix"        unix epoch time (i)                           yes`,
+		`    "unixmicro"   unix (microsecond version) (i)                yes`,
+		`    "unixmilli"   unix (millisecond version) (i)                yes`,
+		`    "unixnano"    unix (nanosecond version) (i)                 yes`,
+		`    "week"        year, week (I)`,
+		`    "weekday"     0-7 weekday starting from Sunday (i)`,
+		`    "year"        year (i)`,
+		`    "yearday"     1-365/6 year day (i)`,
+		`    "zone"        name, offset in seconds east of UTC (s;i)`,
+		`    format (s)    format time using given layout (s)            yes`,
+	}, "\n")
 	return map[string]string{
 		"abs":          abs,
 		"and":          and,
@@ -907,9 +950,12 @@ func GoalKeywordsHelp() map[string]string {
 		"flush":        flush,
 		"help":         help,
 		"goal":         goalHelp,
+		"goal:io":      goalio,
+		"goal:nv":      goalnv,
 		"goal:rt":      goalrt,
 		"goal:s":       goals,
 		"goal:t":       goalt,
+		"goal:tm":      goaltm,
 		"http.client":  httpclient,
 		"http.delete":  helpForHTTPFn("delete"),
 		"http.get":     helpForHTTPFn("get"),
