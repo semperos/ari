@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"codeberg.org/anaseto/goal"
@@ -447,6 +448,20 @@ func GoalKeywordsHelp() map[string]string {
 			`                  - Token                     s`,
 			`                  - UserInfo                  ..[Username:"user";Password:"pass"]`,
 		}, "\n"),
+		// Ari extension: http.delete
+		"http.delete": helpForHTTPFn("delete"),
+		// Ari extension: http.get
+		"http.get": helpForHTTPFn("get"),
+		// Ari extension: http.head
+		"http.head": helpForHTTPFn("head"),
+		// Ari extension: http.options
+		"http.options": helpForHTTPFn("options"),
+		// Ari extension: http.patch
+		"http.patch": helpForHTTPFn("patch"),
+		// Ari extension: http.post
+		"http.post": helpForHTTPFn("post"),
+		// Ari extension: http.put
+		"http.put": helpForHTTPFn("put"),
 		"import": strings.Join([]string{
 			`import s    read/eval wrapper roughly equivalent to eval[read path;path;pfx]`,
 			`            where 1) path~s or path~env["GOALLIB"]+s+".goal"`,
@@ -528,6 +543,8 @@ func GoalKeywordsHelp() map[string]string {
 		}, "\n"),
 		"sign": `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`,
 		"sin":  "sin n",
+		// Ari extension: sql.open
+		"sql.open": "sql.open s    Open DuckDB database with data source name s",
 		// Ari extension: sql.q
 		"sql.q": "sql.q s    Run SQL query, results as table.",
 		"sqrt":  "sqrt n",
@@ -552,6 +569,26 @@ func GoalKeywordsHelp() map[string]string {
 			`s utf8 s   to UTF-8     "b" utf8 "a\xff" → "ab"       (replace invalid with "b")`,
 		}, "\n"),
 	}
+}
+
+func helpForHTTPFn(s string) string {
+	l := strings.ToLower(s)
+	u := strings.ToUpper(s)
+	return strings.Join([]string{
+		fmt.Sprintf("       http.%s s         Make HTTP %s request for URL s", l, u),
+		//nolint:lll
+		fmt.Sprintf("  opts http.%s s         Make HTTP %s request for URL s with client opts dict (builds one-off client)", l, u),
+		fmt.Sprintf("client http.%s s         Make HTTP %s request for URL s with client (from http.client)", l, u),
+		fmt.Sprintf("http.%s[client;s;opts]   Make HTTP %s request for URL s with client and request opts dict", l, u),
+		"                          For client opts, see http.client",
+		"                          Supported request opts (depending on HTTP method):",
+		"                          - Debug",
+		"                          - FormData",
+		"                          - Header",
+		"                          - PathParams",
+		"                          - QueryParam",
+		"                          - RawPathParams",
+	}, "\n")
 }
 
 // Goal Preamble in Goal
@@ -604,7 +641,7 @@ fmt.tbl:{[t;r;c;f]
 
 // Goal functions implemented in Go
 
-// printV adapted from Goal's implementation of os.go
+// printV adapted from Goal's implementation found in the os.go file.
 func printV(ctx *goal.Context, x goal.V) error {
 	switch xv := x.BV().(type) {
 	case goal.S:
@@ -614,9 +651,15 @@ func printV(ctx *goal.Context, x goal.V) error {
 		buf := bufio.NewWriter(os.Stdout)
 		imax := xv.Len() - 1
 		for i, s := range xv.Slice {
-			buf.WriteString(s)
+			_, err := buf.WriteString(s)
+			if err != nil {
+				return err
+			}
 			if i < imax {
-				buf.WriteByte(' ')
+				err := buf.WriteByte(' ')
+				if err != nil {
+					return err
+				}
 			}
 		}
 		return buf.Flush()
@@ -649,48 +692,59 @@ func helpMonadic(goalContext *goal.Context, help Help, x goal.V) goal.V {
 	case goal.S:
 		helpKeywordString := string(helpKeyword)
 		if helpKeywordString == "" {
-			categories := make([]string, 0, len(help))
-			categoryDicts := make([]goal.V, 0)
-			for category, v := range help {
-				categories = append(categories, category)
-				categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
-			}
-			return goal.NewD(goal.NewAS(categories), goal.NewAV(categoryDicts))
+			return helpReturnAsDict(help)
 		}
-		goalHelp := help["goal"]
-		if helpString, ok := goalHelp[string(helpKeyword)]; ok {
-			err := printV(goalContext, goal.NewS(helpString))
-			if err != nil {
-				return goal.NewPanicError(err)
-			}
-			fmt.Fprintln(os.Stdout)
-			return goal.NewI(1)
-		} else {
-			err := printV(goalContext, goal.NewS(noHelpString))
-			if err != nil {
-				return goal.NewPanicError(err)
-			}
-			fmt.Fprintln(os.Stdout)
-			return goal.NewI(0)
-		}
+		return helpPrintExactMatch(help, helpKeyword, goalContext)
 	case *goal.R:
-		r := helpKeyword.Regexp
-		goalHelp := help["goal"]
-		anyMatches := false
-		for k, v := range goalHelp {
-			if r.MatchString(k) || r.MatchString(v) {
-				fmt.Fprintln(os.Stdout, v)
-				anyMatches = true
-			}
-		}
+		anyMatches := helpPrintRegexMatches(help, helpKeyword.Regexp)
 		if anyMatches {
 			return goal.NewI(1)
 		}
 		fmt.Fprintln(os.Stdout, "(no help matches)")
 		return goal.NewI(0)
 	default:
-		return panicType("help s", "s", x)
+		return panicType("help s-or-rx", "s-or-rx", x)
 	}
+}
+
+func helpPrintExactMatch(help Help, helpKeyword goal.S, goalContext *goal.Context) goal.V {
+	goalHelp := help["goal"]
+	if helpString, ok := goalHelp[string(helpKeyword)]; ok {
+		err := printV(goalContext, goal.NewS(helpString))
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		fmt.Fprintln(os.Stdout)
+		return goal.NewI(1)
+	}
+	err := printV(goalContext, goal.NewS(noHelpString))
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+	fmt.Fprintln(os.Stdout)
+	return goal.NewI(0)
+}
+
+func helpReturnAsDict(help Help) goal.V {
+	categories := make([]string, 0, len(help))
+	categoryDicts := make([]goal.V, 0)
+	for category, v := range help {
+		categories = append(categories, category)
+		categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
+	}
+	return goal.NewD(goal.NewAS(categories), goal.NewAV(categoryDicts))
+}
+
+func helpPrintRegexMatches(help Help, r *regexp.Regexp) bool {
+	goalHelp := help["goal"]
+	anyMatches := false
+	for k, v := range goalHelp {
+		if r.MatchString(k) || r.MatchString(v) {
+			fmt.Fprintln(os.Stdout, v)
+			anyMatches = true
+		}
+	}
+	return anyMatches
 }
 
 func helpDyadic(help Help, x goal.V, args []goal.V) goal.V {
@@ -785,14 +839,14 @@ func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQ
 	gos.Import(goalContext, "")
 	// Ari
 	goalContext.RegisterDyad("help", VFHelpFn(help))
-	goalContext.RegisterDyad("http.client", VFHttpClient)
-	goalContext.RegisterDyad("http.get", VFHTTPMaker("GET"))
-	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
-	goalContext.RegisterDyad("http.put", VFHTTPMaker("PUT"))
+	goalContext.RegisterDyad("http.client", VFHTTPClient)
 	goalContext.RegisterDyad("http.delete", VFHTTPMaker("DELETE"))
-	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
+	goalContext.RegisterDyad("http.get", VFHTTPMaker("GET"))
 	goalContext.RegisterDyad("http.head", VFHTTPMaker("HEAD"))
 	goalContext.RegisterDyad("http.options", VFHTTPMaker("OPTIONS"))
+	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
+	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
+	goalContext.RegisterDyad("http.put", VFHTTPMaker("PUT"))
 	goalContext.RegisterDyad("sql.open", VFSqlOpenFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 }

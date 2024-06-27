@@ -201,7 +201,6 @@ func (autoCompleter *AutoCompleter) sqlAutoCompleteFn() func(v [][]rune, line, c
 }
 
 func (autoCompleter *AutoCompleter) cacheGoalKeywords(goalContext *goal.Context) {
-	// TODO Work out abstraction for adding help to user-defined Goal keywords.
 	goalKeywords := goalContext.Keywords(nil)
 	goalKeywordsHelp := ari.GoalKeywordsHelp()
 	sort.Strings(goalKeywords)

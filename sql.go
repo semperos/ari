@@ -31,7 +31,7 @@ func (sqlDatabase *SQLDatabase) Append(_ *goal.Context, dst []byte, _ bool) []by
 func (sqlDatabase *SQLDatabase) LessT(y goal.BV) bool {
 	// Goal falls back to ordering by type name,
 	// and there is no other reasonable way to order
-	// these HttpClient structs.
+	// these structs.
 	return sqlDatabase.Type() < y.Type()
 }
 
@@ -171,7 +171,7 @@ func panicType(op, sym string, x goal.V) goal.V {
 
 // Implements sql.open to open a SQL DB.
 func VFSqlOpenFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
-	return func(goalContext *goal.Context, args []goal.V) goal.V {
+	return func(_ *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
 		dataSourceName, ok := x.BV().(goal.S)
 		switch len(args) {

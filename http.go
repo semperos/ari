@@ -21,7 +21,7 @@ type HTTPClient struct {
 func (httpClient *HTTPClient) LessT(y goal.BV) bool {
 	// Goal falls back to ordering by type name,
 	// and there is no other reasonable way to order
-	// these HttpClient structs.
+	// these HTTPClient structs.
 	return httpClient.Type() < y.Type()
 }
 
@@ -37,7 +37,7 @@ func (httpClient *HTTPClient) Matches(y goal.BV) bool {
 
 // Type implements goal.BV.
 func (httpClient *HTTPClient) Type() string {
-	return "ari.HttpClient"
+	return "ari.HTTPClient"
 }
 
 // Append implements goal.BV.
@@ -330,7 +330,7 @@ func newHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 						value)
 				}
 			default:
-				return nil, fmt.Errorf("unsupported ari.HttpClient option: %v", k)
+				return nil, fmt.Errorf("unsupported ari.HTTPClient option: %v", k)
 			}
 		}
 	default:
@@ -343,7 +343,7 @@ func newHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 	return &HTTPClient{client: restyClient}, nil
 }
 
-func VFHttpClient(_ *goal.Context, args []goal.V) goal.V {
+func VFHTTPClient(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	clientOptions, ok := x.BV().(*goal.D)
 	switch len(args) {
@@ -393,7 +393,6 @@ func httpMakerMonadic(x goal.V, methodLower string, methodUpper string) goal.V {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
 	}
-
 	return goalDictFromResponse(resp)
 }
 
@@ -409,7 +408,7 @@ func httpMakerDyadic(x goal.V, args []goal.V, methodLower string, methodUpper st
 			return goal.NewPanicError(err)
 		}
 	default:
-		errMsg := fmt.Sprintf("client http.%s url : client must be a dict or HttpClient instance, "+
+		errMsg := fmt.Sprintf("client http.%s url : client must be a dict or ari.HTTPClient instance, "+
 			"but received a %v: %v",
 			methodLower,
 			reflect.TypeOf(clientOpts),
@@ -419,7 +418,7 @@ func httpMakerDyadic(x goal.V, args []goal.V, methodLower string, methodUpper st
 	y := args[0]
 	urlS, ok := y.BV().(goal.S)
 	if !ok {
-		return panicType(fmt.Sprintf("HttpClient http.%s url", methodLower), "url", y)
+		return panicType(fmt.Sprintf("ari.HTTPClient http.%s url", methodLower), "url", y)
 	}
 	req := httpClient.client.R()
 	resp, err := req.Execute(methodUpper, string(urlS))
@@ -441,7 +440,7 @@ func httpMakerTriadic(x goal.V, args []goal.V, methodLower string, methodUpper s
 			return goal.NewPanicError(err)
 		}
 	default:
-		errMsg := fmt.Sprintf("client http.%s url optionsDict : client must be a dict or HttpClient instance, "+
+		errMsg := fmt.Sprintf("client http.%s url optionsDict : client must be a dict or ari.HTTPClient instance, "+
 			"but received a %v: %v",
 			methodLower,
 			reflect.TypeOf(clientOpts),
@@ -451,12 +450,12 @@ func httpMakerTriadic(x goal.V, args []goal.V, methodLower string, methodUpper s
 	y := args[1]
 	urlS, ok := y.BV().(goal.S)
 	if !ok {
-		return panicType(fmt.Sprintf("HttpClient http.%s url", methodLower), "url", y)
+		return panicType(fmt.Sprintf("ari.HTTPClient http.%s url", methodLower), "url", y)
 	}
 	z := args[0]
 	optionsD, ok := z.BV().(*goal.D)
 	if !ok {
-		return panicType(fmt.Sprintf("http.%s[HttpClient;url;optionsDict]", methodLower), "optionsDict", z)
+		return panicType(fmt.Sprintf("http.%s[ari.HTTPClient;url;optionsDict]", methodLower), "optionsDict", z)
 	}
 	req := httpClient.client.R()
 	req, err := augmentRequestWithOptions(req, optionsD, methodLower)

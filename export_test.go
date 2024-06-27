@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// Relies on unexported noHelpString
+// Relies on unexported noHelpString.
 func TestGoalKeywordsHaveHelp(t *testing.T) {
 	tests := map[string]struct {
 		kw string
