@@ -424,17 +424,22 @@ func GoalSyntax() map[string]string {
 	}
 }
 
-func goalAdverbsHelp() map[string]string {
-	return map[string]string{
-		"'": strings.Join([]string{
+type mapentry struct {
+	k string
+	v string
+}
+
+func goalAdverbsHelp() []mapentry {
+	return []mapentry{
+		{k: "'", v: strings.Join([]string{
 			`f'x    each      #'(4 5;6 7 8) → 2 3`,
 			`x F'y  each      2 3#'4 5 → (4 4;5 5 5)      {(x;y;z)}'[1;2 3;4] → (1 2 4;1 3 4)`,
 			`x I'y  case      (6 7 8 9)0 1 0 1'"a""b""c""d" → 6 "b" 8 "d"`,
 			`I A'I  at each   m:3$!9;p:!2 2;(m').p → 0 1 3 4`,
-		}, "\n"),
-		"`": "x F`" + `y  eachleft  1 2,` + "`" + `"a""b" → (1 "a" "b";2 "a" "b")           (same as F[;y]'x)`,
-		"´": `x F` + "´y  eachright 1 2,´" + `"a""b" → (1 2 "a";1 2 "b")               (same as F[x;]'y)`,
-		"/": strings.Join([]string{
+		}, "\n")},
+		{k: "`", v: "x F`" + `y  eachleft  1 2,` + "`" + `"a""b" → (1 "a" "b";2 "a" "b")           (same as F[;y]'x)`},
+		{k: "´", v: `x F` + "´y  eachright 1 2,´" + `"a""b" → (1 2 "a";1 2 "b")               (same as F[x;]'y)`},
+		{k: "/", v: strings.Join([]string{
 			`F/x    fold      +/!10 → 45`,
 			`x F/y  fold      5 6+/!4 → 11 12                     {x+y-z}/[5;4 3;2 1] → 9`,
 			`i f/y  do        3(2*)/4 → 32`,
@@ -442,8 +447,8 @@ func goalAdverbsHelp() map[string]string {
 			`f/x    converge  {1+1.0%x}/1 → 1.618033988749895     {-x}/1 → -1`,
 			`s/S    join      ","/"a" "b" "c" → "a,b,c"`,
 			`I/x    decode    24 60 60/1 2 3 → 3723               2/1 1 0 → 6`,
-		}, "\n"),
-		`\`: strings.Join([]string{
+		}, "\n")},
+		{k: `\`, v: strings.Join([]string{
 			`F\x    scan      +\!10 → 0 1 3 6 10 15 21 28 36 45`,
 			`x F\y  scan      5 6+\!4 → (5 6;6 7;8 9;11 12)       {x+y-z}\[5;4 3;2 1] → 7 9`,
 			`i f\y  dos       3(2*)\4 → 4 8 16 32`,
@@ -454,45 +459,39 @@ func goalAdverbsHelp() map[string]string {
 			`i s\s  splitN    (2)","\"a,b,c" → "a" "b,c"`,
 			`i r\s  splitN    (3)rx/[,;]/\"a,b;c,d" → "a" "b" "c,d"`,
 			`I\x    encode    24 60 60\3723 → 1 2 3               2\6 → 1 1 0`,
-		}, "\n"),
+		}, "\n")},
 	}
 }
 
 //nolint:funlen
-func GoalSyntaxHelp() map[string]string {
-	adverbs := goalAdverbsHelp()
-	m := map[string]string{
-		"¿": strings.Join([]string{
-			`firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`,
-			`x in s     contained    "bc" "ac"in"abcd" → 1 0                    (same as x¿s)`,
-			`x in Y     member of    2 3 in 8 2 4 → 1 0                         (same as x¿Y)`,
-		}, "\n"),
-		":": strings.Join([]string{
+func goalVerbsHelp() []mapentry {
+	return []mapentry{
+		{k: ":", v: strings.Join([]string{
 			`:x  identity    :[42] → 42  (recall that : is also syntax for return and assign)`,
 			`x:y right       2:3 → 3                        "a":"b" → "b"`,
-		}, "\n"),
-		"+": strings.Join([]string{
+		}, "\n")},
+		{k: "+", v: strings.Join([]string{
 			`+d  swap k/v    +"a""b"!0 1 → 0 1!"a" "b"`,
 			`+x  flip        +(1 2;3 4) → (1 3;2 4)         +42 → ,,42`,
 			`n+n add         2+3 → 5                        2+3 4 → 5 6`,
 			`s+s concat      "a"+"b" → "ab"                 "a" "b"+"c" → "ac" "bc"`,
-		}, "\n"),
-		"-": strings.Join([]string{
+		}, "\n")},
+		{k: "-", v: strings.Join([]string{
 			`-n  negate      - 2 3 → -2 -3                  -(1 2.5;3 4) → (-1.0 -2.5;-3 -4)`,
 			`-s  rtrim space -"a\tb \r\n" " c d \n" → "a\tb" " c d"   (Unicode's White Space)`,
 			`n-n subtract    5-3 → 2                        5 4-3 → 2 1`,
 			`s-s trim suffix "file.txt"-".txt" → "file"`,
-		}, "\n"),
-		"*": strings.Join([]string{
+		}, "\n")},
+		{k: "*", v: strings.Join([]string{
 			`*x  first       *7 8 9 → 7                     *"ab" → "ab"           *(+;*) → +`,
 			`n*n multiply    2*3 → 6                        1 2 3*3 → 3 6 9`,
 			`s*i repeat      "a"*3 2 1 0 → "aaa" "aa" "a" ""`,
-		}, "\n"),
-		"%": strings.Join([]string{
+		}, "\n")},
+		{k: "%", v: strings.Join([]string{
 			`%X  classify    %7 8 9 7 8 9 → 0 1 2 0 1 2     %"a" "b" "a" → 0 1 0`,
 			`n%n divide      3%2 → 1.5                      3 4%2 → 1.5 2.0`,
-		}, "\n"),
-		"!": strings.Join([]string{
+		}, "\n")},
+		{k: "!", v: strings.Join([]string{
 			`!i  enum        !5 → 0 1 2 3 4                 !-5 → -5 -4 -3 -2 -1`,
 			`!s  fields      !"a b\tc\nd \u00a0e" → "a""b""c""d""e"   (Unicode's White Space)`,
 			`!I  odometer    !2 3 → (0 0 0 1 1 1;0 1 2 0 1 2)`,
@@ -501,44 +500,44 @@ func GoalSyntaxHelp() map[string]string {
 			`i!s pad fields  3!"a" → "a  "              -3!"1" "23" "456" → "  1" " 23" "456"`,
 			`s!s fields      ",;"!"a,b;c" → "a""b""c" (fields cut on any of ",;"; ""!s is !s)`,
 			`X!Y dict        d:"a""b"!1 2; d"a" → 1              (same as d:..[a:1;b:2]; d..a)`,
-		}, "\n"),
-		"&": strings.Join([]string{
+		}, "\n")},
+		{k: "&", v: strings.Join([]string{
 			`&s  byte-count  &"abc" → 3                      &"π" → 2              &"αβγ" → 6`,
 			`&I  where       &0 0 1 0 0 0 1 → 2 6            &2 3 → 0 0 1 1 1`,
 			`&d  keys where  &"a""b""c""d"!0 1 1 0 → "b" "c"`,
 			`x&y min/and     2&3 → 2          4&3 → 3         "b"&"a" → "a"           0&1 → 0`,
-		}, "\n"),
-		"|": strings.Join([]string{
+		}, "\n")},
+		{k: "|", v: strings.Join([]string{
 			`|X  reverse     |!5 → 4 3 2 1 0`,
 			`x|y max/or      2|3 → 3          4|3 → 4         "b"|"a" → "b"           0|1 → 1`,
-		}, "\n"),
-		"<": strings.Join([]string{
+		}, "\n")},
+		{k: "<", v: strings.Join([]string{
 			`<d  sort up     <"a""b""c"!2 3 1 → "c""a""b"!1 2 3`,
 			`<X  ascend      <3 5 4 → 0 2 1           (index permutation for ascending order)`,
 			`x<y less        2<3 → 1          "c"<"a" → 0                       7 8<6 9 → 0 1`,
-		}, "\n"),
-		">": strings.Join([]string{
+		}, "\n")},
+		{k: ">", v: strings.Join([]string{
 			`>d  sort down   >"a""b""c"!2 3 1 → "b""a""c"!3 2 1`,
 			`>X  descend     >3 5 4 → 1 2 0          (index permutation for descending order)`,
 			`x>y more        2>3 → 0          "c">"a" → 1                       7 8>6 9 → 1 0`,
-		}, "\n"),
-		"=": strings.Join([]string{
+		}, "\n")},
+		{k: "=", v: strings.Join([]string{
 			`=s  lines       ="ab\ncd\r\nef gh" → "ab" "cd" "ef gh"`,
 			`=I  index-count =1 0 0 2 2 3 -1 2 1 1 1 → 2 4 3 1`,
 			`=d  group keys  ="a""b""c"!0 1 0 → ("a" "c";,"b")           ="a""b"!0 -1 → ,,"a"`,
 			`f=Y group by    (2!)=!10 → (0 2 4 6 8;1 3 5 7 9)`,
 			`x=y equal       2 3 4=3 → 0 1 0                          "ab" = "ba" → 0`,
-		}, "\n"),
-		"~": strings.Join([]string{
+		}, "\n")},
+		{k: "~", v: strings.Join([]string{
 			`~x  not         ~0 1 2 → 1 0 0                           ~"a" "" "0" → 0 1 0`,
 			`x~y match       3~3 → 1            2 3~3 2 → 0           ("a";%)~'("b";%) → 0 1`,
-		}, "\n"),
-		",": strings.Join([]string{
+		}, "\n")},
+		{k: ",", v: strings.Join([]string{
 			`,x  enlist      ,1 → ,1            #,2 3 → 1             (list with one element)`,
 			`d,d merge       ("a""b"!1 2),"b""c"!3 4 → "a""b""c"!1 3 4`,
 			`x,y join        1,2 → 1 2                       "ab" "c","d" → "ab" "c" "d"`,
-		}, "\n"),
-		"^": strings.Join([]string{
+		}, "\n")},
+		{k: "^", v: strings.Join([]string{
 			`^d  sort keys   ^"c""a""b"!1 2 3 → "a""b""c"!2 3 1`,
 			`^X  sort        ^3 5 0 → 0 3 5                  ^"ca" "ab" "bc" → "ab" "bc" "ca"`,
 			`i^s windows     2^"abcde" → "abcd" "bcde"`,
@@ -549,8 +548,8 @@ func GoalSyntaxHelp() map[string]string {
 			`                (0;..a>1;..b<0)^..[a:1 2 3;b:4 -5 6] → "a""b"!(,1;,4)`,
 			`X^d w/o keys    (,"b")^"a""b""c"!0 1 2 → "a""c"!0 2`,
 			`X^Y w/o values  2 3^1 1 2 3 3 4 → 1 1 4                          (like in[;X]^Y)`,
-		}, "\n"),
-		"#": strings.Join([]string{
+		}, "\n")},
+		{k: "#", v: strings.Join([]string{
 			`#x  length      #7 8 9 → 3        #"ab" "cd" → 2       #42 → 1      #"ab" → 1`,
 			`i#y take/repeat 2#6 7 8 → 6 7     5#6 7 8 → 6 7 8 6 7               3#1 → 1 1 1`,
 			`s#s count       "ab"#"cabdab" "cd" "deab" → 2 0 1                   ""#"αβγ" → 4`,
@@ -559,8 +558,8 @@ func GoalSyntaxHelp() map[string]string {
 			`                (1;..a>1;..b>0)#..[a:1 2 3;b:4 -5 6] → "a""b"!(,3;,6)`,
 			`X#d with keys   "a""c""e"#"a""b""c""a"!2 3 4 5 → "a""c""a"!2 4 5`,
 			`X#Y with values 2 3#1 1 2 3 3 4 → 2 3 3                          (like in[;X]#Y)`,
-		}, "\n"),
-		"_": strings.Join([]string{
+		}, "\n")},
+		{k: "_", v: strings.Join([]string{
 			`_n  floor       _2.3 → 2.0                  _1.5 3.7 → 1.0 3.0`,
 			`_s  to lower    _"ABC" → "abc"              _"AB" "CD" "Π" → "ab" "cd" "π"`,
 			`i_s drop bytes  2_"abcde" → "cde"           -2_"abcde" → "abc"`,
@@ -569,8 +568,8 @@ func GoalSyntaxHelp() map[string]string {
 			`f_Y cut where   {0=3!x}_!10 → (0 1 2;3 4 5;6 7 8;,9)          (same as (&f Y)_Y)`,
 			`I_s cut string  1 3_"abcdef" → "bc" "def"                          (I ascending)`,
 			`I_Y cut         2 5_!10 → (2 3 4;5 6 7 8 9)                        (I ascending)`,
-		}, "\n"),
-		"$": strings.Join([]string{
+		}, "\n")},
+		{k: "$", v: strings.Join([]string{
 			`$x  string      $2 3 → "2 3"      $"text" → "\"text\""`,
 			`i$s cut shape   3$"abcdefghijk" → "abc" "defg" "hijk"`,
 			`i$Y cut shape   3$!6 → (0 1;2 3;4 5)             -3$!6 → (0 1 2;3 4 5)`,
@@ -582,8 +581,8 @@ func GoalSyntaxHelp() map[string]string {
 			`s$s parse value "v"$qq/(2 3;"a")/ → (2 3;"a")   ($x inverse for types in "inrs")`,
 			`s$y format      "%.2g"$1 4%3 → "0.33" "1.3"      "%s=%03d"$"a" 42 → "a=042"`,
 			`X$y binsearch   2 3 5 7$8 2 7 5 5.5 3 0 → 4 1 4 3 3 2 0            (X ascending)`,
-		}, "\n"),
-		"?": strings.Join([]string{
+		}, "\n")},
+		{k: "?", v: strings.Join([]string{
 			`?i  uniform     ?2 → 0.6046602879796196 0.9405090880450124     (between 0 and 1)`,
 			`?i  normal      ?-2 → -1.233758177597947 -0.12634751070237293    (mean 0, dev 1)`,
 			`?X  distinct    ?2 2 4 3 2 3 → 2 4 3                   (keeps first occurrences)`,
@@ -595,8 +594,13 @@ func GoalSyntaxHelp() map[string]string {
 			`s?s index       "a = a + 1"?"=" "+" → 2 6`,
 			`d?y find key    ("a""b"!3 4)?4 → "b"                    ("a" "b"!3 4)?5 → ""`,
 			`X?y find        9 8 7?8 → 1                              9 8 7?6 → 3`,
-		}, "\n"),
-		"@": strings.Join([]string{
+		}, "\n")},
+		{k: "¿", v: strings.Join([]string{
+			`firsts X        mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`,
+			`x in s          contained    "bc" "ac"in"abcd" → 1 0                    (same as x¿s)`,
+			`x in Y          member of    2 3 in 8 2 4 → 1 0                         (same as x¿Y)`,
+		}, "\n")},
+		{k: "@", v: strings.Join([]string{
 			`@x  type        @2 → "i"    @1.5 → "n"    @"ab" → "s"    @2 3 → "I"     @+ → "f"`,
 			`i@y take/pad    2@6 7 8 → 6 7     4@6 7 8 → 6 7 8 0      -4@6 7 8 → 0 6 7 8`,
 			`s@i substr      "abcdef"@2  → "cdef"                                 (s[offset])`,
@@ -606,8 +610,8 @@ func GoalSyntaxHelp() map[string]string {
 			`d@y at key      ..[a:6 7;b:8 9]"a" → 6 7                 (1 2!"a""b")2 → "b"`,
 			`t@i at row      ..[a:6 7;b:8 9]0 → "a""b"!6 8`,
 			`X@i at          7 8 9@2 → 9             7 8 9[2 0] → 9 7            7 8 9@-2 → 8`,
-		}, "\n"),
-		".": strings.Join([]string{
+		}, "\n")},
+		{k: ".", v: strings.Join([]string{
 			`.s  get global  a:3;."a" → 3`,
 			`.e  get error   .error"msg" → "msg"`,
 			`.d  values      ."a""b"!1 2 → 1 2`,
@@ -619,32 +623,41 @@ func GoalSyntaxHelp() map[string]string {
 			`d.y deep at     ..[a:6 7;b:8 9]["a";1] → 7`,
 			`t.y at row;key  ..[a:6 7;b:8 9][1;"a"] → (,"a")!,7`,
 			`X.y deep at     (6 7;8 9)[0;1] → 7               (6 7;8 9)[;1] → 7 9`,
-		}, "\n"),
-		"«": strings.Join([]string{
+		}, "\n")},
+		{k: "«", v: strings.Join([]string{
 			`«X  shift       «8 9 → 9 0     «"a" "b" → "b" ""        (ASCII keyword: shift x)`,
 			`x«Y shift       "a" "b"«1 2 3 → 3 "a" "b"`,
-		}, "\n"),
-		"»": strings.Join([]string{
+		}, "\n")},
+		{k: "»", v: strings.Join([]string{
 			`»X  rshift      »8 9 → 0 8     »"a" "b" → "" "a"       (ASCII keyword: rshift x)`,
 			`x»Y rshift      "a" "b"»1 2 3 → "a" "b" 1`,
-		}, "\n"),
-		"::": `::[s;y]     set global  ::["a";3];a → 3  (brackets needed because :: is monadic)`,
-		"@[": strings.Join([]string{
+		}, "\n")},
+		{k: "::", v: `::[s;y]     set global  ::["a";3];a → 3  (brackets needed because :: is monadic)`},
+		{k: "@[", v: strings.Join([]string{
 			`@[d;y;f]    amend       @["a""b""c"!7 8 9;"a""b""b";10+] → "a""b""c"!17 28 9`,
 			`@[X;i;f]    amend       @[7 8 9;0 1 1;10+] → 17 28 9`,
 			`@[d;y;F;z]  amend       @["a""b""c"!7 8 9;"a";:;42] → "a""b""c"!42 8 9`,
 			`@[X;i;F;z]  amend       @[7 8 9;1 2 0;+;10 20 -10] → -3 18 29`,
 			`@[f;x;f]    try at      @[2+;3;{"msg"}] → 5           @[2+;"a";{"msg"}] → "msg"`,
-		}, "\n"),
-		".[": strings.Join([]string{
+		}, "\n")},
+		{k: ".[", v: strings.Join([]string{
 			`.[X;y;f]    deep amend  .[(6 7;8 9);0 1;-] → (6 -7;8 9)`,
 			`.[X;y;F;z]  deep amend  .[(6 7;8 9);(0 1 0;1);+;10] → (6 27;8 19)`,
 			`                        .[(6 7;8 9);(*;1);:;42] → (6 42;8 42)`,
 			`.[f;x;f]    try         .[+;2 3;{"msg"}] → 5          .[+;2 "a";{"msg"}] → "msg"`,
-		}, "\n"),
+		}, "\n")},
 	}
-	for k, v := range adverbs {
-		m[k] = v
+}
+
+func GoalSyntaxHelp() map[string]string {
+	verbHelp := goalVerbsHelp()
+	adverbHelp := goalAdverbsHelp()
+	m := make(map[string]string, len(verbHelp)+len(adverbHelp))
+	for _, entry := range verbHelp {
+		m[entry.k] = entry.v
+	}
+	for _, entry := range adverbHelp {
+		m[entry.k] = entry.v
 	}
 	return m
 }
@@ -660,7 +673,6 @@ func GoalGlobalsHelp() map[string]string {
 //nolint:funlen
 func GoalKeywordsHelp() map[string]string {
 	// Some help strings are used for individual entries and topic-based ones.
-	// TODO Finish topic-based entries from Goal's help"" and help"TOPIC" output
 	rtget := strings.Join([]string{
 		`rt.get s        returns various kinds of runtime information`,
 		`                "g"   dictionary with copy of all global variables`,
@@ -719,9 +731,9 @@ func GoalKeywordsHelp() map[string]string {
 		``,
 		`"goal:s"     syntax`,
 		`"goal:t"     value types`,
-		`TODO NOT IMPLEMENTED "goal:v"     verbs (like +*-%,)`,
+		`"goal:v"     verbs (like +*-%,)`,
 		`"goal:nv"    named verbs (like in, sign)`,
-		`TODO NOT IMPLEMENTED "goal:a"     adverbs (/\')`,
+		`"goal:a"     adverbs (/\')`,
 		`"goal:tm"    time handling`,
 		`"goal:rt"    runtime system`,
 		`"goal:io"    IO verbs (like say, open, read)`,
@@ -901,12 +913,20 @@ func GoalKeywordsHelp() map[string]string {
 		`utf8 s     is UTF-8     utf8 "aπc" → 1                          utf8 "a\xff" → 0`,
 		`s utf8 s   to UTF-8     "b" utf8 "a\xff" → "ab"       (replace invalid with "b")`,
 	}, "\n")
-	goalaMap := goalAdverbsHelp()
-	goalaHelps := make([]string, 0, len(goalaMap))
-	for _, v := range goalaMap {
-		goalaHelps = append(goalaHelps, v)
+	// Adverbs
+	goalAdverbHelpEntries := goalAdverbsHelp()
+	goalaHelps := make([]string, 0, len(goalAdverbHelpEntries))
+	for _, entry := range goalAdverbHelpEntries {
+		goalaHelps = append(goalaHelps, entry.v)
 	}
 	goala := strings.Join(goalaHelps, "\n")
+	// Verbs
+	goalVerbHelpEntries := goalVerbsHelp()
+	goalvHelps := make([]string, 0, len(goalVerbHelpEntries))
+	for _, entry := range goalVerbHelpEntries {
+		goalvHelps = append(goalvHelps, entry.v)
+	}
+	goalv := strings.Join(goalvHelps, "\n")
 	goalnv := strings.Join([]string{
 		"GOAL NAMED VERBS HELP", abs, atan, cos, csv, errorHelp, exp, eval, firsts, in,
 		json, logHelp, nan, ocount, panicHelp, rotate, round, rx, sign, sin, sqrt, sub, uc, utf8,
@@ -973,6 +993,7 @@ func GoalKeywordsHelp() map[string]string {
 		"goal:s":       goals,
 		"goal:t":       goalt,
 		"goal:tm":      goaltm,
+		"goal:v":       goalv,
 		"http.client":  httpclient,
 		"http.delete":  helpForHTTPFn("delete"),
 		"http.get":     helpForHTTPFn("get"),
