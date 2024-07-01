@@ -424,8 +424,7 @@ func GoalSyntax() map[string]string {
 	}
 }
 
-//nolint:funlen
-func GoalSyntaxHelp() map[string]string {
+func goalAdverbsHelp() map[string]string {
 	return map[string]string{
 		"'": strings.Join([]string{
 			`f'x    each      #'(4 5;6 7 8) → 2 3`,
@@ -456,6 +455,13 @@ func GoalSyntaxHelp() map[string]string {
 			`i r\s  splitN    (3)rx/[,;]/\"a,b;c,d" → "a" "b" "c,d"`,
 			`I\x    encode    24 60 60\3723 → 1 2 3               2\6 → 1 1 0`,
 		}, "\n"),
+	}
+}
+
+//nolint:funlen
+func GoalSyntaxHelp() map[string]string {
+	adverbs := goalAdverbsHelp()
+	m := map[string]string{
 		"¿": strings.Join([]string{
 			`firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`,
 			`x in s     contained    "bc" "ac"in"abcd" → 1 0                    (same as x¿s)`,
@@ -637,6 +643,10 @@ func GoalSyntaxHelp() map[string]string {
 			`.[f;x;f]    try         .[+;2 3;{"msg"}] → 5          .[+;2 "a";{"msg"}] → "msg"`,
 		}, "\n"),
 	}
+	for k, v := range adverbs {
+		m[k] = v
+	}
+	return m
 }
 
 func GoalGlobalsHelp() map[string]string {
@@ -663,20 +673,20 @@ func GoalKeywordsHelp() map[string]string {
 		`rt.time[s;i]    eval s for i times (default 1), return average time (ns)`,
 		`rt.time[f;x;i]  call f. x for i times (default 1), return average time (ns)`,
 	}, "\n")
-	abs := `abs n    abs -3.0 -1.5 2.0 → 3.0 1.5 2.0`
+	abs := `abs n      abs/mag      abs -3.0 -1.5 2.0 → 3.0 1.5 2.0`
 	and := `and[1;2] → 2    and[1;0;3] → 0`
 	atan := `atan[n;n]`
 	chdir := `chdir s     change current working directory to s, or return an error`
 	closeHelp := `close h     flush any buffered data, then close handle h`
 	cos := `cos n      cos 0 → 1.0`
 	csv := strings.Join([]string{
-		`csv s      csv read     csv"a,b\n1,2" → ("a" "1";"b" "2")`,
-		`csv A      csv write    csv("a" "b";1 2) → "a,1\nb,2\n"`,
+		`  csv s    csv read     csv"a,b\n1,2" → ("a" "1";"b" "2")`,
+		`  csv A    csv write    csv("a" "b";1 2) → "a,1\nb,2\n"`,
 		`s csv s    csv read     " "csv"a b\n1 2" → ("a" "1";"b" "2")  (" " as separator)`,
 		`s csv A    csv write    " "csv("a" "b";1 2) → "a 1\nb 2\n"    (" " as separator)`,
 	}, "\n")
 	env := strings.Join([]string{
-		`env s       get environment variable s, or an error if unset`,
+		`  env s     get environment variable s, or an error if unset`,
 		`            return a dictionary representing the whole environment if s~""`,
 		`x env s     set environment variable x to s, or return an error`,
 		`x env 0     unset environment variable x, or clear environment if x~""`,
@@ -688,7 +698,7 @@ func GoalKeywordsHelp() map[string]string {
 		`                        path), and prefix pfx+"." for globals; does not eval`,
 		`                        same location more than once`,
 	}, "\n")
-	exp := `exp n      exp 1 → 2.718281828459045`
+	exp := `exp n      nat exp      exp 1 → 2.718281828459045`
 	firsts := `firsts X   mark firsts  firsts 0 0 2 3 0 2 3 4 → 1 0 1 1 0 0 0 1    (same as ¿X)`
 	flush := `flush h     flush any buffered data for handle h`
 	help := strings.Join([]string{
@@ -818,7 +828,7 @@ func GoalKeywordsHelp() map[string]string {
 		`s json y   write json   ""json 1.5 2 → "[1.5,2]" (indent with s;disable with "")`,
 		`S json y   write json   like s json y, but with (pfx;indent) for pretty-printing`,
 	}, "\n")
-	logHelp := `log n      log 2.718281828459045 → 1.0`
+	logHelp := `log n      nat log      log 2.718281828459045 → 1.0`
 	mkdir := `mkdir s     create new directory named s (parent must already exist)`
 	nan := strings.Join([]string{
 		`nan n      isNaN        nan(0n;2;sqrt -1) → 1 0 1             nan 2 0i 3 → 0 1 0`,
@@ -845,7 +855,7 @@ func GoalKeywordsHelp() map[string]string {
 	remove := `remove s    remove the named file or empty directory`
 	rename := `x rename y  renames (moves) old path x (s) to new path y (s)`
 	rotate := `i rotate Y rotate       2 rotate 7 8 9 → 9 7 8           -2 rotate 7 8 9 → 8 9 7`
-	round := `round n    round 3.4 → 3.0    round 3.5 → 4.0`
+	round := `round      round n      round 3.4 → 3.0    round 3.5 → 4.0`
 	rshift := strings.Join([]string{
 		`»X  rshift      »8 9 → 0 8     »"a" "b" → "" "a"       (ASCII keyword: rshift x)`,
 		`x»Y rshift      "a" "b"»1 2 3 → "a" "b" 1`,
@@ -867,7 +877,7 @@ func GoalKeywordsHelp() map[string]string {
 		`x«Y shift       "a" "b"«1 2 3 → 3 "a" "b"`,
 	}, "\n")
 	sign := `sign n     sign         sign -3 -1 0 1.5 5 → -1 -1 0 1 1`
-	sin := `sin n      sin 3.141592653589793%2 → 1.0`
+	sin := `sin n      sin        sin 3.141592653589793%2 → 1.0`
 	sqlopen := `sql.open s    Open DuckDB database with data source name s`
 	sqlq := `sql.q s    Run SQL query, results as table.`
 	sqrt := `sqrt n     sqrt 9 → 3.0    sqrt -1 → 0n`
@@ -891,6 +901,12 @@ func GoalKeywordsHelp() map[string]string {
 		`utf8 s     is UTF-8     utf8 "aπc" → 1                          utf8 "a\xff" → 0`,
 		`s utf8 s   to UTF-8     "b" utf8 "a\xff" → "ab"       (replace invalid with "b")`,
 	}, "\n")
+	goalaMap := goalAdverbsHelp()
+	goalaHelps := make([]string, 0, len(goalaMap))
+	for _, v := range goalaMap {
+		goalaHelps = append(goalaHelps, v)
+	}
+	goala := strings.Join(goalaHelps, "\n")
 	goalnv := strings.Join([]string{
 		"GOAL NAMED VERBS HELP", abs, atan, cos, csv, errorHelp, exp, eval, firsts, in,
 		json, logHelp, nan, ocount, panicHelp, rotate, round, rx, sign, sin, sqrt, sub, uc, utf8,
@@ -950,6 +966,7 @@ func GoalKeywordsHelp() map[string]string {
 		"flush":        flush,
 		"help":         help,
 		"goal":         goalHelp,
+		"goal:a":       goala,
 		"goal:io":      goalio,
 		"goal:nv":      goalnv,
 		"goal:rt":      goalrt,
