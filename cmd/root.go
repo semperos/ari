@@ -306,8 +306,8 @@ func main() {
 		Short: "ari - Array relational interactive environment",
 		Long: `ari is an interactive environment for array + relational programming.
 
-	It embeds the Goal array programming language, with extensions for
-	working with SQL and HTTP APIs.`,
+It embeds the Goal array programming language, with extensions for
+working with SQL and HTTP APIs.`,
 		Run: func(_ *cobra.Command, _ []string) {
 			replMain()
 		},
