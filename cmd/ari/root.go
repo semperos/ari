@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"unsafe"
 
 	"codeberg.org/anaseto/goal"
 	"github.com/knz/bubbline"
@@ -42,6 +43,8 @@ type CliSystem struct {
 	cliMode       cliMode
 	autoCompleter *AutoCompleter
 	ariContext    *ari.Context
+	debug         bool
+	programName   string
 }
 
 func (cliSystem *CliSystem) switchModePre(cliMode cliMode) {
@@ -67,6 +70,7 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 	cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 	cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
 	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
+	// TODO This should be at parity with Goal's own REPL, see Goal's cmd.go
 	cliSystem.cliEditor.CheckInputComplete = nil
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
 }
@@ -106,13 +110,24 @@ func replMain() {
 	cliEditor := cliEditorInitialize()
 	autoCompleter := &AutoCompleter{ariContext: ariContext}
 	mainCliSystem := CliSystem{
+		ariContext:    ariContext,
+		autoCompleter: autoCompleter,
 		cliEditor:     cliEditor,
 		cliMode:       cliModeGoal,
-		autoCompleter: autoCompleter,
-		ariContext:    ariContext,
+		debug:         viper.GetBool("debug"),
+		programName:   os.Args[0],
 	}
 
 	mainCliSystem.switchModeToGoal()
+
+	goalFilesToLoad := viper.GetStringSlice("load")
+	for _, f := range goalFilesToLoad {
+		err := runScript(&mainCliSystem, f)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to load file %q with error: %v", f, err)
+			os.Exit(1)
+		}
+	}
 
 	// REPL starts here
 	for {
@@ -132,7 +147,8 @@ func replMain() {
 		// Add to REPL history, even if not a legal expression (thus before we try to evaluate)
 		err = cliEditor.AddHistory(line)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to write REPL history, error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Failed to write REPL history with error: %v\n", err)
+			// NB: Not exiting if history file fails to load, just printing.
 		}
 
 		// Support system commands
@@ -194,6 +210,7 @@ func (cliSystem *CliSystem) replEvalSystemCommand(line string, dataSourceName st
 	cmdAndArgs := strings.Split(line, " ")
 	systemCommand := cmdAndArgs[0]
 	switch systemCommand {
+	// TODO )help
 	case ")goal":
 		cliSystem.switchMode(cliModeGoal)
 	case ")sql":
@@ -270,6 +287,78 @@ func (cliSystem *CliSystem) sqlExec(sqlQuery string, args []any) (goal.V, error)
 	return goalD, nil
 }
 
+// Adapted from Goal's implementation.
+func runScript(cliSystem *CliSystem, fname string) error {
+	bs, err := os.ReadFile(fname)
+	if err != nil {
+		return fmt.Errorf("%s: %w", cliSystem.programName, err)
+	}
+	// We avoid redundant copy in bytes->string conversion.
+	source := unsafe.String(unsafe.SliceData(bs), len(bs))
+	return runSource(cliSystem, source, fname)
+}
+
+// Adapted from Goal's implementation.
+func runSource(cliSystem *CliSystem, source, loc string) error {
+	goalContext := cliSystem.ariContext.GoalContext
+	err := goalContext.Compile(source, loc, "")
+	if err != nil {
+		if cliSystem.debug {
+			printProgram(goalContext, cliSystem.programName)
+		}
+		return formatError(cliSystem.programName, err)
+	}
+	if cliSystem.debug {
+		printProgram(goalContext, cliSystem.programName)
+		return nil
+	}
+	r, err := goalContext.Run()
+	// if m.interactive {
+	// 	if err != nil {
+	// 		formatREPLError(err, m.quiet)
+	// 	}
+	// 	if r.IsError() {
+	// 		formatREPLError(errors.New(formatGoalError(goalContext, r)), m.quiet)
+	// 	}
+	// 	runStdin(goalContext, cfg, m)
+	// 	return nil
+	// }
+	if err != nil {
+		return formatError(cliSystem.programName, err)
+	}
+	if r.IsError() {
+		return fmt.Errorf("%s", formatGoalError(goalContext, r))
+	}
+	return nil
+}
+
+// printProgram prints debug information about the context and any compiled
+// source.
+//
+// Adapted from Goal's implementation.
+func printProgram(ctx *goal.Context, programName string) {
+	fmt.Fprintf(os.Stderr, "%s: debug info below:\n%v", programName, ctx.String())
+}
+
+// formatError formats an error from script or command.
+//
+// Adapted from Goal's implementation.
+func formatError(programName string, err error) error {
+	//nolint:errorlint // Need the type case e for the ErrorStack
+	if e, ok := err.(*goal.Panic); ok {
+		return fmt.Errorf("%s: %v", programName, e.ErrorStack())
+	}
+	return fmt.Errorf("%s: %w", programName, err)
+}
+
+// formatGoalError formats a Goal error value returned from the program.
+func formatGoalError(ctx *goal.Context, r goal.V) string {
+	if e, ok := r.BV().(*goal.Error); ok {
+		return e.Msg(ctx)
+	}
+	return "(failed to format Goal error)"
+}
+
 // CLI (Cobra, Viper)
 
 // Return a function for cobra.OnInitialize function.
@@ -327,6 +416,7 @@ working with SQL and HTTP APIs.`,
 	defaultHistFile := path.Join(cfgDir, "ari-history.txt")
 	defaultCfgFile := path.Join(cfgDir, "ari-config.yaml")
 
+	// TODO Write default ari-config.yaml file if none present
 	// Config file has processing in initConfig outside of viper lifecycle, so it's a separate variable.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", defaultCfgFile, "ari configuration")
 
@@ -347,6 +437,15 @@ working with SQL and HTTP APIs.`,
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().BoolP("debug", "d", false, "Enable debugging (detailed printing)")
+	rootCmd.Flags().StringP("execute", "e", "", "String of Goal code to execute, last result not printed automatically")
+	rootCmd.Flags().StringArrayP("load", "l", nil, "Goal source files to load on startup")
+	err = viper.BindPFlag("load", rootCmd.Flags().Lookup("load"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to bind 'load' CLI flag: %v\n", err)
+		os.Exit(1)
+	}
+	rootCmd.Flags().BoolP("version", "v", false, "Print version info and exit")
 
 	// NB: MUST be last in this method.
 	err = rootCmd.Execute()
