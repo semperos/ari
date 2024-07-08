@@ -68,7 +68,7 @@ func NewHelp() map[string]map[string]string {
 	return help
 }
 
-// Initialize an entire new Context struct.
+// Initialize a new Context without connecting to the database.
 func NewContext(dataSourceName string) (*Context, error) {
 	help := NewHelp()
 	sqlDatabase, err := NewSQLDatabase(dataSourceName)
