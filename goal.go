@@ -122,7 +122,7 @@ func helpMonadic(goalContext *goal.Context, help Help, x goal.V) goal.V {
 		}
 		return helpPrintExactMatch(help, helpKeyword, goalContext)
 	case *goal.R:
-		anyMatches := helpPrintRegexMatches(help, helpKeyword.Regexp)
+		anyMatches := helpPrintRegexMatches(help, helpKeyword.Regexp())
 		if anyMatches {
 			return goal.NewI(1)
 		}
