@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -391,7 +390,7 @@ func httpMakerMonadic(x goal.V, methodLower string, methodUpper string) goal.V {
 	req := httpClient.client.R()
 	resp, err := req.Execute(methodUpper, string(url))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+		return goal.Errorf("HTTP ERROR: %v", err)
 	}
 	return goalDictFromResponse(resp)
 }
@@ -423,7 +422,7 @@ func httpMakerDyadic(x goal.V, args []goal.V, methodLower string, methodUpper st
 	req := httpClient.client.R()
 	resp, err := req.Execute(methodUpper, string(urlS))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+		return goal.Errorf("HTTP ERROR: %v", err)
 	}
 	return goalDictFromResponse(resp)
 }
@@ -464,7 +463,7 @@ func httpMakerTriadic(x goal.V, args []goal.V, methodLower string, methodUpper s
 	}
 	resp, err := req.Execute(methodUpper, string(urlS))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "HTTP error: %v\n", err)
+		return goal.Errorf("HTTP ERROR: %v", err)
 	}
 	return goalDictFromResponse(resp)
 }
