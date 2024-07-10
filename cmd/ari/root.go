@@ -27,7 +27,7 @@ import (
 type cliMode int
 
 const (
-	cliModeGoal = iota
+	cliModeGoal cliMode = iota
 	cliModeSQLReadOnly
 	cliModeSQLReadWrite
 )
@@ -73,7 +73,6 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 	cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 	cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
 	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
-	// TODO This should be at parity with Goal's own REPL, see Goal's cmd.go
 	cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
 }
@@ -104,6 +103,20 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite() {
 	cliSystem.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
 }
 
+func cliModeFromString(s string) (cliMode, error) {
+	switch s {
+	case "goal":
+		return cliModeGoal, nil
+	case "sql":
+		return cliModeSQLReadOnly, nil
+	case "sql!":
+		return cliModeSQLReadWrite, nil
+	default:
+		return 0, errors.New("unsupported ari mode: " + s)
+	}
+}
+
+// TODO Make this more testable by pulling out things from Cobra/Viper into a config struct
 func ariMain(cmd *cobra.Command) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
@@ -118,7 +131,10 @@ func ariMain(cmd *cobra.Command) int {
 		debug:         viper.GetBool("debug"),
 		programName:   os.Args[0],
 	}
-	mainCliSystem.switchModeToGoal()
+	startupCliModeString := viper.GetString("mode")
+	startupCliMode, err := cliModeFromString(startupCliModeString)
+	cobra.CheckErr(err)
+	mainCliSystem.switchMode(startupCliMode)
 
 	// MUST COME FIRST
 	// Engage detailed print on panic.
@@ -247,7 +263,7 @@ func (cliSystem *CliSystem) replEvalSystemCommand(line string) {
 	cmdAndArgs := strings.Split(line, " ")
 	systemCommand := cmdAndArgs[0]
 	switch systemCommand {
-	// TODO )help that doesn't require quoting
+	// IDEA )help that doesn't require quoting
 	case ")goal":
 		cliSystem.switchMode(cliModeGoal)
 	case ")sql":
@@ -282,11 +298,13 @@ func (cliSystem *CliSystem) sqlInitialize(dataSourceName string, cliMode cliMode
 func (cliSystem *CliSystem) sqlClose() error {
 	sqlDatabase := cliSystem.ariContext.SQLDatabase
 	if sqlDatabase != nil {
-		err := sqlDatabase.DB.Close()
-		if err != nil {
-			return err
+		if sqlDatabase.DB != nil {
+			err := sqlDatabase.DB.Close()
+			if err != nil {
+				return err
+			}
+			sqlDatabase.IsOpen = false
 		}
-		sqlDatabase.IsOpen = false
 	}
 	return nil
 }
@@ -436,9 +454,13 @@ func initConfigFn(cfgFile string) func() {
 
 		viper.AutomaticEnv() // read in environment variables that match
 
-		// If a config file is found, read it in.
-		if err := viper.ReadInConfig(); err == nil {
-			fmt.Fprintln(os.Stderr, "[INFO] Using config file:", viper.ConfigFileUsed())
+		// Config file is optional, but do check if it's present and malformed.
+		err := viper.ReadInConfig()
+		notFoundErr := viper.ConfigFileNotFoundError{}
+		if !errors.As(err, &notFoundErr) {
+			cfgFileName := viper.ConfigFileUsed()
+			fmt.Fprintf(os.Stderr, "[ERROR] Config file at '%v' could not be loaded due to error: %v\n", cfgFileName, err)
+			os.Exit(1)
 		}
 	}
 }
@@ -480,8 +502,7 @@ working with SQL and HTTP APIs.`,
 	defaultHistFile := path.Join(cfgDir, "ari-history.txt")
 	defaultCfgFile := path.Join(cfgDir, "ari-config.yaml")
 
-	// TODO Write default ari-config.yaml file if none present
-	// Config file has processing in initConfig outside of viper lifecycle, so it's a separate variable.
+	// Config file has processing in initConfigFn outside of viper lifecycle, so it's a separate variable.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", defaultCfgFile, "ari configuration")
 
 	// Everything else should go through viper for consistency.
@@ -491,7 +512,7 @@ working with SQL and HTTP APIs.`,
 	flagNameDatabase := "database"
 
 	pFlags.String(flagNameHistory, defaultHistFile, "history of REPL entries")
-	pFlags.String(flagNameDatabase, "", "DuckDB database (default: in-memory)")
+	pFlags.StringP(flagNameDatabase, "d", "", "DuckDB database (default: in-memory)")
 
 	err = viper.BindPFlag(flagNameHistory, pFlags.Lookup(flagNameHistory))
 	cobra.CheckErr(err)
@@ -501,13 +522,16 @@ working with SQL and HTTP APIs.`,
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	rootCmd.Flags().BoolP("debug", "d", false, "Enable debugging (detailed printing)")
-	rootCmd.Flags().Bool("cpu-profile", false, "Write CPU profile to file")
-	rootCmd.Flags().StringP("execute", "e", "", "String of Goal code to execute, last result not printed automatically")
+	rootCmd.Flags().Bool("debug", false, "enable detailed debugging output on panic")
+	rootCmd.Flags().Bool("cpu-profile", false, "write CPU profile to file")
+	rootCmd.Flags().StringP("execute", "e", "", "string of Goal code to execute, last result not printed automatically")
 	rootCmd.Flags().StringArrayP("load", "l", nil, "Goal source files to load on startup")
 	err = viper.BindPFlag("load", rootCmd.Flags().Lookup("load"))
 	cobra.CheckErr(err)
-	rootCmd.Flags().BoolP("version", "v", false, "Print version info and exit")
+	rootCmd.Flags().StringP("mode", "m", "goal", "language mode at startup")
+	err = viper.BindPFlag("mode", rootCmd.Flags().Lookup("mode"))
+	cobra.CheckErr(err)
+	rootCmd.Flags().BoolP("version", "v", false, "print version info and exit")
 
 	// NB: MUST be last in this method.
 	err = rootCmd.Execute()
