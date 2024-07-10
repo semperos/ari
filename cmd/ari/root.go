@@ -7,7 +7,10 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime/debug"
+	"runtime/pprof"
 	"strings"
+	"time"
 	"unsafe"
 
 	"codeberg.org/anaseto/goal"
@@ -71,7 +74,7 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 	cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
 	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
 	// TODO This should be at parity with Goal's own REPL, see Goal's cmd.go
-	cliSystem.cliEditor.CheckInputComplete = nil
+	cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
 }
 
@@ -101,12 +104,10 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite() {
 	cliSystem.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
 }
 
-func replMain() {
+func ariMain(cmd *cobra.Command) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
-	if err != nil {
-		log.Fatalf("%v", err)
-	}
+	cobra.CheckErr(err)
 	cliEditor := cliEditorInitialize()
 	autoCompleter := &AutoCompleter{ariContext: ariContext}
 	mainCliSystem := CliSystem{
@@ -117,19 +118,56 @@ func replMain() {
 		debug:         viper.GetBool("debug"),
 		programName:   os.Args[0],
 	}
-
 	mainCliSystem.switchModeToGoal()
 
+	// MUST COME FIRST
+	// Engage detailed print on panic.
+	debug, err := cmd.Flags().GetBool("debug")
+	cobra.CheckErr(err)
+	if debug {
+		defer debugPrintStack(ariContext.GoalContext, mainCliSystem.programName)
+	}
+
+	cpuProfile, err := cmd.Flags().GetBool("cpu-profile")
+	cobra.CheckErr(err)
+	if cpuProfile {
+		//nolint:govet // false positive?
+		cpuProfileFile, err := os.Create(fmt.Sprintf("cpu-profile-%d", time.Now().UnixMilli()))
+		cobra.CheckErr(err)
+		err = pprof.StartCPUProfile(cpuProfileFile)
+		cobra.CheckErr(err)
+		defer pprof.StopCPUProfile()
+	}
+
+	// MUST COME IMMEDIATELY AFTER DEBUG
 	goalFilesToLoad := viper.GetStringSlice("load")
 	for _, f := range goalFilesToLoad {
-		err := runScript(&mainCliSystem, f)
+		err = runScript(&mainCliSystem, f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to load file %q with error: %v", f, err)
-			os.Exit(1)
+			return 1
 		}
 	}
 
-	// REPL starts here
+	// Eval and exit
+	programToExecute, err := cmd.Flags().GetString("execute")
+	cobra.CheckErr(err)
+	if programToExecute != "" {
+		err = runCommand(&mainCliSystem, programToExecute)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to execute program:\n%q\n    with error:\n%v\n", programToExecute, err)
+			return 1
+		}
+		return 0
+	}
+
+	// REPL
+	readEvalPrintLoop(mainCliSystem)
+	return 0
+}
+
+func readEvalPrintLoop(mainCliSystem CliSystem) {
+	cliEditor := mainCliSystem.cliEditor
 	for {
 		line, err := cliEditor.GetLine()
 		if err != nil {
@@ -144,20 +182,19 @@ func replMain() {
 			}
 			continue
 		}
-		// Add to REPL history, even if not a legal expression (thus before we try to evaluate)
+
+		// Add line to REPL history, even if not a legal expression (thus before we try to evaluate)
 		err = cliEditor.AddHistory(line)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to write REPL history with error: %v\n", err)
 			// NB: Not exiting if history file fails to load, just printing.
-		}
-
-		// Support system commands
-		if matchesSystemCommand(line) {
-			mainCliSystem.replEvalSystemCommand(line, dataSourceName)
-			continue
+			fmt.Fprintf(os.Stderr, "Failed to write REPL history with error: %v\n", err)
 		}
 
 		// Future: Consider user commands with ]
+		if matchesSystemCommand(line) {
+			mainCliSystem.replEvalSystemCommand(line)
+			continue
+		}
 
 		switch mainCliSystem.cliMode {
 		case cliModeGoal:
@@ -206,11 +243,11 @@ func (cliSystem *CliSystem) replEvalSQLReadWrite(line string) {
 	}
 }
 
-func (cliSystem *CliSystem) replEvalSystemCommand(line string, dataSourceName string) {
+func (cliSystem *CliSystem) replEvalSystemCommand(line string) {
 	cmdAndArgs := strings.Split(line, " ")
 	systemCommand := cmdAndArgs[0]
 	switch systemCommand {
-	// TODO )help
+	// TODO )help that doesn't require quoting
 	case ")goal":
 		cliSystem.switchMode(cliModeGoal)
 	case ")sql":
@@ -218,7 +255,7 @@ func (cliSystem *CliSystem) replEvalSystemCommand(line string, dataSourceName st
 	case ")sql!":
 		var mode cliMode
 		mode = cliModeSQLReadWrite
-		err := cliSystem.sqlInitialize(dataSourceName, mode)
+		err := cliSystem.sqlInitialize(cliSystem.ariContext.SQLDatabase.DataSource, mode)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -285,6 +322,23 @@ func (cliSystem *CliSystem) sqlExec(sqlQuery string, args []any) (goal.V, error)
 	}
 	cliSystem.ariContext.GoalContext.AssignGlobal("sql.t", goalD)
 	return goalD, nil
+}
+
+// debugPrintStack catches possible panics in debug mode, attempting to print debug
+// information.
+//
+// Adapated from Goal's implementation.
+func debugPrintStack(ctx *goal.Context, programName string) {
+	if r := recover(); r != nil {
+		printProgram(ctx, programName)
+		log.Printf("Caught panic: %v\nStack Trace:\n", r)
+		debug.PrintStack()
+	}
+}
+
+// Adapted from Goal's implementation.
+func runCommand(cliSystem *CliSystem, cmd string) error {
+	return runSource(cliSystem, cmd, "")
 }
 
 // Adapted from Goal's implementation.
@@ -390,6 +444,7 @@ func initConfigFn(cfgFile string) func() {
 }
 
 func main() {
+	statusCode := 0
 	rootCmd := &cobra.Command{
 		Use:   "ari",
 		Short: "ari - Array relational interactive environment",
@@ -397,8 +452,17 @@ func main() {
 
 It embeds the Goal array programming language, with extensions for
 working with SQL and HTTP APIs.`,
-		Run: func(_ *cobra.Command, _ []string) {
-			replMain()
+		Run: func(cmd *cobra.Command, _ []string) {
+			// Version and exit
+			showVersion, err := cmd.Flags().GetBool("version")
+			cobra.CheckErr(err)
+			if showVersion {
+				if bi, ok := debug.ReadBuildInfo(); ok {
+					fmt.Fprintf(os.Stdout, "%v\n", bi)
+				}
+				os.Exit(0)
+			}
+			statusCode = ariMain(cmd)
 		},
 	}
 
@@ -438,18 +502,16 @@ working with SQL and HTTP APIs.`,
 	// when this action is called directly.
 	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.Flags().BoolP("debug", "d", false, "Enable debugging (detailed printing)")
+	rootCmd.Flags().Bool("cpu-profile", false, "Write CPU profile to file")
 	rootCmd.Flags().StringP("execute", "e", "", "String of Goal code to execute, last result not printed automatically")
 	rootCmd.Flags().StringArrayP("load", "l", nil, "Goal source files to load on startup")
 	err = viper.BindPFlag("load", rootCmd.Flags().Lookup("load"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to bind 'load' CLI flag: %v\n", err)
-		os.Exit(1)
-	}
+	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("version", "v", false, "Print version info and exit")
 
 	// NB: MUST be last in this method.
 	err = rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
-	}
+	cobra.CheckErr(err)
+
+	os.Exit(statusCode)
 }

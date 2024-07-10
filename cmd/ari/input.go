@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"regexp"
@@ -30,6 +31,169 @@ type AutoCompleter struct {
 
 func matchesSystemCommand(s string) bool {
 	return strings.HasPrefix(s, ")")
+}
+
+// CheckInputComplete handler for Goal.
+//
+// This detects whether a SQL statement is complete from the CLI editor's perspective,
+// it does not provide autocomplete functionality.
+func modeGoalCheckInputComplete(v [][]rune, line, _ int) bool {
+	if len(v) == 1 && matchesSystemCommand(string(v[0])) {
+		return true
+	}
+	if line == len(v)-1 { // Enter on final line of input to allow inserting newlines.
+		s := stringFromSliceOfRuneSlices(v)
+		sc := &scanner{r: bufio.NewReader(strings.NewReader(s))}
+		_, err := sc.readLine()
+		// No error means it parsed completely as a Goal expression.
+		return err == nil
+	}
+	return false
+}
+
+func stringFromSliceOfRuneSlices(v [][]rune) string {
+	sb := strings.Builder{}
+	for _, runeSlice := range v {
+		sb.WriteString(string(runeSlice))
+		sb.WriteByte('\n')
+	}
+	return sb.String()
+}
+
+// scanner represents the state of a readline scanner for the Goal REPL. It
+// handles multi-line expressions.
+type scanner struct {
+	r      *bufio.Reader
+	depth  []byte // (){}[] depth stack
+	state  scanState
+	done   bool
+	escape bool
+}
+
+type scanState int
+
+const (
+	scanNormal scanState = iota
+	scanString
+	scanQuote
+	scanRawQuote
+)
+
+const delimchars = ":+-*%!&|=~,^#_?@/"
+
+// readLine reads until the first end of line that also ends a Goal expression.
+//
+// Adapated from Goal's implementation.
+//
+//nolint:cyclop,gocognit,funlen // Vendored code
+func (sc *scanner) readLine() (string, error) {
+	*sc = scanner{r: sc.r, depth: sc.depth[:0]}
+	sb := strings.Builder{}
+	var qr byte = '/'
+	for {
+		c, err := sc.r.ReadByte()
+		if err != nil {
+			return sb.String(), err
+		}
+		switch c {
+		case '\r':
+			continue
+		default:
+			sb.WriteByte(c)
+		}
+		switch sc.state {
+		case scanNormal:
+			switch c {
+			case '\n':
+				if len(sc.depth) == 0 || sc.done {
+					return sb.String(), nil
+				}
+			case '"':
+				sc.state = scanString
+			case '{', '(', '[':
+				sc.depth = append(sc.depth, c)
+			case '}', ')', ']':
+				if len(sc.depth) > 0 && sc.depth[len(sc.depth)-1] == opening(c) {
+					sc.depth = sc.depth[:len(sc.depth)-1]
+				} else {
+					// error, so return on next \n
+					sc.done = true
+				}
+			default:
+				if strings.IndexByte(delimchars, c) != -1 {
+					acc := sb.String()
+					switch {
+					case strings.HasSuffix(acc[:len(acc)-1], "rx"):
+						qr = c
+						sc.state = scanQuote
+					case strings.HasSuffix(acc[:len(acc)-1], "rq"):
+						qr = c
+						sc.state = scanRawQuote
+					case strings.HasSuffix(acc[:len(acc)-1], "qq"):
+						qr = c
+						sc.state = scanQuote
+					}
+				}
+			}
+		case scanQuote:
+			switch c {
+			case '\\':
+				sc.escape = !sc.escape
+			case qr:
+				if !sc.escape {
+					sc.state = scanNormal
+				}
+				sc.escape = false
+			default:
+				sc.escape = false
+			}
+		case scanString:
+			switch c {
+			case '\\':
+				sc.escape = !sc.escape
+			case '"':
+				if !sc.escape {
+					sc.state = scanNormal
+				}
+				sc.escape = false
+			default:
+				sc.escape = false
+			}
+		case scanRawQuote:
+			//nolint:nestif // Vendored code
+			if c == qr {
+				c, err := sc.r.ReadByte()
+				if err != nil {
+					return sb.String(), err
+				}
+				if c == qr {
+					sb.WriteByte(c)
+				} else {
+					err := sc.r.UnreadByte()
+					if err != nil {
+						return sb.String(), err
+					}
+					sc.state = scanNormal
+				}
+			}
+		}
+	}
+}
+
+// opening returns matching opening delimiter for a given closing delimiter.
+//
+// Adapted from Goal's implementation.
+func opening(r byte) byte {
+	switch r {
+	case ')':
+		return '('
+	case ']':
+		return '['
+	case '}':
+		return '{'
+	default:
+		return r
+	}
 }
 
 // CheckInputComplete handler for SQL.
