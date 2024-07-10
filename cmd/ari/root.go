@@ -440,12 +440,13 @@ func initConfigFn(cfgFile string) func() {
 			viper.SetConfigType("yaml")
 		}
 
+		viper.SetEnvPrefix("ARI")
 		viper.AutomaticEnv()
 
 		// Config file is optional, but if present and malformed, exit with error.
 		err := viper.ReadInConfig()
 		notFoundErr := viper.ConfigFileNotFoundError{}
-		if !errors.As(err, &notFoundErr) {
+		if err != nil && !errors.As(err, &notFoundErr) {
 			cfgFileName := viper.ConfigFileUsed()
 			fmt.Fprintf(os.Stderr, "[ERROR] Config file at '%v' could not be loaded due to error: %v\n", cfgFileName, err)
 			os.Exit(1)
