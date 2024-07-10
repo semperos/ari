@@ -155,7 +155,7 @@ func ariMain(cmd *cobra.Command) int {
 		defer pprof.StopCPUProfile()
 	}
 
-	// MUST COME IMMEDIATELY AFTER DEBUG
+	// MUST PRECEDE EXECUTE/REPL
 	goalFilesToLoad := viper.GetStringSlice("load")
 	for _, f := range goalFilesToLoad {
 		err = runScript(&mainCliSystem, f)
@@ -269,9 +269,7 @@ func (cliSystem *CliSystem) replEvalSystemCommand(line string) {
 	case ")sql":
 		cliSystem.switchMode(cliModeSQLReadOnly)
 	case ")sql!":
-		var mode cliMode
-		mode = cliModeSQLReadWrite
-		err := cliSystem.sqlInitialize(cliSystem.ariContext.SQLDatabase.DataSource, mode)
+		err := cliSystem.sqlInitialize(cliSystem.ariContext.SQLDatabase.DataSource, cliModeSQLReadWrite)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
@@ -281,10 +279,10 @@ func (cliSystem *CliSystem) replEvalSystemCommand(line string) {
 	}
 }
 
-// Caller is expected to close everything.
+// sqlInitialize opens a SQL database and expects the caller to close things.
 func (cliSystem *CliSystem) sqlInitialize(dataSourceName string, cliMode cliMode) error {
+	// In-memory doesn't support read_only access
 	if cliMode == cliModeSQLReadOnly && len(dataSourceName) != 0 {
-		// In-memory doesn't support read_only access
 		dataSourceName += "?access_mode=read_only"
 	}
 	sqlDatabase, err := ari.NewSQLDatabase(dataSourceName)
@@ -321,7 +319,7 @@ func (cliSystem *CliSystem) sqlQuery(sqlQuery string, args []any) (goal.V, error
 	if err != nil {
 		return goal.V{}, err
 	}
-	// Last result table as sql.t in Goal, to support switching eval mdoes:
+	// Last result table as sql.t in Goal, to support switching eval modes:
 	cliSystem.ariContext.GoalContext.AssignGlobal("sql.t", goalD)
 	return goalD, nil
 }
@@ -385,16 +383,6 @@ func runSource(cliSystem *CliSystem, source, loc string) error {
 		return nil
 	}
 	r, err := goalContext.Run()
-	// if m.interactive {
-	// 	if err != nil {
-	// 		formatREPLError(err, m.quiet)
-	// 	}
-	// 	if r.IsError() {
-	// 		formatREPLError(errors.New(formatGoalError(goalContext, r)), m.quiet)
-	// 	}
-	// 	runStdin(goalContext, cfg, m)
-	// 	return nil
-	// }
 	if err != nil {
 		return formatError(cliSystem.programName, err)
 	}
@@ -433,7 +421,7 @@ func formatGoalError(ctx *goal.Context, r goal.V) string {
 
 // CLI (Cobra, Viper)
 
-// Return a function for cobra.OnInitialize function.
+// initConfigFn returns a function compatible with cobra.OnInitialize.
 func initConfigFn(cfgFile string) func() {
 	return func() {
 		if cfgFile != "" {
@@ -452,9 +440,9 @@ func initConfigFn(cfgFile string) func() {
 			viper.SetConfigType("yaml")
 		}
 
-		viper.AutomaticEnv() // read in environment variables that match
+		viper.AutomaticEnv()
 
-		// Config file is optional, but do check if it's present and malformed.
+		// Config file is optional, but if present and malformed, exit with error.
 		err := viper.ReadInConfig()
 		notFoundErr := viper.ConfigFileNotFoundError{}
 		if !errors.As(err, &notFoundErr) {
@@ -519,9 +507,6 @@ working with SQL and HTTP APIs.`,
 	err = viper.BindPFlag(flagNameDatabase, pFlags.Lookup(flagNameDatabase))
 	cobra.CheckErr(err)
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 	rootCmd.Flags().Bool("debug", false, "enable detailed debugging output on panic")
 	rootCmd.Flags().Bool("cpu-profile", false, "write CPU profile to file")
 	rootCmd.Flags().StringP("execute", "e", "", "string of Goal code to execute, last result not printed automatically")
