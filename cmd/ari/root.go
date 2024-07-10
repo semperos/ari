@@ -117,7 +117,7 @@ func cliModeFromString(s string) (cliMode, error) {
 }
 
 // TODO Make this more testable by pulling out things from Cobra/Viper into a config struct
-func ariMain(cmd *cobra.Command) int {
+func ariMain(cmd *cobra.Command, args []string) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
 	cobra.CheckErr(err)
@@ -165,6 +165,8 @@ func ariMain(cmd *cobra.Command) int {
 		}
 	}
 
+	hasFileArgument := len(args) > 0
+
 	// Eval and exit
 	programToExecute, err := cmd.Flags().GetString("execute")
 	cobra.CheckErr(err)
@@ -172,6 +174,19 @@ func ariMain(cmd *cobra.Command) int {
 		err = runCommand(&mainCliSystem, programToExecute)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to execute program:\n%q\n    with error:\n%v\n", programToExecute, err)
+			return 1
+		}
+		// Support -e/--execute along with a file argument.
+		if !hasFileArgument {
+			return 0
+		}
+	}
+
+	if hasFileArgument {
+		f := args[0]
+		err = runScript(&mainCliSystem, f)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to run file %q with error: %v", f, err)
 			return 1
 		}
 		return 0
@@ -463,7 +478,9 @@ func main() {
 
 It embeds the Goal array programming language, with extensions for
 working with SQL and HTTP APIs.`,
-		Run: func(cmd *cobra.Command, _ []string) {
+		// If 1 arg provided, treat as Goal source to run.
+		Args: cobra.MaximumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
 			// Version and exit
 			showVersion, err := cmd.Flags().GetBool("version")
 			cobra.CheckErr(err)
@@ -473,7 +490,7 @@ working with SQL and HTTP APIs.`,
 				}
 				os.Exit(0)
 			}
-			statusCode = ariMain(cmd)
+			statusCode = ariMain(cmd, args)
 		},
 	}
 
