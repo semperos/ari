@@ -1,0 +1,16 @@
+pi:π:atan[-1.0;0.0]
+/ gcd[i;i] returns the greatest common divisor.
+gcd:{{?[0~y:x!y;x;o[y;x]]}[abs x;y]}
+/ lcm[i;i] returns the lowest common multiple.
+lcm:{x*(-gcd[x;y])!y}
+/ pow[x;y] returns the base-x exponential of y.
+pow:{exp y*log x}
+/ msum[i;N] returns the i-item moving sums (sums of the previous i items).
+msum:{s-(x#0)»s:+\y}
+/ avg[N] returns the mean of a list.
+avg:{(+/x)%#x}
+/ avgs[N] returns the cumulative average.
+avgs:{(+\x)%1+!#x}
+/ mavg[i;N] returns the simple moving average (avg of the previous i items).
+mavg:{msum[x;y]%(1+!x-1)»(#y)#x}
+1

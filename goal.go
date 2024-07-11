@@ -2,6 +2,7 @@ package ari
 
 import (
 	"bufio"
+	_ "embed"
 	"fmt"
 	"os"
 	"regexp"
@@ -35,59 +36,11 @@ func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	return nil
 }
 
-// The Goal code in the following goalSource* variables are taken from
-// https://codeberg.org/anaseto/goal and are licensed as follows:
-//
-// Copyright (c) 2022 Yon <anaseto@bardinflor.perso.aquilenet.fr>
-//
-// Permission to use, copy, modify, and distribute this software for any
-// purpose with or without fee is hereby granted, provided that the above
-// copyright notice and this permission notice appear in all copies.
-//
-// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-const goalSourceFmt = `
-/ dict[d;f] outputs dict d, assuming string keys and atom or flat array values,
-/ using format string f for floating point numbers.
-dict:{[d;f]
- nk:#d; say"=== Dict ($nk keys) ==="
- k:(|/-1+""#k)!k:!d; v:" "/(..?[(@x)¿"nN";p.f$x;$'x])'.d
- say"\n"/k{"$x| $y"}'v
-}
+//go:embed vendor-goal/fmt.goal
+var goalSourceFmt string
 
-/ tbl[t;r;c;f] outputs dict t as table, assuming string keys and flat columns,
-/ and outputs at most r rows and c columns, using format string f for floating
-/ point numbers. Example: tbl[t;5;8;"%.1f"].
-tbl:{[t;r;c;f]
-  (nr;nc):(#*t;#t); say"=== Table ${nr}x$nc ==="
-  t:t[!r&nr;(c&nc)@!t] / keep up to r rows and c columns
-  k:!t; v:(..?[(@x)¿"nN";p.f$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
-  (k;v):(-w)!'´(k;v); say"\n"/,/" "/(k;"-"*w;+v)
-}
-`
-
-const goalSourceMath = `
-pi:π:atan[-1.0;0.0]
-/ gcd[i;i] returns the greatest common divisor.
-gcd:{{?[0~y:x!y;x;o[y;x]]}[abs x;y]}
-/ lcm[i;i] returns the lowest common multiple.
-lcm:{x*(-gcd[x;y])!y}
-/ pow[x;y] returns the base-x exponential of y.
-pow:{exp y*log x}
-/ msum[i;N] returns the i-item moving sums (sums of the previous i items).
-msum:{s-(x#0)»s:+\y}
-/ avg[N] returns the mean of a list.
-avg:{(+/x)%#x}
-/ avgs[N] returns the cumulative average.
-avgs:{(+\x)%1+!#x}
-/ mavg[i;N] returns the simple moving average (avg of the previous i items).
-mavg:{msum[x;y]%(1+!x-1)»(#y)#x}
-`
+//go:embed vendor-goal/math.goal
+var goalSourceMath string
 
 // Goal functions implemented in Go
 
