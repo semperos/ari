@@ -264,40 +264,25 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 // to determine the prompt shown at the CLI REPL.
 func (cliSystem *CliSystem) detectGoalPrompt() {
 	goalContext := cliSystem.ariContext.GoalContext
-	shouldReset := false
 
-	originalPrompt := cliSystem.cliEditor.Prompt
 	prompt, found := goalContext.GetGlobal("ari.prompt")
 	if found {
 		promptS, ok := prompt.BV().(goal.S)
 		if ok {
-			newPrompt := string(promptS)
-			cliSystem.cliEditor.Prompt = newPrompt
-			if originalPrompt != newPrompt {
-				shouldReset = true
-			}
+			cliSystem.cliEditor.Prompt = string(promptS)
 		} else {
 			fmt.Fprintf(os.Stderr, "ari.prompt must be a string, but found %q\n", prompt)
 		}
 	}
 
-	originalNextPrompt := cliSystem.cliEditor.NextPrompt
 	nextPrompt, found := goalContext.GetGlobal("ari.nextprompt")
 	if found {
 		nextPromptS, ok := nextPrompt.BV().(goal.S)
 		if ok {
-			newNextPrompt := string(nextPromptS)
-			cliSystem.cliEditor.NextPrompt = newNextPrompt
-			if originalNextPrompt != newNextPrompt {
-				shouldReset = true
-			}
+			cliSystem.cliEditor.NextPrompt = string(nextPromptS)
 		} else {
 			fmt.Fprintf(os.Stderr, "ari.nextprompt must be a string, but found %q\n", nextPrompt)
 		}
-	}
-
-	if shouldReset {
-		cliSystem.cliEditor.Reset()
 	}
 }
 
