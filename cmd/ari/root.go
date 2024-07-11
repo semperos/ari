@@ -72,6 +72,7 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 	cliSystem.cliMode = cliModeGoal
 	cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 	cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
+	cliSystem.detectGoalPrompt()
 	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
 	cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
@@ -131,10 +132,6 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		debug:         viper.GetBool("debug"),
 		programName:   os.Args[0],
 	}
-	startupCliModeString := viper.GetString("mode")
-	startupCliMode, err := cliModeFromString(startupCliModeString)
-	cobra.CheckErr(err)
-	mainCliSystem.switchMode(startupCliMode)
 
 	// MUST COME FIRST
 	// Engage detailed print on panic.
@@ -192,6 +189,14 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		return 0
 	}
 
+	// With files loaded (which might adjust the prompt via Goal code)
+	// and knowing we're not executing and exiting immediately,
+	// set up the CLI REPL.
+	startupCliModeString := viper.GetString("mode")
+	startupCliMode, err := cliModeFromString(startupCliModeString)
+	cobra.CheckErr(err)
+	mainCliSystem.switchMode(startupCliMode)
+
 	// REPL
 	readEvalPrintLoop(mainCliSystem)
 	return 0
@@ -247,26 +252,52 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 
 	if !goalContext.AssignedLast() {
 		fmt.Fprintln(os.Stdout, value.Sprint(goalContext, false))
+		// In the REPL, make it easy to get the value of the _p_revious expression
+		// just evaluated. Equivalent of *1 in Lisp REPLs
+		goalContext.AssignGlobal("ari.p", value)
 	}
 
+	cliSystem.detectGoalPrompt()
+}
+
+// detectGoalPrompt interrogates Goal globals ari.prompt and ari.nextprompt
+// to determine the prompt shown at the CLI REPL.
+func (cliSystem *CliSystem) detectGoalPrompt() {
+	goalContext := cliSystem.ariContext.GoalContext
+	shouldReset := false
+
+	originalPrompt := cliSystem.cliEditor.Prompt
 	prompt, found := goalContext.GetGlobal("ari.prompt")
 	if found {
 		promptS, ok := prompt.BV().(goal.S)
 		if ok {
-			cliSystem.cliEditor.Prompt = string(promptS)
+			newPrompt := string(promptS)
+			cliSystem.cliEditor.Prompt = newPrompt
+			if originalPrompt != newPrompt {
+				shouldReset = true
+			}
 		} else {
 			fmt.Fprintf(os.Stderr, "ari.prompt must be a string, but found %q\n", prompt)
 		}
 	}
 
+	originalNextPrompt := cliSystem.cliEditor.NextPrompt
 	nextPrompt, found := goalContext.GetGlobal("ari.nextprompt")
 	if found {
 		nextPromptS, ok := nextPrompt.BV().(goal.S)
 		if ok {
-			cliSystem.cliEditor.NextPrompt = string(nextPromptS)
+			newNextPrompt := string(nextPromptS)
+			cliSystem.cliEditor.NextPrompt = newNextPrompt
+			if originalNextPrompt != newNextPrompt {
+				shouldReset = true
+			}
 		} else {
 			fmt.Fprintf(os.Stderr, "ari.nextprompt must be a string, but found %q\n", nextPrompt)
 		}
+	}
+
+	if shouldReset {
+		cliSystem.cliEditor.Reset()
 	}
 }
 
