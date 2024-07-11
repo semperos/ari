@@ -607,24 +607,22 @@ func processFormData(goalD *goal.D, goalFnName string) (url.Values, error) {
 	formDataValues := goalD.ValueArray()
 	switch fdks := formDataKeys.(type) {
 	case (*goal.AS):
-		for hvi := 0; hvi < formDataValues.Len(); hvi++ {
-			for i, hk := range fdks.Slice {
-				formDataValue := formDataValues.At(i)
-				switch hv := formDataValue.BV().(type) {
-				case (goal.S):
-					urlValues.Add(hk, string(hv))
-				case (*goal.AS):
-					for _, w := range hv.Slice {
-						urlValues.Add(hk, w)
-					}
-				default:
-					return nil, fmt.Errorf("%v expects \"FormData\" "+
-						"to be a dictionary with values that are strings or lists of strings, "+
-						"but received a %v: %v",
-						goalFnName,
-						reflect.TypeOf(hv),
-						hv)
+		for i, hk := range fdks.Slice {
+			formDataValue := formDataValues.At(i)
+			switch hv := formDataValue.BV().(type) {
+			case (goal.S):
+				urlValues.Add(hk, string(hv))
+			case (*goal.AS):
+				for _, w := range hv.Slice {
+					urlValues.Add(hk, w)
 				}
+			default:
+				return nil, fmt.Errorf("%v expects \"FormData\" "+
+					"to be a dictionary with values that are strings or lists of strings, "+
+					"but received a %v: %v",
+					goalFnName,
+					reflect.TypeOf(hv),
+					hv)
 			}
 		}
 	default:
@@ -644,24 +642,22 @@ func processHeader(goalD *goal.D, goalFnName string) (http.Header, error) {
 	headerValues := goalD.ValueArray()
 	switch hks := headerKeys.(type) {
 	case (*goal.AS):
-		for hvi := 0; hvi < headerValues.Len(); hvi++ {
-			for i, hk := range hks.Slice {
-				headerValue := headerValues.At(i)
-				switch hv := headerValue.BV().(type) {
-				case (goal.S):
-					header.Add(hk, string(hv))
-				case (*goal.AS):
-					for _, w := range hv.Slice {
-						header.Add(hk, w)
-					}
-				default:
-					return nil, fmt.Errorf("%v expects \"Header\" to be "+
-						"a dictionary with values that are strings or lists of strings, "+
-						"but received a %v: %v",
-						goalFnName,
-						reflect.TypeOf(hv),
-						hv)
+		for i, hk := range hks.Slice {
+			headerValue := headerValues.At(i)
+			switch hv := headerValue.BV().(type) {
+			case (goal.S):
+				header.Add(hk, string(hv))
+			case (*goal.AS):
+				for _, w := range hv.Slice {
+					header.Add(hk, w)
 				}
+			default:
+				return nil, fmt.Errorf("%v expects \"Header\" to be "+
+					"a dictionary with values that are strings or lists of strings, "+
+					"but received a %v: %v",
+					goalFnName,
+					reflect.TypeOf(hv),
+					hv)
 			}
 		}
 	default:
@@ -680,23 +676,21 @@ func processQueryParam(goalD *goal.D, goalFnName string) (url.Values, error) {
 	queryParamValues := goalD.ValueArray()
 	switch qpks := queryParamKeys.(type) {
 	case (*goal.AS):
-		for qpvi := 0; qpvi < queryParamValues.Len(); qpvi++ {
-			for i, hk := range qpks.Slice {
-				queryParamValue := queryParamValues.At(i)
-				switch hv := queryParamValue.BV().(type) {
-				case (goal.S):
-					urlValues.Add(hk, string(hv))
-				case (*goal.AS):
-					for _, w := range hv.Slice {
-						urlValues.Add(hk, w)
-					}
-				default:
-					return nil, fmt.Errorf("%v expects \"QueryParam\" to be a dictionary "+
-						"with values that are strings or lists of strings, but received a %v: %v",
-						goalFnName,
-						reflect.TypeOf(hv),
-						hv)
+		for i, hk := range qpks.Slice {
+			queryParamValue := queryParamValues.At(i)
+			switch hv := queryParamValue.BV().(type) {
+			case (goal.S):
+				urlValues.Add(hk, string(hv))
+			case (*goal.AS):
+				for _, w := range hv.Slice {
+					urlValues.Add(hk, w)
 				}
+			default:
+				return nil, fmt.Errorf("%v expects \"QueryParam\" to be a dictionary "+
+					"with values that are strings or lists of strings, but received a %v: %v",
+					goalFnName,
+					reflect.TypeOf(hv),
+					hv)
 			}
 		}
 	default:
