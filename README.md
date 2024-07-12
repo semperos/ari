@@ -1,12 +1,44 @@
-# ari
+# Ari
 
-**_A_**rray **_R_**elational **_I_**nteractive programming environment.
+Ari stands for **A**rray **R**elational **I**nteractive programming environment.
+
+Ari takes the [Goal] programming language, wraps it in a custom CLI and provides new functions for the features listed below.
+
+## Features
+
+- [Goal] is the core language
+- Extensible CLI REPL with:
+  - Auto-complete for:
+    - Built-in keywords
+    - Built-in syntax aliases (e.g., typing "shift" and TAB will show "«" and "»" in auto-complete results)
+    - User-defined globals
+  - Runtime configuration:
+    - Configure the REPL prompt by setting string values for the `ari.prompt` and `ari.nextprompt` (for multiline input) globals
+    - Replace default REPL printing by setting a function value for the `ari.print` global (function receives a single Goal value to print)
+- Extensible help system
+  - `help"TOPIC"` like Goal's CLI help
+  - `help rx/search/` to use regular expression matching to find help entries that match
+  - `"myvar" help "My Var Help"` to extend the help system with new documentation
+  - `help""` returns entire help dictionary (including non-Goal help for the SQL mode; use `(help"")"goal"` for just the Goal help)
+  - Auto-complete shows abbreviated help for each result.
+- New Goal functions:
+  - `http.` functions for HTTP requests using [Resty]
+  - `sql.` functions for SQL queries and commands
+- Dedicated SQL mode for DuckDB
+  - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.
+  - Auto-completion of SQL keywords
+  - Help entries for SQL keywords (shown during auto-complete)
+  - Results of last-run query/command set to the `sql.t` Goal global, so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
 
 ## To Do
 
-- IN PROGRESS: HTTP client
-- IN PROGRESS: SQL client
-- TODO: Plots/charts (consider https://github.com/wcharczuk/go-chart)
+Non-exhaustive list:
+
+- DONE: Basic HTTP client
+- DONE: Basic SQL client
+- TODO: Allow specifying a database as an argument to `)sql` and `)sql!` system commands.
+- TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
+- TODO: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
 
 ## Ideas
 
@@ -82,3 +114,8 @@ Goal already has a number of features that mean we don't need to fill these gaps
 - Powerful string API
 - JSON support
 - CSV support
+
+<!-- Links -->
+
+[Goal]: https://codeberg.org/anaseto/goal
+[Resty]: https://github.com/go-resty/resty
