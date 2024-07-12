@@ -72,7 +72,7 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 	cliSystem.cliMode = cliModeGoal
 	cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 	cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
-	cliSystem.detectGoalPrompt()
+	cliSystem.detectAriPrompt()
 	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
 	cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
@@ -251,18 +251,23 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 	}
 
 	if !goalContext.AssignedLast() {
-		fmt.Fprintln(os.Stdout, value.Sprint(goalContext, false))
+		ariPrintFn := cliSystem.detectAriPrint()
+		if ariPrintFn != nil {
+			ariPrintFn(value)
+		} else {
+			fmt.Fprintln(os.Stdout, value.Sprint(goalContext, false))
+		}
 		// In the REPL, make it easy to get the value of the _p_revious expression
-		// just evaluated. Equivalent of *1 in Lisp REPLs
+		// just evaluated. Equivalent of *1 in Lisp REPLs. Skip assignments.
 		goalContext.AssignGlobal("ari.p", value)
 	}
 
-	cliSystem.detectGoalPrompt()
+	cliSystem.detectAriPrompt()
 }
 
-// detectGoalPrompt interrogates Goal globals ari.prompt and ari.nextprompt
+// detectAriPrompt interrogates Goal globals ari.prompt and ari.nextprompt
 // to determine the prompt shown at the CLI REPL.
-func (cliSystem *CliSystem) detectGoalPrompt() {
+func (cliSystem *CliSystem) detectAriPrompt() {
 	goalContext := cliSystem.ariContext.GoalContext
 
 	prompt, found := goalContext.GetGlobal("ari.prompt")
@@ -284,6 +289,21 @@ func (cliSystem *CliSystem) detectGoalPrompt() {
 			fmt.Fprintf(os.Stderr, "ari.nextprompt must be a string, but found %q\n", nextPrompt)
 		}
 	}
+}
+
+// detectAriPrint returns a function for printing values at the REPL in goal mode.
+func (cliSystem *CliSystem) detectAriPrint() func(goal.V) {
+	goalContext := cliSystem.ariContext.GoalContext
+	printFn, found := goalContext.GetGlobal("ari.print")
+	if found {
+		if printFn.IsCallable() {
+			return func(v goal.V) {
+				printFn.ApplyAt(goalContext, v)
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Error: The ari.print value must be a callable, but encountered %q", printFn)
+	}
+	return nil
 }
 
 func (cliSystem *CliSystem) replEvalSQLReadOnly(line string) {
