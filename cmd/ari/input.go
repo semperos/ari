@@ -262,7 +262,7 @@ func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, 
 			start = locs[0] // Preserve non-word prefix
 			end = locs[1]   // Preserve non-word suffix
 		}
-		msg := fmt.Sprintf("Matching %v", word)
+		// msg := fmt.Sprintf("Matching %v", word)
 		lword := strings.ToLower(word)
 		autoCompleteGoalGlobals(goalContext, lword, perCategory)
 		autoCompleteGoalKeywords(autoCompleter, lword, perCategory)
@@ -273,7 +273,7 @@ func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, 
 			moveRight:  end - col,
 			deleteLeft: end - start,
 		}
-		// msg := ""
+		msg := ""
 		return msg, completions
 	}
 }
