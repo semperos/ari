@@ -142,9 +142,13 @@ func helpPrintRegexMatches(help Help, r *regexp.Regexp) bool {
 	goalHelp := help["goal"]
 	anyMatches := false
 	for k, v := range goalHelp {
-		if r.MatchString(k) || r.MatchString(v) {
-			fmt.Fprintln(os.Stdout, v)
-			anyMatches = true
+		// Skip roll-up help topics that have a ":" in them,
+		// since it produces too much (and duplicated) output.
+		if !strings.Contains(k, ":") {
+			if r.MatchString(k) || r.MatchString(v) {
+				fmt.Fprintln(os.Stdout, v)
+				anyMatches = true
+			}
 		}
 	}
 	return anyMatches
@@ -274,8 +278,12 @@ func GoalSyntax() map[string]string {
 		"split":          "\\",
 		"encode":         "\\",
 		"rshift":         "»",
+		"rightshift":     "»",
+		"shiftright":     "»",
 		"shift":          "«",
 		"lshift":         "«",
+		"leftshift":      "«",
+		"shiftleft":      "«",
 		"firsts":         "¿",
 		"identity":       ":",
 		"return":         ":",
@@ -398,6 +406,7 @@ func GoalSyntax() map[string]string {
 		"tryat":          "@[",
 		"deepamend":      ".[",
 		"try":            ".[",
+		"cond":           "?[",
 	}
 }
 
@@ -716,6 +725,8 @@ func GoalKeywordsHelp() map[string]string {
 		`"goal:io"    IO verbs (like say, open, read)`,
 		`op           where op is a builtin's name (like "+" or "in")`,
 		``,
+		`Shorter goal"s", goal"t", etc. can be used if you haven't overridden them.`,
+		``,
 		`Notations:`,
 		`        i (integer) n (number) s (string) r (regexp)`,
 		`        d (dict) t (dict S!Y) h (handle) e (error)`,
@@ -948,21 +959,33 @@ func GoalKeywordsHelp() map[string]string {
 		`    format (s)    format time using given layout (s)            yes`,
 	}, "\n")
 	return map[string]string{
-		"abs":          abs,
-		"and":          and,
-		"atan":         atan,
-		"chdir":        chdir,
-		"close":        closeHelp,
-		"cos":          cos,
-		"csv":          csv,
-		"env":          env,
-		"error":        errorHelp,
-		"eval":         eval,
-		"exp":          exp,
-		"firsts":       firsts,
-		"flush":        flush,
-		"help":         help,
-		"goal":         goalHelp,
+		"abs":    abs,
+		"and":    and,
+		"atan":   atan,
+		"chdir":  chdir,
+		"close":  closeHelp,
+		"cos":    cos,
+		"csv":    csv,
+		"env":    env,
+		"error":  errorHelp,
+		"eval":   eval,
+		"exp":    exp,
+		"firsts": firsts,
+		"flush":  flush,
+		"help":   help,
+		"goal":   goalHelp,
+		// Since help can be extended by users, save important help topics
+		// under impossible-to-be-used-as-Goal-names keys so they're always
+		// available, but also register the shorter versions for those
+		// familiar with Goal's help function.
+		"a":            goala,
+		"io":           goalio,
+		"nv":           goalnv,
+		"rt":           goalrt,
+		"s":            goals,
+		"t":            goalt,
+		"tm":           goaltm,
+		"v":            goalv,
 		"goal:a":       goala,
 		"goal:io":      goalio,
 		"goal:nv":      goalnv,
