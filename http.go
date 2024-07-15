@@ -491,7 +491,7 @@ func goalDictFromResponse(resp *resty.Response) goal.V {
 	return goal.NewD(ks, vs)
 }
 
-//nolint:funlen,gocognit
+//nolint:cyclop,funlen,gocognit // every case edits the same req, returned at end
 func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower string) (*resty.Request, error) {
 	goalFnName := "http." + methodLower
 	optionsKeys := optionsD.KeyArray()
@@ -501,6 +501,13 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 		for i, k := range kas.Slice {
 			value := optionsValues.At(i)
 			switch k {
+			case "Body":
+				switch goalV := value.BV().(type) {
+				case *goal.AB:
+					req.SetBody(goalV.Slice)
+				case goal.S:
+					req.SetBody(string(goalV))
+				}
 			case "Cookies":
 				panic("not yet implemented")
 			case "Debug":
