@@ -109,12 +109,12 @@ func newHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 						reflect.TypeOf(value),
 						value)
 				}
-			case "BaseUrl":
+			case "BaseURL":
 				switch goalV := value.BV().(type) {
 				case goal.S:
 					restyClient.BaseURL = string(goalV)
 				default:
-					return nil, fmt.Errorf("%v expects \"BaseUrl\" "+
+					return nil, fmt.Errorf("%v expects \"BaseURL\" "+
 						"to be a string, but received a %v: %v",
 						goalFnName,
 						reflect.TypeOf(value),

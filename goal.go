@@ -797,7 +797,7 @@ func GoalKeywordsHelp() map[string]string {
 		`                 must be strings or lists of strings:`,
 		`                  - AllowGetMethodPayload     i`,
 		`                  - AuthScheme                s`,
-		`                  - BaseUrl                   s`,
+		`                  - BaseURL                   s`,
 		`                  - Debug                     i`,
 		`                  - DisableWarn               i`,
 		`                  - FormData                  d`,
