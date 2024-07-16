@@ -10,7 +10,7 @@ Ari takes the [Goal] programming language, wraps it in a custom CLI and provides
 - Extensible CLI REPL with:
   - Auto-complete for:
     - Built-in keywords
-    - Built-in syntax aliases (e.g., typing "shift" and TAB will show "«" and "»" in auto-complete results)
+    - Built-in syntax aliases (e.g., typing "first" and TAB will show `*` and `¿` in auto-complete results)
     - User-defined globals
   - Runtime configuration:
     - Configure the REPL prompt by setting string values for the `ari.prompt` and `ari.nextprompt` (for multiline input) globals
