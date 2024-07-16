@@ -8,15 +8,17 @@ Ari takes the [Goal] programming language, wraps it in a custom CLI and provides
 
 - [Goal] is the core language
 - Extensible CLI REPL with:
-  - Auto-complete for:
+  - Auto-completion for:
     - Built-in keywords
     - Built-in syntax aliases (e.g., typing "first" and TAB will show `*` and `¿` in auto-complete results)
     - User-defined globals
   - Runtime configuration:
     - Configure the REPL prompt by setting string values for the `ari.prompt` and `ari.nextprompt` (for multiline input) globals
     - Replace default REPL printing by setting a function value for the `ari.print` global (function receives a single Goal value to print)
+  - `ari.p` as previous result (value from last evaluation)
 - Extensible help system
-  - `help"TOPIC"` like Goal's CLI help
+  - `help"help"` for an overview
+  - `help"TOPIC"` similar to Goal's CLI help
   - `help rx/search/` to use regular expression matching to find help entries that match
   - `"myvar" help "My Var Help"` to extend the help system with new documentation
   - `help""` returns entire help dictionary (including non-Goal help for the SQL mode; use `(help"")"goal"` for just the Goal help)
@@ -27,7 +29,7 @@ Ari takes the [Goal] programming language, wraps it in a custom CLI and provides
 - Dedicated SQL mode for DuckDB
   - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.
   - Auto-completion of SQL keywords
-  - Help entries for SQL keywords (shown during auto-complete)
+  - Help entries for SQL keywords (shown during auto-complete, still WIP)
   - Results of last-run query/command set to the `sql.t` Goal global, so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
 
 ## To Do
