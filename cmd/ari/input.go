@@ -243,7 +243,6 @@ func (autoCompleter *AutoCompleter) systemCommandsAutoComplete() func(v [][]rune
 
 //nolint:lll
 func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, col int) (string, editline.Completions) {
-	goalContext := autoCompleter.ariContext.GoalContext
 	goalNameRe := regexp.MustCompile(`[a-zA-Z\.]+`)
 	// Cache Goal syntax autocompletion keys.
 	if autoCompleter.goalSyntaxKeys == nil {
@@ -264,7 +263,7 @@ func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, 
 		}
 		// msg := fmt.Sprintf("Matching %v", word)
 		lword := strings.ToLower(word)
-		autoCompleteGoalGlobals(goalContext, lword, perCategory)
+		autoCompleteGoalGlobals(autoCompleter, lword, perCategory)
 		autoCompleteGoalKeywords(autoCompleter, lword, perCategory)
 		autoCompleteGoalSyntax(autoCompleter, lword, perCategory)
 		// msg = fmt.Sprintf("Type is %v")
@@ -317,16 +316,17 @@ func autoCompleteGoalKeywords(autoCompleter *AutoCompleter, lword string, perCat
 	}
 }
 
-func autoCompleteGoalGlobals(goalContext *goal.Context, lword string, perCategory map[string][]acEntry) {
+func autoCompleteGoalGlobals(autoCompleter *AutoCompleter, lword string, perCategory map[string][]acEntry) {
+	goalContext := autoCompleter.ariContext.GoalContext
 	// Globals cannot be cached; this is what assignment in Goal creates.
 	goalGlobals := goalContext.GlobalNames(nil)
 	sort.Strings(goalGlobals)
-	goalGlobalsHelp := ari.GoalGlobalsHelp()
+	goalHelp := autoCompleter.ariContext.Help["goal"]
 	category := "Global"
 	for _, goalGlobal := range goalGlobals {
 		if strings.HasPrefix(strings.ToLower(goalGlobal), lword) {
 			var help string
-			if val, ok := goalGlobalsHelp[goalGlobal]; ok {
+			if val, ok := goalHelp[goalGlobal]; ok {
 				help = val
 			} else {
 				help = "A Goal global binding"
