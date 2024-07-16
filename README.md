@@ -36,8 +36,7 @@ Ari takes the [Goal] programming language, wraps it in a custom CLI and provides
 
 Non-exhaustive list:
 
-- DONE: Basic HTTP client
-- DONE: Basic SQL client
+- TODO: Test coverage.
 - TODO: Allow specifying a database as an argument to `)sql` and `)sql!` system commands.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
@@ -51,6 +50,12 @@ Non-exhaustive list:
   - Contextual command/function invocations (e.g., "ls" inside an epic lists stories/issues)
   - Formatted table summaries; raw JSON payload details available.
   - Auto-complete based on API schema and entities
+
+## Examples
+
+I am using ari to build an API client environment for [Shortcut](https://shortcut.com). The under-major-construction code for that can be found [in this GitHub Gist](https://gist.github.com/semperos/daba47a3665c89794a3613cfdb0a2d6c).
+
+I am also using ari to build out an alternative to the Julia setup described in the Background section of this README, but that code is not available at this time.
 
 ## Background
 
