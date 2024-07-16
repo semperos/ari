@@ -54,9 +54,9 @@ Non-exhaustive list:
 
 ## Examples
 
-I am using ari to build an API client environment for [Shortcut](https://shortcut.com). The under-major-construction code for that can be found [in this GitHub Gist](https://gist.github.com/semperos/daba47a3665c89794a3613cfdb0a2d6c).
+I am using Ari to build an API client environment for [Shortcut](https://shortcut.com). The under-major-construction code for that can be found [in this GitHub Gist](https://gist.github.com/semperos/daba47a3665c89794a3613cfdb0a2d6c).
 
-I am also using ari to build out an alternative to the Julia setup described in the Background section of this README, but that code is not available at this time.
+I am also using Ari to build out an alternative to the Julia setup described in the Background section of this README, but that code is not available at this time.
 
 ## Background
 
@@ -125,7 +125,7 @@ Goal already has a number of features that mean we don't need to fill these gaps
 
 ## License
 
-### ari
+### Ari
 
 Original software in this repository is licensed as follows:
 

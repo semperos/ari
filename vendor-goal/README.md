@@ -1,8 +1,8 @@
 # Vendor Goal Code
 
-Goal code that is loaded by default into the ari runtime is located here as files, embedded into the ari Go program using `//go:embed` directives.
+Goal code that is loaded by default into the Ari runtime is located here as files, embedded into the Ari Go program using `//go:embed` directives.
 
-## [goal] repo ()
+## [goal] repo
 
 Last fetched at commit `a7797629ad427b77f3608f1c3a0c725e5cb692d3`:
 
