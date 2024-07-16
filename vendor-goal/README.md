@@ -4,14 +4,14 @@ Goal code that is loaded by default into the ari runtime is located here as file
 
 ## [goal] repo ()
 
-Last fetched at commit `4b7ddab228a6af38bd536f5687c37917d34f0115`:
+Last fetched at commit `a7797629ad427b77f3608f1c3a0c725e5cb692d3`:
 
 ```
-commit 4b7ddab228a6af38bd536f5687c37917d34f0115
+commit a7797629ad427b77f3608f1c3a0c725e5cb692d3
 Author: Yon <anaseto@bardinflor.perso.aquilenet.fr>
-Date:   Thu Jul 11 08:50:52 2024 +0000
+Date:   Mon Jul 15 15:53:23 2024 +0000
 
-    add stack-length checks in regression tests
+    add a couple of examples
 ```
 
 The Goal code vendored in this repository is licensed as follows:
@@ -31,7 +31,10 @@ The Goal code vendored in this repository is licensed as follows:
 > OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 - [fmt.goal](fmt.goal)
+- [html.goal](html.goal)
+- [k.goal](k.goal)
 - [math.goal](math.goal)
+- [mods.goal](mods.goal)
 
 <!-- Links -->
 

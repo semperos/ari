@@ -1,0 +1,10 @@
+/ This file implements adverbial-like modifiers as user-defined functions.
+er:{[f;x;y]f[x;]'y}       / each-right x f/:y
+eer:{[f;x;y]er[f';x;y]}   / each each-right x f'/: y
+eel:{[f;x;y]x f'`y}       / each each-left x f'\: y
+ere:{[f;x;y]x er[f;;]'y}  / each-right each x f/:' y
+ele:{[f;x;y]x f`'y}       / each-left each x f\:' y
+erel:{[f;x;y]x er[f;;]`y} / each-right each-left x f/:\:y
+eler:{[f;x;y]er[f`;x;y]}  / each-left each-right x f\:/:y
+swp:{[f;x;y]f[y;x]}       / argument swap
+1

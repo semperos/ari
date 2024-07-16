@@ -25,7 +25,10 @@ const (
 func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	goalPackages := map[string]string{
 		"fmt":  goalSourceFmt,
+		"html": goalSourceHTML,
+		"k":    goalSourceK,
 		"math": goalSourceMath,
+		"mods": goalSourceMods,
 	}
 	for pkg, source := range goalPackages {
 		_, err := ctx.EvalPackage(source, "<builtin>", pkg)
@@ -39,8 +42,17 @@ func goalLoadExtendedPreamble(ctx *goal.Context) error {
 //go:embed vendor-goal/fmt.goal
 var goalSourceFmt string
 
+//go:embed vendor-goal/html.goal
+var goalSourceHTML string
+
+//go:embed vendor-goal/k.goal
+var goalSourceK string
+
 //go:embed vendor-goal/math.goal
 var goalSourceMath string
+
+//go:embed vendor-goal/mods.goal
+var goalSourceMods string
 
 // Goal functions implemented in Go
 

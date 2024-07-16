@@ -7,6 +7,7 @@ Ari takes the [Goal] programming language, wraps it in a custom CLI and provides
 ## Features
 
 - [Goal] is the core language
+  - Goal `libs` are loaded by default, with prefix matching their file names (see [vendor-goal](vendor-goal) folder in this repo)
 - Extensible CLI REPL with:
   - Auto-completion for:
     - Built-in keywords

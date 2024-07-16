@@ -1,0 +1,3 @@
+/ esc safely escapes < > & ' ".
+esc:sub[!"& &amp; ' &#39; < &lt; > &gt; \" &#34;"]
+1
