@@ -247,7 +247,13 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 	goalContext := cliSystem.ariContext.GoalContext
 	value, err := goalContext.Eval(line)
 	if err != nil {
-		fmt.Fprint(os.Stderr, err)
+		// NB: Goal errors built with the Goal `error` function are goal.V values,
+		// whereas Goal returns a Go error for things like an undefined global,
+		// so "Goal error[]":"Java Exception"::"Go error":"Java Error" here.
+		// This means that the user's ari.prompt function is not honored in this
+		// case, which is good by design in my opinion given the low-level nature
+		// of these errors.
+		fmt.Fprintln(os.Stderr, err)
 	}
 
 	if !goalContext.AssignedLast() {
