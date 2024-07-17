@@ -121,6 +121,7 @@ func cliModeFromString(s string) (cliMode, error) {
 func ariMain(cmd *cobra.Command, args []string) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
+	ariContext.GoalContext.AssignGlobal("ARGS", goal.NewAS(args))
 	cobra.CheckErr(err)
 	cliEditor := cliEditorInitialize()
 	autoCompleter := &AutoCompleter{ariContext: ariContext}
