@@ -1,9 +1,15 @@
 package ari_test
 
 import (
+	"fmt"
+	"io/fs"
+	"log"
+	"os"
 	"strings"
 	"testing"
 
+	"codeberg.org/anaseto/goal"
+	_ "github.com/marcboeker/go-duckdb"
 	"github.com/semperos/ari"
 )
 
@@ -95,6 +101,200 @@ func TestGoalError(t *testing.T) {
 					test.input,
 					expected,
 					got)
+			}
+		})
+	}
+}
+
+// Adapted from Goal implementation.
+type matchTest struct {
+	Fname    string
+	Line     int
+	Left     string
+	Right    string
+	IsScript bool
+}
+
+// Adapted from Goal implementation.
+func getMatchTests(glob string) ([]matchTest, error) {
+	d := os.DirFS("testing/")
+	fnames, err := fs.Glob(d, glob)
+	if err != nil {
+		return nil, err
+	}
+	mts := []matchTest{}
+	for _, fname := range fnames {
+		bs, err := fs.ReadFile(d, fname)
+		if err != nil {
+			return nil, err
+		}
+		text := string(bs)
+		lines := strings.Split(text, "\n")
+		for i, line := range lines {
+			line = strings.TrimSpace(line)
+			if len(line) == 0 || line[0] == '/' {
+				continue
+			}
+			left, right, found := strings.Cut(line, " /")
+			if !found {
+				log.Printf("%s:%d: bad line", fname, i+1)
+				continue
+			}
+			mts = append(mts, matchTest{
+				Fname:    fname,
+				Line:     i + 1,
+				Left:     strings.TrimSpace(left),
+				Right:    strings.TrimSpace(right),
+				IsScript: false,
+			})
+		}
+	}
+	return mts, nil
+}
+
+// Adapted from Goal implementation.
+func getScriptMatchTests(glob string) ([]matchTest, error) {
+	d := os.DirFS("testing/scripts")
+	fnames, err := fs.Glob(d, glob)
+	if err != nil {
+		return nil, err
+	}
+	mts := []matchTest{}
+	for _, fname := range fnames {
+		bs, err := fs.ReadFile(d, fname)
+		if err != nil {
+			return nil, err
+		}
+		text := string(bs)
+		body := strings.SplitN(text, "\n/RESULT:\n", 2)
+		if len(body) != 2 {
+			log.Printf("%s: bad script", fname)
+			continue
+		}
+		left := body[0]
+		right := body[1]
+		mts = append(mts, matchTest{
+			Fname:    fname,
+			Left:     strings.TrimSpace(left),
+			Right:    strings.TrimSpace(right),
+			IsScript: true,
+		})
+	}
+	return mts, nil
+}
+
+// Adapted from Goal implementation.
+func TestEval(t *testing.T) {
+	mts, err := getMatchTests("*.goal")
+	if err != nil {
+		t.Fatalf("getMatchTests: %v", err)
+	}
+	smts, err := getScriptMatchTests("*.goal")
+	if err != nil {
+		t.Fatalf("getScriptMatchTests: %v", err)
+	}
+	for _, mt := range append(mts, smts...) {
+		if mt.Fname == "errors.goal" {
+			continue
+		}
+		mt := mt
+		name := fmt.Sprintf("%s:%d", mt.Fname, mt.Line)
+		matchString := fmt.Sprintf("(%s) ~ (%s)", mt.Left, mt.Right)
+		t.Run(name, func(t *testing.T) {
+			ariContextLeft, err := ari.NewContext("")
+			if err != nil {
+				t.Fatalf("ari context error: %v", err)
+			}
+			ariContextRight, err := ari.NewContext("")
+			if err != nil {
+				t.Fatalf("ari context error: %v", err)
+			}
+			if mt.IsScript {
+				ariContextLeft.GoalContext.AssignGlobal("ARGS", goal.NewAS([]string{mt.Fname}))
+				err = os.Chdir("testing/scripts")
+				if err != nil {
+					t.Fatalf("failed to chdir to 'testing/scripts': %v", err)
+				}
+			} else {
+				err = os.Chdir("testing")
+				t.Fatalf("failed to chdir to 'testing': %v", err)
+			}
+			err = ariContextLeft.GoalContext.Compile(mt.Left, "", "")
+			ps := ariContextLeft.GoalContext.String()
+			if err != nil {
+				t.Log(ps)
+				t.Log(matchString)
+				t.Fatalf("compile error: %v", err)
+			}
+			vLeft, errLeft := ariContextLeft.GoalContext.Run()
+			vRight, errRight := ariContextRight.GoalContext.Eval(mt.Right)
+			if errLeft != nil || errRight != nil {
+				t.Log(ps)
+				t.Log(matchString)
+				t.Fatalf("return error: `%v` vs `%v`", errLeft, errRight)
+			}
+			if !vLeft.Matches(vRight) {
+				t.Log(ps)
+				t.Log(matchString)
+				if vLeft != (goal.V{}) {
+					t.Logf("results:\n   %s\nvs %s\n", vLeft.Sprint(ariContextLeft.GoalContext, true), vRight.Sprint(ariContextRight.GoalContext, true))
+				} else {
+					t.Logf("results:\n   %v\nvs %s\n", vLeft, vRight.Sprint(ariContextRight.GoalContext, true))
+				}
+				t.FailNow()
+			}
+		})
+	}
+}
+
+// Adapted from Goal implementation.
+func TestErrors(t *testing.T) {
+	mts, err := getMatchTests("errors.goal")
+	if err != nil {
+		t.Fatalf("getMatchTests: %v", err)
+	}
+	smts, err := getScriptMatchTests("errors.goal")
+	if err != nil {
+		t.Fatalf("getScriptMatchTests: %v", err)
+	}
+	for _, mt := range append(mts, smts...) {
+		mt := mt
+		name := fmt.Sprintf("%s:%d", mt.Fname, mt.Line)
+		matchString := mt.Left
+		t.Run(name, func(t *testing.T) {
+			ariContext, err := ari.NewContext("")
+			if err != nil {
+				t.Fatalf("ari context error: %v", err)
+			}
+			err = ariContext.GoalContext.Compile(mt.Left, "", "")
+			ps := ariContext.GoalContext.String()
+			if err == nil {
+				var v goal.V
+				v, err = ariContext.GoalContext.Run()
+				if err == nil {
+					t.Log(ps)
+					t.Log(matchString)
+					t.Fatalf("no error left: result: %s\nexpected: %v", v.Sprint(ariContext.GoalContext, true), mt.Right)
+				}
+			}
+			//nolint:errorlint // upstream
+			e, ok := err.(*goal.Panic)
+			if !ok {
+				// should never happen
+				t.Log(ps)
+				t.Log(matchString)
+				t.Fatalf("bad error: `%v`\nexpected:`%v`", err, mt.Right)
+			}
+			msg := e.Error()
+			if strings.Contains(mt.Left, "\n") {
+				msg = e.ErrorStack()
+			}
+			if !strings.Contains(e.Error(), mt.Right) {
+				t.Log(ps)
+				t.Log(matchString)
+				t.Logf("\n   error: %q\nexpected: %q", msg, mt.Right)
+				t.Fail()
+				return
 			}
 		})
 	}
