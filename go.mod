@@ -8,7 +8,7 @@ require (
 	codeberg.org/anaseto/goal v0.42.1-0.20240715155323-a7797629ad42
 	github.com/go-resty/resty/v2 v2.11.0
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
-	github.com/marcboeker/go-duckdb v1.6.5
+	github.com/marcboeker/go-duckdb v1.7.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 )
