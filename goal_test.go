@@ -184,6 +184,8 @@ func getScriptMatchTests(glob string) ([]matchTest, error) {
 }
 
 // Adapted from Goal implementation.
+//
+//nolint:gocognit // upstream
 func TestEval(t *testing.T) {
 	mts, err := getMatchTests("*.goal")
 	if err != nil {
@@ -237,6 +239,7 @@ func TestEval(t *testing.T) {
 				t.Log(ps)
 				t.Log(matchString)
 				if vLeft != (goal.V{}) {
+					//nolint:lll // upstream
 					t.Logf("results:\n   %s\nvs %s\n", vLeft.Sprint(ariContextLeft.GoalContext, true), vRight.Sprint(ariContextRight.GoalContext, true))
 				} else {
 					t.Logf("results:\n   %v\nvs %s\n", vLeft, vRight.Sprint(ariContextRight.GoalContext, true))
@@ -248,6 +251,8 @@ func TestEval(t *testing.T) {
 }
 
 // Adapted from Goal implementation.
+//
+//nolint:gocognit // upstream
 func TestErrors(t *testing.T) {
 	mts, err := getMatchTests("errors.goal")
 	if err != nil {
