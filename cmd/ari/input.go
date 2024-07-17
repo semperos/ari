@@ -79,7 +79,7 @@ const (
 	scanRawQuote
 )
 
-const delimchars = ":+-*%!&|=~,^#_?@/"
+const delimchars = ":+-*%!&|=~,^#_?@/`"
 
 // readLine reads until the first end of line that also ends a Goal expression.
 //
