@@ -33,11 +33,9 @@ func NewGoalContext(help Help, sqlDatabase *SQLDatabase) (*goal.Context, error) 
 }
 
 // Initialize SQL struct, but don't open the DB yet.
+//
+// Call SQLDatabase.open to open the database.
 func NewSQLDatabase(dataSourceName string) (*SQLDatabase, error) {
-	// db, err := sql.Open(dbDriver, dataSourceName)
-	// if err != nil {
-	// 	return nil, err
-	// }
 	return &SQLDatabase{DataSource: dataSourceName, DB: nil, IsOpen: false}, nil
 }
 

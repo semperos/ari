@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"codeberg.org/anaseto/goal"
-	"github.com/spf13/viper"
 )
 
 type SQLDatabase struct {
@@ -50,8 +49,8 @@ func (sqlDatabase *SQLDatabase) Type() string {
 	return "ari.SqlDatabase"
 }
 
-func (sqlDatabase *SQLDatabase) Open(dataSourceName string) error {
-	db, err := sql.Open(dbDriver, dataSourceName)
+func (sqlDatabase *SQLDatabase) Open() error {
+	db, err := sql.Open(dbDriver, sqlDatabase.DataSource)
 	if err != nil {
 		return err
 	}
@@ -170,6 +169,8 @@ func panicType(op, sym string, x goal.V) goal.V {
 }
 
 // Implements sql.open to open a SQL DB.
+//
+// TODO This needs to return a new, separate SQLDatabase when a non-empty data source name is supplied.
 func VFSqlOpenFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
 	return func(_ *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
@@ -180,11 +181,10 @@ func VFSqlOpenFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args 
 				return panicType("sql.open s", "s", x)
 			}
 			dsn := string(dataSourceName)
-			if len(dsn) == 0 {
-				// Empty means use the value from config/CLI args
-				dsn = viper.GetString("database")
+			if len(dsn) != 0 {
+				sqlDatabase.DataSource = dsn
 			}
-			err := sqlDatabase.Open(dsn)
+			err := sqlDatabase.Open()
 			if err != nil {
 				return goal.NewPanicError(err)
 			}
@@ -216,8 +216,9 @@ func sqlQMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Context) 
 		return panicType("sql.q s", "s", x)
 	}
 	var err error
-	if sqlDatabase == nil || !sqlDatabase.IsOpen {
-		sqlDatabase, err = NewSQLDatabase(sqlDatabase.DataSource)
+	if sqlDatabase.DB == nil || !sqlDatabase.IsOpen {
+		fmt.Fprintf(os.Stdout, "Opening database %q\n", sqlDatabase.DataSource)
+		err = sqlDatabase.Open()
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
@@ -226,7 +227,6 @@ func sqlQMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Context) 
 	if err != nil {
 		return goal.NewPanicError(err)
 	}
-
 	goalContext.AssignGlobal("sql.t", goalD)
 	return goalD
 }
@@ -241,11 +241,65 @@ func sqlQDyadic(x goal.V, args []goal.V) goal.V {
 	if !ok {
 		return panicType("ari.SqlDatabase sql.q s", "s", y)
 	}
-	queryResult, err := SQLQueryContext(sqlDatabase, string(sqlQuery), nil)
+	goalD, err := SQLQueryContext(sqlDatabase, string(sqlQuery), nil)
 	if err != nil {
-		return goal.Errorf("%v", err)
+		return goal.NewPanicError(err)
 	}
-	return queryResult
+	return goalD
+}
+
+// Implements sql.exec for executing SQL statements.
+func VFSqlExecFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
+	return func(goalContext *goal.Context, args []goal.V) goal.V {
+		x := args[len(args)-1]
+		switch len(args) {
+		case monadic:
+			return sqlExecMonadic(x, sqlDatabase, goalContext)
+		case dyadic:
+			return sqlExecDyadic(goalContext, x, args)
+		default:
+			return goal.Panicf("sql.exec too many arguments (%d), expects 1 or 2 arguments", len(args))
+		}
+	}
+}
+
+func sqlExecMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Context) goal.V {
+	sqlStmt, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("sql.exec s", "s", x)
+	}
+	var err error
+	if sqlDatabase.DB == nil || !sqlDatabase.IsOpen {
+		fmt.Fprintf(os.Stdout, "Opening database %q\n", sqlDatabase.DataSource)
+		err = sqlDatabase.Open()
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+	}
+	goalD, err := SQLExec(sqlDatabase, string(sqlStmt), nil)
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+	goalContext.AssignGlobal("sql.t", goalD)
+	return goalD
+}
+
+func sqlExecDyadic(goalContext *goal.Context, x goal.V, args []goal.V) goal.V {
+	sqlDatabase, ok := x.BV().(*SQLDatabase)
+	if !ok {
+		return panicType("ari.SqlDatabase sql.exec s", "ari.SqlDatabase", x)
+	}
+	y := args[0]
+	sqlStmt, ok := y.BV().(goal.S)
+	if !ok {
+		return panicType("ari.SqlDatabase sql.exec s", "s", y)
+	}
+	goalD, err := SQLExec(sqlDatabase, string(sqlStmt), nil)
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+	goalContext.AssignGlobal("sql.t", goalD)
+	return goalD
 }
 
 // From https://en.wikipedia.org/wiki/List_of_SQL_reserved_words

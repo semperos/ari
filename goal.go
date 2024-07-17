@@ -257,6 +257,9 @@ func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQ
 	// From Goal itself
 	gos.Import(goalContext, "")
 	// Ari
+	// Monads
+	goalContext.RegisterMonad("sql.open", VFSqlOpenFn(sqlDatabase))
+	// Dyads
 	goalContext.RegisterDyad("help", VFHelpFn(help))
 	goalContext.RegisterDyad("http.client", VFHTTPClient)
 	goalContext.RegisterDyad("http.delete", VFHTTPMaker("DELETE"))
@@ -266,8 +269,8 @@ func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQ
 	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
 	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
 	goalContext.RegisterDyad("http.put", VFHTTPMaker("PUT"))
-	goalContext.RegisterDyad("sql.open", VFSqlOpenFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
+	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
 }
 
 //nolint:funlen

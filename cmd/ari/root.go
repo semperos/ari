@@ -79,7 +79,7 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 }
 
 func (cliSystem *CliSystem) switchModeToSQLReadOnly() {
-	err := cliSystem.ariContext.SQLDatabase.Open(cliSystem.ariContext.SQLDatabase.DataSource)
+	err := cliSystem.ariContext.SQLDatabase.Open()
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -92,7 +92,7 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly() {
 }
 
 func (cliSystem *CliSystem) switchModeToSQLReadWrite() {
-	err := cliSystem.ariContext.SQLDatabase.Open(cliSystem.ariContext.SQLDatabase.DataSource)
+	err := cliSystem.ariContext.SQLDatabase.Open()
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
