@@ -252,6 +252,11 @@ func TestEval(t *testing.T) {
 	}
 }
 
+func registerHTTPMocks() {
+	httpmock.RegisterResponder("GET", "https://example.com/api/sprockets/1",
+		httpmock.NewStringResponder(200, `[{"id": 1, "name": "Test Sprocket 1"}]`))
+}
+
 // Adapted from Goal implementation.
 //
 //nolint:gocognit // upstream
