@@ -219,7 +219,9 @@ func TestEval(t *testing.T) {
 				}
 			} else {
 				err = os.Chdir("testing")
-				t.Fatalf("failed to chdir to 'testing': %v", err)
+				if err != nil {
+					t.Fatalf("failed to chdir to 'testing': %v", err)
+				}
 			}
 			err = ariContextLeft.GoalContext.Compile(mt.Left, "", "")
 			ps := ariContextLeft.GoalContext.String()
