@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"codeberg.org/anaseto/goal"
+	"github.com/jarcoal/httpmock"
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/semperos/ari"
 )
@@ -195,6 +196,10 @@ func TestEval(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getScriptMatchTests: %v", err)
 	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get current working directory: %v", err)
+	}
 	for _, mt := range append(mts, smts...) {
 		if mt.Fname == "errors.goal" {
 			continue
@@ -211,14 +216,27 @@ func TestEval(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ari context error: %v", err)
 			}
+
+			// HTTP mocking
+			httpClient, err := ari.NewHTTPClient(goalNewDictEmpty())
+			if err != nil {
+				t.Fatalf("failed to create HTTP client for testing: %v", err)
+			}
+			ariContextLeft.HTTPClient = httpClient
+			ariContextRight.HTTPClient = httpClient
+			httpmock.ActivateNonDefault(ariContextLeft.HTTPClient.Client.GetClient())
+			httpmock.ActivateNonDefault(ariContextRight.HTTPClient.Client.GetClient())
+			defer httpmock.DeactivateAndReset()
+			registerHTTPMocks()
+
 			if mt.IsScript {
 				ariContextLeft.GoalContext.AssignGlobal("ARGS", goal.NewAS([]string{mt.Fname}))
-				err = os.Chdir("testing/scripts")
+				err = os.Chdir(cwd + "/testing/scripts")
 				if err != nil {
 					t.Fatalf("failed to chdir to 'testing/scripts': %v", err)
 				}
 			} else {
-				err = os.Chdir("testing")
+				err = os.Chdir(cwd + "/testing")
 				if err != nil {
 					t.Fatalf("failed to chdir to 'testing': %v", err)
 				}
@@ -253,8 +271,19 @@ func TestEval(t *testing.T) {
 }
 
 func registerHTTPMocks() {
+	httpmock.RegisterResponder("GET", "https://example.com/api/sprockets",
+		httpmock.NewStringResponder(200, `[{"id": 1, "name": "Test Sprocket 1"},{"id": 2, "name": "Test Sprocket 2"}]`))
 	httpmock.RegisterResponder("GET", "https://example.com/api/sprockets/1",
-		httpmock.NewStringResponder(200, `[{"id": 1, "name": "Test Sprocket 1"}]`))
+		httpmock.NewStringResponder(200, `{"id": 1, "name": "Test Sprocket 1"}`))
+}
+
+func goalNewDictEmpty() *goal.D {
+	dv := goal.NewD(goal.NewAV(nil), goal.NewAV(nil))
+	d, ok := dv.BV().(*goal.D)
+	if !ok {
+		panic("Developer error: Empty Goal dictionary expected.")
+	}
+	return d
 }
 
 // Adapted from Goal implementation.

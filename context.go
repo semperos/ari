@@ -11,6 +11,8 @@ type Help map[string]map[string]string
 type Context struct {
 	// GoalContext is needed to evaluate Goal programs and introspect the Goal execution environment.
 	GoalContext *goal.Context
+	// HTTPClient exposed for testing purposes.
+	HTTPClient *HTTPClient
 	// SQLDatabase keeps track of open database connections as well as the data source name.
 	SQLDatabase *SQLDatabase
 	// Help stores documentation information for identifiers.
@@ -21,10 +23,10 @@ type Context struct {
 }
 
 // Initialize a Goal language context with Ari's extensions.
-func NewGoalContext(help Help, sqlDatabase *SQLDatabase) (*goal.Context, error) {
+func NewGoalContext(ariContext *Context, help Help, sqlDatabase *SQLDatabase) (*goal.Context, error) {
 	goalContext := goal.NewContext()
 	goalContext.Log = os.Stderr
-	goalRegisterVariadics(goalContext, help, sqlDatabase)
+	goalRegisterVariadics(ariContext, goalContext, help, sqlDatabase)
 	err := goalLoadExtendedPreamble(goalContext)
 	if err != nil {
 		return nil, err
@@ -68,14 +70,18 @@ func NewHelp() map[string]map[string]string {
 
 // Initialize a new Context without connecting to the database.
 func NewContext(dataSourceName string) (*Context, error) {
+	ctx := Context{}
 	help := NewHelp()
 	sqlDatabase, err := NewSQLDatabase(dataSourceName)
 	if err != nil {
 		return nil, err
 	}
-	goalContext, err := NewGoalContext(help, sqlDatabase)
+	goalContext, err := NewGoalContext(&ctx, help, sqlDatabase)
 	if err != nil {
 		return nil, err
 	}
-	return &Context{GoalContext: goalContext, SQLDatabase: sqlDatabase, Help: help}, nil
+	ctx.GoalContext = goalContext
+	ctx.SQLDatabase = sqlDatabase
+	ctx.Help = help
+	return &ctx, nil
 }

@@ -253,7 +253,7 @@ func goalNewDictEmpty() *goal.D {
 
 // Integration with other parts of Ari
 
-func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
+func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
 	// From Goal itself
 	gos.Import(goalContext, "")
 	// Ari
@@ -261,14 +261,14 @@ func goalRegisterVariadics(goalContext *goal.Context, help Help, sqlDatabase *SQ
 	goalContext.RegisterMonad("sql.open", VFSqlOpenFn(sqlDatabase))
 	// Dyads
 	goalContext.RegisterDyad("help", VFHelpFn(help))
-	goalContext.RegisterDyad("http.client", VFHTTPClient)
-	goalContext.RegisterDyad("http.delete", VFHTTPMaker("DELETE"))
-	goalContext.RegisterDyad("http.get", VFHTTPMaker("GET"))
-	goalContext.RegisterDyad("http.head", VFHTTPMaker("HEAD"))
-	goalContext.RegisterDyad("http.options", VFHTTPMaker("OPTIONS"))
-	goalContext.RegisterDyad("http.patch", VFHTTPMaker("PATCH"))
-	goalContext.RegisterDyad("http.post", VFHTTPMaker("POST"))
-	goalContext.RegisterDyad("http.put", VFHTTPMaker("PUT"))
+	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
+	goalContext.RegisterDyad("http.delete", VFHTTPMaker(ariContext, "DELETE"))
+	goalContext.RegisterDyad("http.get", VFHTTPMaker(ariContext, "GET"))
+	goalContext.RegisterDyad("http.head", VFHTTPMaker(ariContext, "HEAD"))
+	goalContext.RegisterDyad("http.options", VFHTTPMaker(ariContext, "OPTIONS"))
+	goalContext.RegisterDyad("http.patch", VFHTTPMaker(ariContext, "PATCH"))
+	goalContext.RegisterDyad("http.post", VFHTTPMaker(ariContext, "POST"))
+	goalContext.RegisterDyad("http.put", VFHTTPMaker(ariContext, "PUT"))
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
 }

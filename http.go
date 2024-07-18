@@ -13,7 +13,7 @@ import (
 )
 
 type HTTPClient struct {
-	client *resty.Client
+	Client *resty.Client
 }
 
 // LessT implements goal.BV.
@@ -28,7 +28,7 @@ func (httpClient *HTTPClient) LessT(y goal.BV) bool {
 func (httpClient *HTTPClient) Matches(y goal.BV) bool {
 	switch yv := y.(type) {
 	case *HTTPClient:
-		return httpClient.client == yv.client
+		return httpClient.Client == yv.Client
 	default:
 		return false
 	}
@@ -42,42 +42,26 @@ func (httpClient *HTTPClient) Type() string {
 // Append implements goal.BV.
 func (httpClient *HTTPClient) Append(_ *goal.Context, dst []byte, _ bool) []byte {
 	// Go prints nil as `<nil>` so following suit.
-	return append(dst, fmt.Sprintf("<%v %#v>", httpClient.Type(), httpClient.client)...)
+	return append(dst, fmt.Sprintf("<%v %#v>", httpClient.Type(), httpClient.Client)...)
 }
 
 //nolint:cyclop,funlen,gocognit,gocyclo // No code shared, ball of wax stays together.
-func newHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
-	// [DONE] BaseURL               string
-	// [DONE] QueryParam            url.Values //  type Values map[string][]string
-	// [DONE] FormData              url.Values
-	// [DONE] PathParams            map[string]string
-	// [DONE] RawPathParams         map[string]string
-	// [DONE] Header                http.Header // Use Add methods; accept dictionary of either single strings or []string
-	// [DONE] HeaderAuthorizationKey string
-	// [DONE] UserInfo              *User // Struct of Username, Password string
-	// [DONE] Token                 string
-	// [DONE] AuthScheme            string
+func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
+	// Not currently implemented:
 	// Cookies               []*http.Cookie // Medium-sized struct
 	// Error                 reflect.Type
-	// [DONE] Debug                 bool
-	// [DONE] DisableWarn           bool
-	// [DONE] AllowGetMethodPayload bool
-	// [DONE] RetryCount            int
-	// [DONE] RetryWaitTime         time.Duration // Pick canonical unit (millis/micros) int64
-	// [DONE] RetryMaxWaitTime      time.Duration int64
 	// RetryConditions       []RetryConditionFunc // Research: How tough is it to invoke a Goal lambda from Go land?
 	// RetryHooks            []OnRetryFunc
 	// RetryAfter            RetryAfterFunc
-	// [DONE] RetryResetReaders     bool
 	// JSONMarshal           func(v interface{}) ([]byte, error)
 	// JSONUnmarshal         func(data []byte, v interface{}) error
 	// XMLMarshal            func(v interface{}) ([]byte, error)
 	// XMLUnmarshal          func(data []byte, v interface{}) error
 	goalFnName := "http.client"
 	restyClient := resty.New()
-	// fmt.Printf("OPTS: %q", dict)
+	httpClient := HTTPClient{restyClient}
 	if optionsD.Len() == 0 {
-		return &HTTPClient{resty.New()}, nil
+		return &httpClient, nil
 	}
 	ka := optionsD.KeyArray()
 	va := optionsD.ValueArray()
@@ -339,35 +323,37 @@ func newHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 			reflect.TypeOf(va),
 			va)
 	}
-	return &HTTPClient{client: restyClient}, nil
+	return &httpClient, nil
 }
 
-func VFHTTPClient(_ *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
-	clientOptions, ok := x.BV().(*goal.D)
-	switch len(args) {
-	case 1:
-		if !ok {
-			return panicType("http.client d", "d", x)
+func VFHTTPClientFn() func(goalContext *goal.Context, args []goal.V) goal.V {
+	return func(_ *goal.Context, args []goal.V) goal.V {
+		x := args[len(args)-1]
+		clientOptions, ok := x.BV().(*goal.D)
+		switch len(args) {
+		case 1:
+			if !ok {
+				return panicType("http.client d", "d", x)
+			}
+			hc, err := NewHTTPClient(clientOptions)
+			if err != nil {
+				return goal.NewPanicError(err)
+			}
+			return goal.NewV(hc)
+		default:
+			return goal.NewPanic("http.client : too many arguments")
 		}
-		hc, err := newHTTPClient(clientOptions)
-		if err != nil {
-			return goal.NewPanicError(err)
-		}
-		return goal.NewV(hc)
-	default:
-		return goal.NewPanic("http.client : too many arguments")
 	}
 }
 
-func VFHTTPMaker(method string) func(goalContext *goal.Context, args []goal.V) goal.V {
+func VFHTTPMaker(ariContext *Context, method string) func(goalContext *goal.Context, args []goal.V) goal.V {
 	methodLower := strings.ToLower(method) // Used for function name
 	methodUpper := strings.ToUpper(method) // Used by go-resty for HTTP method
 	return func(_ *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
 		switch len(args) {
 		case monadic:
-			return httpMakerMonadic(x, methodLower, methodUpper)
+			return httpMakerMonadic(ariContext, x, methodLower, methodUpper)
 		case dyadic:
 			return httpMakerDyadic(x, args, methodLower, methodUpper)
 		case triadic:
@@ -378,16 +364,22 @@ func VFHTTPMaker(method string) func(goalContext *goal.Context, args []goal.V) g
 	}
 }
 
-func httpMakerMonadic(x goal.V, methodLower string, methodUpper string) goal.V {
+func httpMakerMonadic(ariContext *Context, x goal.V, methodLower string, methodUpper string) goal.V {
 	url, ok := x.BV().(goal.S)
 	if !ok {
 		return panicType(fmt.Sprintf("http.%s s", methodLower), "s", x)
 	}
-	httpClient, err := newHTTPClient(goalNewDictEmpty())
-	if err != nil {
-		return goal.NewPanicError(err)
+	// Cache the client for the monadic arity.
+	if ariContext.HTTPClient == nil {
+		// Saves in ariContext.HTTPClient
+		httpClient, err := NewHTTPClient(goalNewDictEmpty())
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		// NB: Keep pointer to last-minted HTTPClient, so tests can mock and override.
+		ariContext.HTTPClient = httpClient
 	}
-	req := httpClient.client.R()
+	req := ariContext.HTTPClient.Client.R()
 	resp, err := req.Execute(methodUpper, string(url))
 	if err != nil {
 		return goal.Errorf("HTTP ERROR: %v", err)
@@ -402,7 +394,7 @@ func httpMakerDyadic(x goal.V, args []goal.V, methodLower string, methodUpper st
 		httpClient = clientOpts
 	case *goal.D:
 		var err error
-		httpClient, err = newHTTPClient(clientOpts)
+		httpClient, err = NewHTTPClient(clientOpts)
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
@@ -419,7 +411,7 @@ func httpMakerDyadic(x goal.V, args []goal.V, methodLower string, methodUpper st
 	if !ok {
 		return panicType(fmt.Sprintf("ari.HTTPClient http.%s url", methodLower), "url", y)
 	}
-	req := httpClient.client.R()
+	req := httpClient.Client.R()
 	resp, err := req.Execute(methodUpper, string(urlS))
 	if err != nil {
 		return goal.Errorf("HTTP ERROR: %v", err)
@@ -434,7 +426,7 @@ func httpMakerTriadic(x goal.V, args []goal.V, methodLower string, methodUpper s
 		httpClient = clientOpts
 	case *goal.D:
 		var err error
-		httpClient, err = newHTTPClient(clientOpts)
+		httpClient, err = NewHTTPClient(clientOpts)
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
@@ -456,7 +448,7 @@ func httpMakerTriadic(x goal.V, args []goal.V, methodLower string, methodUpper s
 	if !ok {
 		return panicType(fmt.Sprintf("http.%s[ari.HTTPClient;url;optionsDict]", methodLower), "optionsDict", z)
 	}
-	req := httpClient.client.R()
+	req := httpClient.Client.R()
 	req, err := augmentRequestWithOptions(req, optionsD, methodLower)
 	if err != nil {
 		return goal.NewPanicError(err)
