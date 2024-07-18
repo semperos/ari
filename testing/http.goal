@@ -1,0 +1,1 @@
+http.get"https://example.com/api/sprocket/1" / "foo"
