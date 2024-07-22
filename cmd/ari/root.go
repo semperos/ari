@@ -305,10 +305,16 @@ func (cliSystem *CliSystem) detectAriPrint() func(goal.V) {
 	if found {
 		if printFn.IsCallable() {
 			return func(v goal.V) {
-				printFn.ApplyAt(goalContext, v)
+				goalV := printFn.ApplyAt(goalContext, v)
+				// If an error occurs within the ari.print function, ensure it is printed like a Goal error.
+				if goalV.IsError() {
+					fmt.Fprintln(os.Stdout, goalV.Sprint(goalContext, false))
+				}
 			}
+		} else if printFn.IsFalse() {
+			return nil
 		}
-		fmt.Fprintf(os.Stderr, "Error: The ari.print value must be a callable, but encountered %q", printFn)
+		fmt.Fprintf(os.Stderr, "Error: The ari.print value must be a callable (or falsey), but encountered %q", printFn)
 	}
 	return nil
 }
@@ -318,7 +324,7 @@ func (cliSystem *CliSystem) replEvalSQLReadOnly(line string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
 	} else {
-		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
+		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.p;*#'sql.p;#sql.p;"%.1f"]`)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to print SQL query results via Goal evaluation: %v\n", err)
 		}
@@ -330,7 +336,7 @@ func (cliSystem *CliSystem) replEvalSQLReadWrite(line string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
 	} else {
-		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.t;*#'sql.t;#sql.t;"%.1f"]`)
+		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.p;*#'sql.p;#sql.p;"%.1f"]`)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to print SQL exec results via Goal evaluation: %v\n", err)
 		}
@@ -397,8 +403,8 @@ func (cliSystem *CliSystem) sqlQuery(sqlQuery string, args []any) (goal.V, error
 	if err != nil {
 		return goal.V{}, err
 	}
-	// Last result table as sql.t in Goal, to support switching eval modes:
-	cliSystem.ariContext.GoalContext.AssignGlobal("sql.t", goalD)
+	// Last result table as sql.p in Goal, to support switching eval modes:
+	cliSystem.ariContext.GoalContext.AssignGlobal("sql.p", goalD)
 	return goalD, nil
 }
 
@@ -414,7 +420,7 @@ func (cliSystem *CliSystem) sqlExec(sqlQuery string, args []any) (goal.V, error)
 	if err != nil {
 		return goal.V{}, err
 	}
-	cliSystem.ariContext.GoalContext.AssignGlobal("sql.t", goalD)
+	cliSystem.ariContext.GoalContext.AssignGlobal("sql.p", goalD)
 	return goalD, nil
 }
 

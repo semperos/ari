@@ -31,7 +31,7 @@ Ari takes the [Goal] programming language, wraps it in a custom CLI and provides
   - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.
   - Auto-completion of SQL keywords
   - Help entries for SQL keywords (shown during auto-complete, still WIP)
-  - Results of last-run query/command set to the `sql.t` Goal global, so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
+  - Results of the last-run query/command set to the `sql.p` Goal global (for "SQL previous" and mirroring `ari.p`), so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
 
 ## To Do
 

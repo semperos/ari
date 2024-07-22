@@ -227,7 +227,7 @@ func sqlQMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Context) 
 	if err != nil {
 		return goal.NewPanicError(err)
 	}
-	goalContext.AssignGlobal("sql.t", goalD)
+	goalContext.AssignGlobal("sql.p", goalD)
 	return goalD
 }
 
@@ -280,7 +280,7 @@ func sqlExecMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Contex
 	if err != nil {
 		return goal.NewPanicError(err)
 	}
-	goalContext.AssignGlobal("sql.t", goalD)
+	goalContext.AssignGlobal("sql.p", goalD)
 	return goalD
 }
 
@@ -298,7 +298,7 @@ func sqlExecDyadic(goalContext *goal.Context, x goal.V, args []goal.V) goal.V {
 	if err != nil {
 		return goal.NewPanicError(err)
 	}
-	goalContext.AssignGlobal("sql.t", goalD)
+	goalContext.AssignGlobal("sql.p", goalD)
 	return goalD
 }
 
