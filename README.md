@@ -4,6 +4,16 @@ Ari stands for **A**rray **R**elational **I**nteractive programming environment.
 
 Ari is a set of extensions to the [Goal] programming language, also providing an extensible CLI with dedicated SQL mode.
 
+## Installation
+
+Clone this repository and then run the following:
+
+```shell
+go install ./cmd/ari
+```
+
+Then run `ari` for a REPL or `ari --help` to see CLI options.
+
 ## Features
 
 - [Goal] is the core language
