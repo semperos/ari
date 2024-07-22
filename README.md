@@ -2,12 +2,12 @@
 
 Ari stands for **A**rray **R**elational **I**nteractive programming environment.
 
-Ari takes the [Goal] programming language, wraps it in a custom CLI and provides new functions for the features listed below.
+Ari is a set of extensions to the [Goal] programming language, also providing an extensible CLI with dedicated SQL mode.
 
 ## Features
 
 - [Goal] is the core language
-  - Goal `libs` are loaded by default, with prefix matching their file names (see [vendor-goal](vendor-goal) folder in this repo)
+  - Goal's `libs` are loaded by default, with prefix matching their file names (see [vendor-goal](vendor-goal) folder in this repo)
 - Extensible CLI REPL with:
   - Auto-completion for:
     - Built-in keywords
@@ -16,7 +16,7 @@ Ari takes the [Goal] programming language, wraps it in a custom CLI and provides
   - Runtime configuration:
     - Configure the REPL prompt by setting string values for the `ari.prompt` and `ari.nextprompt` (for multiline input) globals
     - Replace default REPL printing by setting a function value for the `ari.print` global (function receives a single Goal value to print)
-  - `ari.p` as previous result (value from last evaluation)
+  - `ari.p` is bound to the previous result (value from last evaluation at the REPL)
 - Extensible help system
   - `help"help"` for an overview
   - `help"TOPIC"` similar to Goal's CLI help
@@ -39,24 +39,24 @@ Non-exhaustive list:
 
 - TODO: Test coverage.
 - TODO: Allow specifying a database as an argument to `)sql` and `)sql!` system commands.
+- TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
+- TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
+
+I plan to support the above items. The following are nice-to-have's:
+
 - TODO: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
-
-## Ideas
-
-- Support Prolog https://github.com/ichiban/prolog?tab=readme-ov-file
-  - River Crossing or Learn Datalog Today as examples
-- API Explorer (possibly a project that relies on Ari, but not a part of Ari)
-  - Stateful "current working directory" concept within entities of an API
-  - Contextual command/function invocations (e.g., "ls" inside an epic lists stories/issues)
-  - Formatted table summaries; raw JSON payload details available.
-  - Auto-complete based on API schema and entities
+- Specific user commands:
+  - TODO: Choosing output format (e.g., as JSON)
+  - TODO: Toggle pretty-printing
+  - TODO: Toggle paging at the REPL (as found in [PicoLisp](https://picolisp.com/wiki/?home))
+  - TODO: Toggle colored output
 
 ## Examples
 
-I am using Ari to build an API client environment for [Shortcut](https://shortcut.com). The under-major-construction code for that can be found [in this GitHub Gist](https://gist.github.com/semperos/daba47a3665c89794a3613cfdb0a2d6c).
+I began building Ari to replicate the experience described in the [Background](#background) section of this README. That code is not publicly available at this time.
 
-I am also using Ari to build out an alternative to the Julia setup described in the Background section of this README, but that code is not available at this time.
+I am also using Ari to build an API client environment for the [Shortcut](https://shortcut.com) [REST API](https://developer.shortcut.com/api/rest/v3). The under-major-construction code for that can be found [in this GitHub Gist](https://gist.github.com/semperos/daba47a3665c89794a3613cfdb0a2d6c).
 
 ## Background
 
@@ -83,12 +83,12 @@ Details:
   - Julia: Statistics, StatsBase packages both for aggregates and data to plot, pull from DataFrames
   - Julia: Executed external `latexmk` using Julia's `run` to build LaTeX report
 
-Why move away from this slick setup?
+Why move away from this setup?
 
 - Concision and expressive power of array languages.
 - A lot of my code was SQL in Julia.
 
-Ari currently embeds the Goal array programming language. What gaps from my Julia+DuckDB experience need to be filled to use Goal where I used Julia?
+Ari embeds the Goal array programming language. What gaps from my Julia+DuckDB experience need to be filled to use Goal where I used Julia?
 
 - Notebook programming environment
   - Cell dependencies and automatic re-run
@@ -117,7 +117,7 @@ Ari currently embeds the Goal array programming language. What gaps from my Juli
     - See GNU Octave plotting
 - See [Gonum](https://github.com/gonum)
 
-Goal already has a number of features that mean we don't need to fill these gaps to start (more flexible options may be considered in the future):
+Goal already has a number of features, so we don't need to fill these gaps to start (more flexible options may be considered in the future):
 
 - Powerful string API
 - JSON support
