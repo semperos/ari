@@ -17,7 +17,7 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
 ## Features
 
 - [Goal] is the core language
-  - Goal's `libs` are loaded by default, with prefix matching their file names (see [vendor-goal](vendor-goal) folder in this repo)
+  - Goal's `lib` files are loaded by default, with prefix matching their file names (see [vendor-goal](vendor-goal) folder in this repo)
 - Extensible CLI REPL with:
   - Auto-completion for:
     - Built-in keywords
