@@ -572,8 +572,8 @@ func goalVerbsHelp() []mapentry {
 		}, "\n")},
 		{k: "$", v: strings.Join([]string{
 			`$x  string      $2 3 → "2 3"      $"text" → "\"text\""`,
-			`i$s cut shape   3$"abcdefghijk" → "abc" "defg" "hijk"`,
-			`i$Y cut shape   3$!6 → (0 1;2 3;4 5)             -3$!6 → (0 1 2;3 4 5)`,
+			`i$s cut shape   3$"abcdefghijk" → "abc" "defg" "hijk"                   (reshape)`,
+			`i$Y cut shape   3$!6 → (0 1;2 3;4 5)             -3$!6 → (0 1 2;3 4 5)  (reshape)`,
 			`s$y strings     "s"$(1;"c";+) → "1""c""+"`,
 			`s$s chars/bytes "c"$"aπ" → 97 960                "b"$"aπ" → 97 207 128`,
 			`s$i to string   "c"$97 960 → "aπ"                "b"$97 207 128 → "aπ"`,
