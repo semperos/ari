@@ -1055,6 +1055,7 @@ func helpForHTTPFn(s string) string {
 		fmt.Sprintf("http.%s[client;s;opts]   Make HTTP %s request for URL s with client and request opts dict", l, u),
 		"                          For client opts, see http.client",
 		"                          Supported request opts (depending on HTTP method):",
+		"                          - Body",
 		"                          - Debug",
 		"                          - FormData",
 		"                          - Header",
