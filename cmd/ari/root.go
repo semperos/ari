@@ -255,6 +255,7 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 		// case, which is good by design in my opinion given the low-level nature
 		// of these errors.
 		fmt.Fprintln(os.Stderr, err)
+		return
 	}
 
 	if !goalContext.AssignedLast() {
