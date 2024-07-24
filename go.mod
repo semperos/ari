@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.0
 
 require (
-	codeberg.org/anaseto/goal v0.42.1-0.20240715155323-a7797629ad42
+	codeberg.org/anaseto/goal v0.42.1-0.20240724110502-538310b6ed1f
 	github.com/go-resty/resty/v2 v2.13.1
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
