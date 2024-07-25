@@ -247,14 +247,18 @@ func readEvalPrintLoop(mainCliSystem CliSystem) {
 func (cliSystem *CliSystem) replEvalGoal(line string) {
 	goalContext := cliSystem.ariContext.GoalContext
 	value, err := goalContext.Eval(line)
+	// NB: Goal errors built with the Goal `error` function are goal.V values,
+	// whereas Goal returns a Go error for things like an undefined global,
+	// so "Goal error[]":"Java Exception"::"Go error":"Java Error" here.
+	// This means that the user's ari.prompt function is not honored in this
+	// case, which is good by design in my opinion given the low-level nature
+	// of these errors.
 	if err != nil {
-		// NB: Goal errors built with the Goal `error` function are goal.V values,
-		// whereas Goal returns a Go error for things like an undefined global,
-		// so "Goal error[]":"Java Exception"::"Go error":"Java Error" here.
-		// This means that the user's ari.prompt function is not honored in this
-		// case, which is good by design in my opinion given the low-level nature
-		// of these errors.
-		fmt.Fprintln(os.Stderr, err)
+		formatREPLError(err)
+		return
+	}
+	if value.IsError() {
+		formatREPLError(newExitError(goalContext, value.Error()))
 		return
 	}
 
@@ -271,6 +275,44 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 	}
 
 	cliSystem.detectAriPrompt()
+}
+
+// ExitError is returned by Cmd when the program returns a Goal error value.
+// Msg contains the error message. Code is 1 by default. If the error value is
+// a dict value with a code key, following the same convention as the run
+// builtin, then Code is set to the corresponding value (if it is an integer in
+// the [1,125] range).
+//
+// Adapted from Goal's implementation.
+type ExitError struct {
+	Msg  string // error message
+	Code int    // exit status code
+}
+
+// Adapted from Goal's implementation.
+func (e *ExitError) Error() string {
+	return e.Msg
+}
+
+// newExitError produces an *ExitError from a Goal error value.
+//
+// Adapted from Goal's implementation.
+func newExitError(ctx *goal.Context, e *goal.Error) error {
+	ee := &ExitError{Msg: e.Msg(ctx)}
+	if d, ok := e.Value().BV().(*goal.D); ok {
+		if v, ok := d.Get(goal.NewS("code")); ok {
+			if v.IsI() {
+				ee.Code = int(v.I())
+			} else if v.IsF() && v.F() == float64(int(v.F())) {
+				ee.Code = int(v.F())
+			}
+		}
+	}
+	if ee.Code < 1 || ee.Code > 125 {
+		// ignore non-portable exit error codes
+		ee.Code = 1
+	}
+	return ee
 }
 
 // detectAriPrompt interrogates Goal globals ari.prompt and ari.nextprompt
@@ -497,11 +539,27 @@ func formatError(programName string, err error) error {
 }
 
 // formatGoalError formats a Goal error value returned from the program.
+//
+// Adapted from Goal's implementation.
 func formatGoalError(ctx *goal.Context, r goal.V) string {
 	if e, ok := r.BV().(*goal.Error); ok {
 		return e.Msg(ctx)
 	}
 	return "(failed to format Goal error)"
+}
+
+// formatREPLError formats an error from interactive mode.
+//
+// Adapted from Goal's implementation.
+func formatREPLError(err error) {
+	var msg string
+	//nolint:errorlint // upstream
+	if e, ok := err.(*goal.Panic); ok {
+		msg = "'ERROR " + strings.TrimSuffix(e.ErrorStack(), "\n")
+	} else {
+		msg = "'ERROR " + strings.TrimSuffix(err.Error(), "\n")
+	}
+	fmt.Fprintln(os.Stderr, msg)
 }
 
 // CLI (Cobra, Viper)
