@@ -440,20 +440,15 @@ func (m candidate) DeleteLeft() int     { return m.deleteLeft }
 
 // Bubbline
 
-const cliDefaultReflowWidth = 80
-
 func cliEditorInitialize() *bubbline.Editor {
 	editor := bubbline.New()
 	editor.Placeholder = ""
-	editor.Reflow = func(x bool, y string, _ int) (bool, string, string) {
-		return editline.DefaultReflow(x, y, cliDefaultReflowWidth)
-	}
 	historyFile := viper.GetString("history")
 	if err := editor.LoadHistory(historyFile); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load history, error: %v\n", err)
 	}
 	editor.SetAutoSaveHistory(historyFile, true)
-	editor.SetDebugEnabled(true)
+	editor.SetDebugEnabled(false)
 	editor.SetExternalEditorEnabled(true, "goal")
 	return editor
 }
