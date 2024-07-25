@@ -1,5 +1,5 @@
-codeberg.org/anaseto/goal v0.42.1-0.20240724110502-538310b6ed1f h1:l4DLwQxfCDhP0kR36WSfAjHBxORwEtXSVQ8WK+IVlMk=
-codeberg.org/anaseto/goal v0.42.1-0.20240724110502-538310b6ed1f/go.mod h1:4hbMNwarYjA3SqmygPuWiuTUa5qeKqaoNM00mBWhit4=
+codeberg.org/anaseto/goal v0.42.1-0.20240725095128-4af5aab5dec6 h1:/inlvpRybDRtQvpYLrv8/Xbfy5VwYlYP7vPIPJ4X5po=
+codeberg.org/anaseto/goal v0.42.1-0.20240725095128-4af5aab5dec6/go.mod h1:4hbMNwarYjA3SqmygPuWiuTUa5qeKqaoNM00mBWhit4=
 github.com/apache/arrow/go/v14 v14.0.2 h1:N8OkaJEOfI3mEZt07BIkvo4sC6XDbL+48MBPWO5IONw=
 github.com/apache/arrow/go/v14 v14.0.2/go.mod h1:u3fgh3EdgN/YQ8cVQRguVW3R+seMybFg8QBQ5LU+eBY=
 github.com/atotto/clipboard v0.1.4 h1:EH0zSVneZPSuFR11BlR9YppQTVDbh5+16AmcJi4g1z4=
