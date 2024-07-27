@@ -180,30 +180,46 @@ func panicType(op, sym string, x goal.V) goal.V {
 	return goal.Panicf("%s : bad type %q in %s", op, x.Type(), sym)
 }
 
-// Implements sql.open to open a SQL DB.
-//
-// TODO This needs to return a new, separate SQLDatabase when a non-empty data source name is supplied.
-func VFSqlOpenFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
-	return func(_ *goal.Context, args []goal.V) goal.V {
-		x := args[len(args)-1]
-		dataSourceName, ok := x.BV().(goal.S)
-		switch len(args) {
-		case 1:
-			if !ok {
-				return panicType("sql.open s", "s", x)
-			}
-			dsn := string(dataSourceName)
-			if len(dsn) != 0 {
-				sqlDatabase.DataSource = dsn
-			}
-			err := sqlDatabase.Open()
-			if err != nil {
-				return goal.NewPanicError(err)
-			}
-			return goal.NewV(sqlDatabase)
-		default:
-			return goal.Panicf("sql.open : too many arguments (%d), expects 1 argument", len(args))
+// Implements sql.open to open a SQL database.
+func VFSqlOpen(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	dataSourceName, ok := x.BV().(goal.S)
+	switch len(args) {
+	case 1:
+		if !ok {
+			return panicType("sql.open s", "s", x)
 		}
+		dsn := string(dataSourceName)
+		sqlDatabase, err := NewSQLDatabase(dsn)
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		err = sqlDatabase.Open()
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		return goal.NewV(sqlDatabase)
+	default:
+		return goal.Panicf("sql.open : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements sql.close to close the SQL database.
+func VFSqlClose(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	sqlDatabase, ok := x.BV().(*SQLDatabase)
+	switch len(args) {
+	case 1:
+		if !ok {
+			return panicType("sql.close ari.SqlDatabase", "ari.SqlDatabase", x)
+		}
+		err := sqlDatabase.Close()
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		return goal.NewI(1)
+	default:
+		return goal.Panicf("sql.close : too many arguments (%d), expects 1 argument", len(args))
 	}
 }
 

@@ -258,7 +258,8 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	gos.Import(goalContext, "")
 	// Ari
 	// Monads
-	goalContext.RegisterMonad("sql.open", VFSqlOpenFn(sqlDatabase))
+	goalContext.RegisterMonad("sql.close", VFSqlClose)
+	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	// Dyads
 	goalContext.RegisterDyad("help", VFHelpFn(help))
 	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
