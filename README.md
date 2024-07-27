@@ -48,7 +48,6 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
 Non-exhaustive list:
 
 - TODO: Test coverage.
-- TODO: Allow specifying a database as an argument to `)sql` and `)sql!` system commands.
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
