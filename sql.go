@@ -59,6 +59,18 @@ func (sqlDatabase *SQLDatabase) Open() error {
 	return nil
 }
 
+// Close will close the underlying sql.DB, if one exists.
+func (sqlDatabase *SQLDatabase) Close() error {
+	if sqlDatabase.DB != nil {
+		err := sqlDatabase.DB.Close()
+		if err != nil {
+			return err
+		}
+		sqlDatabase.IsOpen = false
+	}
+	return nil
+}
+
 //nolint:gocognit
 func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
 	var rows *sql.Rows

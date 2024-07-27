@@ -50,25 +50,19 @@ type CliSystem struct {
 	programName   string
 }
 
-func (cliSystem *CliSystem) switchModePre(cliMode cliMode) {
-	if cliMode != cliModeSQLReadOnly && cliMode != cliModeSQLReadWrite {
-		cliSystem.sqlClose()
-	}
-}
-
-func (cliSystem *CliSystem) switchMode(cliMode cliMode) {
+func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
 	switch cliMode {
 	case cliModeGoal:
-		cliSystem.switchModeToGoal()
+		return cliSystem.switchModeToGoal()
 	case cliModeSQLReadOnly:
-		cliSystem.switchModeToSQLReadOnly()
+		return cliSystem.switchModeToSQLReadOnly(args)
 	case cliModeSQLReadWrite:
-		cliSystem.switchModeToSQLReadWrite()
+		return cliSystem.switchModeToSQLReadWrite(args)
 	}
-	cliSystem.switchModePre(cliMode)
+	return nil
 }
 
-func (cliSystem *CliSystem) switchModeToGoal() {
+func (cliSystem *CliSystem) switchModeToGoal() error {
 	cliSystem.cliMode = cliModeGoal
 	cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 	cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
@@ -76,12 +70,28 @@ func (cliSystem *CliSystem) switchModeToGoal() {
 	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
 	cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
+	return nil
 }
 
-func (cliSystem *CliSystem) switchModeToSQLReadOnly() {
-	err := cliSystem.ariContext.SQLDatabase.Open()
-	if err != nil {
-		log.Fatalf("%v", err)
+func (cliSystem *CliSystem) switchModeToSQLReadOnly(args []string) error {
+	sqlDatabase := cliSystem.ariContext.SQLDatabase
+	if len(args) > 0 {
+		dataSourceName := args[0]
+		err := sqlDatabase.Close()
+		if err != nil {
+			return err
+		}
+		sqlDatabase.DataSource = dataSourceName
+	}
+	if len(sqlDatabase.DataSource) > 0 && !strings.Contains(sqlDatabase.DataSource, "?") {
+		// In-memory doesn't support read_only access
+		sqlDatabase.DataSource += "?access_mode=read_only"
+	}
+	if sqlDatabase.DB == nil || !sqlDatabase.IsOpen {
+		err := sqlDatabase.Open()
+		if err != nil {
+			return err
+		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
 	cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
@@ -89,12 +99,24 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly() {
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
 	cliSystem.cliEditor.Prompt = cliModeSQLReadOnlyPrompt
 	cliSystem.cliEditor.NextPrompt = cliModeSQLReadOnlyNextPrompt
+	return nil
 }
 
-func (cliSystem *CliSystem) switchModeToSQLReadWrite() {
-	err := cliSystem.ariContext.SQLDatabase.Open()
-	if err != nil {
-		log.Fatalf("%v", err)
+func (cliSystem *CliSystem) switchModeToSQLReadWrite(args []string) error {
+	sqlDatabase := cliSystem.ariContext.SQLDatabase
+	if len(args) > 0 {
+		dataSourceName := args[0]
+		err := sqlDatabase.Close()
+		if err != nil {
+			return err
+		}
+		sqlDatabase.DataSource = dataSourceName
+	}
+	if sqlDatabase.DB == nil || !sqlDatabase.IsOpen {
+		err := sqlDatabase.Open()
+		if err != nil {
+			return err
+		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
 	cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
@@ -102,6 +124,7 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite() {
 	cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
 	cliSystem.cliEditor.Prompt = cliModeSQLReadWritePrompt
 	cliSystem.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
+	return nil
 }
 
 func cliModeFromString(s string) (cliMode, error) {
@@ -117,12 +140,15 @@ func cliModeFromString(s string) (cliMode, error) {
 	}
 }
 
-// TODO Make this more testable by pulling out things from Cobra/Viper into a config struct
+//nolint:funlen,gocognit // conditional returns, defers
 func ariMain(cmd *cobra.Command, args []string) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
 	ariContext.GoalContext.AssignGlobal("ARGS", goal.NewAS(args))
-	cobra.CheckErr(err)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
 	cliEditor := cliEditorInitialize()
 	autoCompleter := &AutoCompleter{ariContext: ariContext}
 	mainCliSystem := CliSystem{
@@ -137,19 +163,31 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	// MUST COME FIRST
 	// Engage detailed print on panic.
 	debug, err := cmd.Flags().GetBool("debug")
-	cobra.CheckErr(err)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
 	if debug {
 		defer debugPrintStack(ariContext.GoalContext, mainCliSystem.programName)
 	}
 
 	cpuProfile, err := cmd.Flags().GetBool("cpu-profile")
-	cobra.CheckErr(err)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
 	if cpuProfile {
 		//nolint:govet // false positive?
 		cpuProfileFile, err := os.Create(fmt.Sprintf("cpu-profile-%d", time.Now().UnixMilli()))
-		cobra.CheckErr(err)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
 		err = pprof.StartCPUProfile(cpuProfileFile)
-		cobra.CheckErr(err)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			return 1
+		}
 		defer pprof.StopCPUProfile()
 	}
 
@@ -167,7 +205,10 @@ func ariMain(cmd *cobra.Command, args []string) int {
 
 	// Eval and exit
 	programToExecute, err := cmd.Flags().GetString("execute")
-	cobra.CheckErr(err)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
 	if programToExecute != "" {
 		err = runCommand(&mainCliSystem, programToExecute)
 		if err != nil {
@@ -195,8 +236,15 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	// set up the CLI REPL.
 	startupCliModeString := viper.GetString("mode")
 	startupCliMode, err := cliModeFromString(startupCliModeString)
-	cobra.CheckErr(err)
-	mainCliSystem.switchMode(startupCliMode)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+	err = mainCliSystem.switchMode(startupCliMode, nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to initialize mode %v with error: %v", startupCliModeString, err)
+		return 1
+	}
 
 	// REPL
 	readEvalPrintLoop(mainCliSystem)
@@ -209,6 +257,7 @@ func readEvalPrintLoop(mainCliSystem CliSystem) {
 		line, err := cliEditor.GetLine()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
+				mainCliSystem.shutdown()
 				break
 			}
 			if errors.Is(err, bubbline.ErrInterrupted) {
@@ -229,7 +278,10 @@ func readEvalPrintLoop(mainCliSystem CliSystem) {
 
 		// Future: Consider user commands with ]
 		if matchesSystemCommand(line) {
-			mainCliSystem.replEvalSystemCommand(line)
+			err = mainCliSystem.replEvalSystemCommand(line)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to execute system command %q with error: %v\n", line, err)
+			}
 			continue
 		}
 
@@ -386,62 +438,25 @@ func (cliSystem *CliSystem) replEvalSQLReadWrite(line string) {
 	}
 }
 
-func (cliSystem *CliSystem) replEvalSystemCommand(line string) {
+func (cliSystem *CliSystem) replEvalSystemCommand(line string) error {
 	cmdAndArgs := strings.Split(line, " ")
 	systemCommand := cmdAndArgs[0]
 	switch systemCommand {
 	// IDEA )help that doesn't require quoting
 	case ")goal":
-		cliSystem.switchMode(cliModeGoal)
+		return cliSystem.switchMode(cliModeGoal, nil)
 	case ")sql":
-		cliSystem.switchMode(cliModeSQLReadOnly)
+		return cliSystem.switchMode(cliModeSQLReadOnly, cmdAndArgs[1:])
 	case ")sql!":
-		err := cliSystem.sqlInitialize(cliSystem.ariContext.SQLDatabase.DataSource, cliModeSQLReadWrite)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-		cliSystem.switchMode(cliModeSQLReadWrite)
+		return cliSystem.switchMode(cliModeSQLReadWrite, cmdAndArgs[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unsupported system command '%v'\n", systemCommand)
-	}
-}
-
-// sqlInitialize opens a SQL database and expects the caller to close things.
-func (cliSystem *CliSystem) sqlInitialize(dataSourceName string, cliMode cliMode) error {
-	// In-memory doesn't support read_only access
-	if cliMode == cliModeSQLReadOnly && len(dataSourceName) != 0 {
-		dataSourceName += "?access_mode=read_only"
-	}
-	sqlDatabase, err := ari.NewSQLDatabase(dataSourceName)
-	if err != nil {
-		return err
-	}
-	cliSystem.ariContext.SQLDatabase = sqlDatabase
-	return nil
-}
-
-func (cliSystem *CliSystem) sqlClose() error {
-	sqlDatabase := cliSystem.ariContext.SQLDatabase
-	if sqlDatabase != nil {
-		if sqlDatabase.DB != nil {
-			err := sqlDatabase.DB.Close()
-			if err != nil {
-				return err
-			}
-			sqlDatabase.IsOpen = false
-		}
 	}
 	return nil
 }
 
 func (cliSystem *CliSystem) sqlQuery(sqlQuery string, args []any) (goal.V, error) {
 	sqlDatabase := cliSystem.ariContext.SQLDatabase
-	if sqlDatabase == nil || !sqlDatabase.IsOpen {
-		err := cliSystem.sqlInitialize(viper.GetString("database"), cliModeSQLReadOnly)
-		if err != nil {
-			return goal.V{}, err
-		}
-	}
 	goalD, err := ari.SQLQueryContext(sqlDatabase, sqlQuery, args)
 	if err != nil {
 		return goal.V{}, err
@@ -453,18 +468,16 @@ func (cliSystem *CliSystem) sqlQuery(sqlQuery string, args []any) (goal.V, error
 
 func (cliSystem *CliSystem) sqlExec(sqlQuery string, args []any) (goal.V, error) {
 	sqlDatabase := cliSystem.ariContext.SQLDatabase
-	if sqlDatabase == nil || !sqlDatabase.IsOpen {
-		err := cliSystem.sqlInitialize(viper.GetString("database"), cliModeSQLReadOnly)
-		if err != nil {
-			return goal.V{}, err
-		}
-	}
 	goalD, err := ari.SQLExec(sqlDatabase, sqlQuery, args)
 	if err != nil {
 		return goal.V{}, err
 	}
 	cliSystem.ariContext.GoalContext.AssignGlobal("sql.p", goalD)
 	return goalD, nil
+}
+
+func (cliSystem *CliSystem) shutdown() {
+	cliSystem.ariContext.SQLDatabase.Close()
 }
 
 // debugPrintStack catches possible panics in debug mode, attempting to print debug
