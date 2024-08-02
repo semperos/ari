@@ -2,6 +2,10 @@
 
 Goal code that is loaded by default into the Ari runtime is located here as files, embedded into the Ari Go program using `//go:embed` directives.
 
+## This repo
+
+- [shape.goal](shape.goal) with `shape` and `reshape` functions
+
 ## [goal] repo
 
 Last fetched at commit `a7797629ad427b77f3608f1c3a0c725e5cb692d3`:

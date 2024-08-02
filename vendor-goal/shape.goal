@@ -1,0 +1,6 @@
+/ TODO Implement shape
+reshape:{[shp;xs]
+ xs:(*/shp)#xs;
+ r:{[shp;xs]res:(*shp)$'xs; ?[1=#shp;res;o[1_shp;res]]}
+ ?[0=#shp;*xs; 1=#shp;xs; 2=#shp;(*shp)$xs; r[1_-1_shp#shp;(*shp)$xs]]
+}
