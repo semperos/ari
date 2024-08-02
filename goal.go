@@ -968,7 +968,7 @@ func GoalKeywordsHelp() map[string]string {
 		`    "unixmilli"   unix (millisecond version) (i)                yes`,
 		`    "unixnano"    unix (nanosecond version) (i)                 yes`,
 		`    "week"        year, week (I)`,
-		`    "weekday"     0-7 weekday starting from Sunday (i)`,
+		`    "weekday"     0-6 weekday starting from Sunday (i)`,
 		`    "year"        year (i)`,
 		`    "yearday"     1-365/6 year day (i)`,
 		`    "zone"        name, offset in seconds east of UTC (s;i)`,
