@@ -21,9 +21,10 @@ const (
 // Goal Preamble in Goal
 
 // goalLoadExtendedPreamble loads the goalSource* snippets below,
-// loading them into the Goal context without any prefix.
+// loading them into the Goal context.
 func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	goalPackages := map[string]string{
+		"":     goalSourceShape,
 		"fmt":  goalSourceFmt,
 		"html": goalSourceHTML,
 		"k":    goalSourceK,
@@ -53,6 +54,9 @@ var goalSourceMath string
 
 //go:embed vendor-goal/mods.goal
 var goalSourceMods string
+
+//go:embed vendor-goal/shape.goal
+var goalSourceShape string
 
 // Goal functions implemented in Go
 

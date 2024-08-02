@@ -1,6 +1,12 @@
 # Vendor Goal Code
 
-Goal code that is loaded by default into the Ari runtime is located here as files, embedded into the Ari Go program using `//go:embed` directives.
+Goal code that is loaded by default into the Ari runtime is located here as files, embedded into the Ari Go program using `//go:embed` directives. The sections below describe where the code has been taken from.
+
+## This repo
+
+- [shape.goal](shape.goal)
+  - Implementation of `reshape` by discodoug, shared [on Matrix](https://matrix.to/#/!laJBzNwLcAOMAbAEeQ:matrix.org/$VnF4KPl4GZKc7F0kYXQ3nUq_4mQJaUIiXNrg0ziHU08?via=matrix.org&via=t2bot.io&via=matrix.fedibird.com)
+  - Implementation of `shape` by John Earnest, shared [in the k tree StackExchange chat](https://chat.stackexchange.com/transcript/message/54070438#54070438)
 
 ## [goal] repo
 

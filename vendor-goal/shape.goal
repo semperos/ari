@@ -1,0 +1,6 @@
+/ Implementation by discodoug, shared on Matrix
+rsh:{*((!*|x;*|x){((x[1]*!y)+y#,x 0;y*x 1)}/1_|x)}
+reshape:{y@(#y)!rsh x}
+/ Implementation by John Earnest, shared on k-tree:
+/ https://chat.stackexchange.com/transcript/message/54070438#54070438
+shape:{-1_#:'*:\x}
