@@ -1,5 +1,4 @@
-/ Implementation by discodoug, shared on Matrix
-rsh:{*((!*|x;*|x){((x[1]*!y)+y#,x 0;y*x 1)}/1_|x)}
-reshape:{y@(#y)!rsh x}
+/ Implementation by anaseto, shared on Matrix
+reshape:{((*/x)#y){(-y)$x}/|1_x}
 / Implementation by John Earnest, shared on k-tree
 shape:{-1_#:'*:\x}
