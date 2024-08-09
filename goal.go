@@ -305,6 +305,7 @@ func GoalSyntax() map[string]string {
 		"leftshift":      "«",
 		"shiftleft":      "«",
 		"firsts":         "¿",
+		"in":             "¿",
 		"identity":       ":",
 		"return":         ":",
 		"assign":         ":",
