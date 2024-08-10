@@ -81,7 +81,8 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly(args []string) error {
 		if err != nil {
 			return err
 		}
-		sqlDatabase.DataSource = dataSourceName
+		// Because if you're mostly in Goal mode you're going to add quotation marks from force of habit.
+		sqlDatabase.DataSource = strings.Trim(dataSourceName, "\"")
 	}
 	if len(sqlDatabase.DataSource) > 0 && !strings.Contains(sqlDatabase.DataSource, "?") {
 		// In-memory doesn't support read_only access
