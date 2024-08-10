@@ -258,12 +258,13 @@ func goalNewDictEmpty() *goal.D {
 // Integration with other parts of Ari
 
 func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
-	// From Goal itself
+	// From Goal itself, os lib imported without prefix
 	gos.Import(goalContext, "")
 	// Ari
 	// Monads
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
+	goalContext.RegisterMonad("time.now", VFTimeNow)
 	// Dyads
 	goalContext.RegisterDyad("help", VFHelpFn(help))
 	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
@@ -276,6 +277,11 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterDyad("http.put", VFHTTPMaker(ariContext, "PUT"))
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
+	goalContext.RegisterDyad("time.add", VFTimeAdd)
+	goalContext.RegisterDyad("time.parse", VFTimeParse)
+	goalContext.RegisterDyad("time.sub", VFTimeSub)
+	// Globals
+	registerTimeGlobals(goalContext)
 }
 
 //nolint:funlen
