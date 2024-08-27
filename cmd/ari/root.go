@@ -33,8 +33,8 @@ const (
 )
 
 const (
-	cliModeGoalPrompt             = "goal> "
-	cliModeGoalNextPrompt         = "    > "
+	cliModeGoalPrompt             = "  "
+	cliModeGoalNextPrompt         = "  "
 	cliModeSQLReadOnlyPrompt      = "sql> "
 	cliModeSQLReadOnlyNextPrompt  = "   > "
 	cliModeSQLReadWritePrompt     = "sql!> "
