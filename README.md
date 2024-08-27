@@ -49,6 +49,8 @@ Non-exhaustive list:
 
 - TODO: Test coverage.
 - TODO: Correct usage of `goal.NewError` vs. `goal.NewPanicError`
+- TODO: Option for raw REPL (modeled on Goal's) with better input performance, no auto-complete etc.
+- TODO: Goal function to return auto-complete results (esp. if raw REPL is being used).
 - TODO: Looser auto-complete, not just prefix-based
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
