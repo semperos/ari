@@ -150,15 +150,12 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
-	cliEditor := cliEditorInitialize()
-	autoCompleter := &AutoCompleter{ariContext: ariContext}
+	programName := os.Args[0]
+	// Delay initializing CLI editor and friends until needed
 	mainCliSystem := CliSystem{
-		ariContext:    ariContext,
-		autoCompleter: autoCompleter,
-		cliEditor:     cliEditor,
-		cliMode:       cliModeGoal,
-		debug:         viper.GetBool("debug"),
-		programName:   os.Args[0],
+		ariContext:  ariContext,
+		debug:       viper.GetBool("debug"),
+		programName: programName,
 	}
 
 	// MUST COME FIRST
@@ -169,7 +166,7 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 	if debug {
-		defer debugPrintStack(ariContext.GoalContext, mainCliSystem.programName)
+		defer debugPrintStack(ariContext.GoalContext, programName)
 	}
 
 	cpuProfile, err := cmd.Flags().GetBool("cpu-profile")
@@ -202,6 +199,7 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		}
 	}
 
+	// Support file argument both with -e and standalone.
 	hasFileArgument := len(args) > 0
 
 	// Eval and exit
@@ -235,12 +233,15 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	// With files loaded (which might adjust the prompt via Goal code)
 	// and knowing we're not executing and exiting immediately,
 	// set up the CLI REPL.
+	mainCliSystem.cliEditor = cliEditorInitialize()
+	mainCliSystem.autoCompleter = &AutoCompleter{ariContext: ariContext}
 	startupCliModeString := viper.GetString("mode")
 	startupCliMode, err := cliModeFromString(startupCliModeString)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	// NB: This sets mainCliSystem.cliMode
 	err = mainCliSystem.switchMode(startupCliMode, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize mode %v with error: %v", startupCliModeString, err)
@@ -614,14 +615,14 @@ func initConfigFn(cfgFile string) func() {
 func main() {
 	statusCode := 0
 	rootCmd := &cobra.Command{
-		Use:   "ari",
+		Use:   "ari [flags] [source file]",
 		Short: "ari - Array relational interactive environment",
 		Long: `ari is an interactive environment for array + relational programming.
 
 It embeds the Goal array programming language, with extensions for
 working with SQL and HTTP APIs.`,
 		// If 1 arg provided, treat as Goal source to run.
-		Args: cobra.MaximumNArgs(1),
+		// Args: cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			// Version and exit
 			showVersion, err := cmd.Flags().GetBool("version")
