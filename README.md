@@ -9,7 +9,7 @@ Ari is a set of extensions to the [Goal] programming language, also providing an
 Clone this repository and then run the following:
 
 ```shell
-go install ./cmd/ari
+go install github.com/semperos/ari/cmd/ari@latest
 ```
 
 Then run `ari` for a REPL or `ari --help` to see CLI options.
