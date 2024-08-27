@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"math/big"
 	"os"
 	"reflect"
 	"sort"
@@ -124,6 +125,13 @@ func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goa
 					rowValues[i] = append(rowValues[i], goal.NewI(int64(col)))
 				case int64:
 					rowValues[i] = append(rowValues[i], goal.NewI(col))
+				case *big.Int:
+					if col.IsInt64() {
+						rowValues[i] = append(rowValues[i], goal.NewI(col.Int64()))
+					} else {
+						fmt.Fprintf(os.Stderr, "WARNING: %v cannot be represented in an int64, serializing as a string.", col)
+						rowValues[i] = append(rowValues[i], goal.NewS(fmt.Sprintf("%v", col)))
+					}
 				case string:
 					rowValues[i] = append(rowValues[i], goal.NewS(col))
 				case time.Time:
