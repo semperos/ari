@@ -107,6 +107,7 @@ func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goa
 		}
 		for i, col := range cols {
 			// fmt.Printf("SQL %v // Go %v\n", colTypes[i].DatabaseTypeName(), reflect.TypeOf(col))
+			//nolint:nestif // type handling in one place
 			if col == nil {
 				rowValues[i] = append(rowValues[i], goal.NewF(math.NaN()))
 			} else {

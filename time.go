@@ -42,7 +42,7 @@ func (time *Time) Type() string {
 }
 
 // Implement time.now function.
-func VFTimeNow(_ *goal.Context, args []goal.V) goal.V {
+func VFTimeNow(_ *goal.Context, _ []goal.V) goal.V {
 	now := time.Now()
 	tt := Time{&now}
 	return goal.NewV(&tt)
@@ -73,7 +73,16 @@ func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
 	}
 }
 
+const (
+	yearPos      = 0
+	monthPos     = 1
+	dayPos       = 2
+	yearMonthDay = 3
+)
+
 // Implements time.add function.
+//
+//nolint:gocognit // I disagree
 func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	t1, ok := x.BV().(*Time)
@@ -83,28 +92,29 @@ func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
 	switch len(args) {
 	case dyadic:
 		y := args[0]
+		//nolint:nestif // I disagree
 		if !y.IsI() {
 			if y.IsBV() {
 				switch ai := y.BV().(type) {
 				case *goal.AB:
 					al := ai.Len()
-					if al != 3 {
+					if al != yearMonthDay {
 						return goal.Panicf("time.add : I arg must have 3 items, had %d", al)
 					}
-					year := ai.At(0).I()
-					month := ai.At(1).I()
-					day := ai.At(2).I()
+					year := ai.At(yearPos).I()
+					month := ai.At(monthPos).I()
+					day := ai.At(dayPos).I()
 					t := t1.Time.AddDate(int(year), int(month), int(day))
 					tt := Time{&t}
 					return goal.NewV(&tt)
 				case *goal.AI:
 					al := ai.Len()
-					if al != 3 {
+					if al != yearMonthDay {
 						return goal.Panicf("time.add : I arg must have 3 items, had %d", al)
 					}
-					year := ai.At(0).I()
-					month := ai.At(1).I()
-					day := ai.At(2).I()
+					year := ai.At(yearPos).I()
+					month := ai.At(monthPos).I()
+					day := ai.At(dayPos).I()
 					t := t1.Time.AddDate(int(year), int(month), int(day))
 					tt := Time{&t}
 					return goal.NewV(&tt)
