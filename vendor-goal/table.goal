@@ -1,0 +1,2 @@
+csv.t:{(*'x)!(1_'x)}
+json.t:{ks:!*x; vs:@[;ks]'x; ks!+vs}

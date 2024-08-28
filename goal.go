@@ -24,7 +24,7 @@ const (
 // loading them into the Goal context.
 func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	goalPackages := map[string]string{
-		"":     goalSourceShape,
+		"":     goalSourceShape + goalSourceTable,
 		"fmt":  goalSourceFmt,
 		"html": goalSourceHTML,
 		"k":    goalSourceK,
@@ -57,6 +57,9 @@ var goalSourceMods string
 
 //go:embed vendor-goal/shape.goal
 var goalSourceShape string
+
+//go:embed vendor-goal/table.goal
+var goalSourceTable string
 
 // Goal functions implemented in Go
 
