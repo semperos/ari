@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"runtime/debug"
 	"runtime/pprof"
 	"strings"
@@ -222,6 +223,12 @@ func ariMain(cmd *cobra.Command, args []string) int {
 
 	if hasFileArgument {
 		f := args[0]
+		var path string
+		path, err = filepath.Abs(f)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "File %q is not recognized as a path on your system: %v", f, err)
+		}
+		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
 		err = runScript(&mainCliSystem, f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to run file %q with error: %v", f, err)
