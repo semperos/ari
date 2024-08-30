@@ -146,6 +146,7 @@ func cliModeFromString(s string) (cliMode, error) {
 func ariMain(cmd *cobra.Command, args []string) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
+	registerCliGoalBindings(ariContext)
 	ariContext.GoalContext.AssignGlobal("ARGS", goal.NewAS(args))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -258,6 +259,13 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	// REPL
 	readEvalPrintLoop(mainCliSystem)
 	return 0
+}
+
+func registerCliGoalBindings(ariContext *ari.Context) {
+	goalContext := ariContext.GoalContext
+	goalContext.RegisterMonad("tui.color", VFTuiColor)
+	goalContext.RegisterMonad("tui.style", VFTuiStyle)
+	goalContext.RegisterDyad("tui.render", VFTuiRender)
 }
 
 func readEvalPrintLoop(mainCliSystem CliSystem) {
