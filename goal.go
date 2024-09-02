@@ -926,6 +926,32 @@ func GoalKeywordsHelp() map[string]string {
 		`time[cmd;t;fmt]       time command with time t in given format`,
 		`time[cmd;t;fmt;loc]   time command with time t in given format and location`,
 	}, "\n")
+	tuiColor := strings.Join([]string{
+		`tui.color s           Color string accepted by lipgloss.Color`,
+	}, "\n")
+	tuiRender := strings.Join([]string{
+		`tui.render style s    Return s marked up according to style (see tui.style)`,
+	}, "\n")
+	tuiStyle := strings.Join([]string{
+		`tui.style d           Return a style based on entries in d:
+		                        - Align (floats or one of "t", "r", "b", "l", or "c")
+								- Background (tui.color)
+								- Blink (bool)
+								- Bold (bool)
+								- Border (list of name + top, right, bottom, left bools)
+								- BorderBackground (tui.color)
+								- BorderForeground (tui.color)
+								- Faint (bool)
+		                        - Foreground (tui.color)
+								- Height (int)
+								- Italic (bool)
+								- Margin (top, right, bottom, left ints)
+								- Padding (top, right, bottom, left ints)
+								- Reverse (bool)
+								- Strikethrough (bool)
+								- Underline (bool)
+								- Width (int)`,
+	}, "\n")
 	uc := `uc x       upper/ceil   uc 1.5 → 2.0                             uc"abπ" → "ABΠ"`
 	utf8 := strings.Join([]string{
 		`utf8 s     is UTF-8     utf8 "aπc" → 1                          utf8 "a\xff" → 0`,
@@ -1054,6 +1080,9 @@ func GoalKeywordsHelp() map[string]string {
 		"stat":         stat,
 		"sub":          sub,
 		"time":         time,
+		"tui.color":    tuiColor,
+		"tui.render":   tuiRender,
+		"tui.style":    tuiStyle,
 		"uc":           uc,
 		"utf8":         utf8,
 	}
