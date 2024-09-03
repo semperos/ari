@@ -50,19 +50,19 @@ Non-exhaustive list:
 - TODO: Test coverage.
 - TODO: Correct usage of `goal.NewError` vs. `goal.NewPanicError`
 - TODO: Option for raw REPL (modeled on Goal's) with better input performance, no auto-complete etc.
-- TODO: Goal function to return auto-complete results (esp. if raw REPL is being used).
-- TODO: Looser auto-complete, not just prefix-based
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
 
 I plan to support the above items. The following are stretch goals or nice-to-have's:
 
+- TODO: Use custom table functions via replacement scan to query Goal tables from DuckDB.
+- TODO: Looser auto-complete, not just prefix-based
+- TODO: `)help`
 - TODO: Functions leveraging [time.Time](https://pkg.go.dev/time@go1.22.5)
-- TODO: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
+- IN PROGRESS: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
 - TODO: Implement a subset of [q](https://code.kx.com/q/) functions to extend what Goal already has.
 - Specific user commands:
-  - TODO: Choosing output format (e.g., as JSON, perhaps all the ones DuckDB supports)
   - TODO: Toggle pretty-printing
   - TODO: Toggle paging at the REPL (as found in [PicoLisp](https://picolisp.com/wiki/?home))
   - TODO: Toggle colored output

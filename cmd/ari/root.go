@@ -33,6 +33,18 @@ const (
 	cliModeSQLReadWrite
 )
 
+type outputFormat int
+
+const (
+	outputFormatGoal outputFormat = iota
+	outputFormatCSV
+	outputFormatJSON
+	outputFormatJSONPretty
+	outputFormatLatex
+	outputFormatMarkdown
+	outputFormatTSV
+)
+
 const (
 	cliModeGoalPrompt             = "  "
 	cliModeGoalNextPrompt         = "  "
@@ -43,11 +55,12 @@ const (
 )
 
 type CliSystem struct {
+	ariContext    *ari.Context
+	autoCompleter *AutoCompleter
 	cliEditor     *bubbline.Editor
 	cliMode       cliMode
-	autoCompleter *AutoCompleter
-	ariContext    *ari.Context
 	debug         bool
+	outputFormat  outputFormat
 	programName   string
 }
 
@@ -138,7 +151,28 @@ func cliModeFromString(s string) (cliMode, error) {
 	case "sql!":
 		return cliModeSQLReadWrite, nil
 	default:
-		return 0, errors.New("unsupported ari mode: " + s)
+		return 0, errors.New("unsupported --mode: " + s)
+	}
+}
+
+func outputFormatFromString(s string) (outputFormat, error) {
+	switch s {
+	case "csv":
+		return outputFormatCSV, nil
+	case "goal":
+		return outputFormatGoal, nil
+	case "json":
+		return outputFormatJSON, nil
+	case "json+pretty":
+		return outputFormatJSONPretty, nil
+	case "latex":
+		return outputFormatLatex, nil
+	case "markdown":
+		return outputFormatMarkdown, nil
+	case "tsv":
+		return outputFormatTSV, nil
+	default:
+		return 0, errors.New("unsupported --output-format: " + s)
 	}
 }
 
@@ -191,16 +225,27 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		defer pprof.StopCPUProfile()
 	}
 
+	// Defaults to outputFormatGoal
+	startupOutputFormatString := viper.GetString("output-format")
+	startupOutputFormat, err := outputFormatFromString(startupOutputFormatString)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		return 1
+	}
+	mainCliSystem.outputFormat = startupOutputFormat
+
 	// MUST PRECEDE EXECUTE/REPL
 	goalFilesToLoad := viper.GetStringSlice("load")
 	for _, f := range goalFilesToLoad {
-		err = runScript(&mainCliSystem, f)
+		_, err = runScript(&mainCliSystem, f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to load file %q with error: %v", f, err)
 			return 1
 		}
 	}
 
+	// By default, we don't print the final return value of a script, but this flag supports that.
+	printFinalValue := viper.GetBool("println")
 	// Support file argument both with -e and standalone.
 	hasFileArgument := len(args) > 0
 
@@ -211,13 +256,16 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 	if programToExecute != "" {
-		err = runCommand(&mainCliSystem, programToExecute)
-		if err != nil {
+		goalV, errr := runCommand(&mainCliSystem, programToExecute)
+		if errr != nil {
 			fmt.Fprintf(os.Stderr, "Failed to execute program:\n%q\n    with error:\n%v\n", programToExecute, err)
 			return 1
 		}
 		// Support -e/--execute along with a file argument.
 		if !hasFileArgument {
+			if printFinalValue {
+				printInOutputFormat(ariContext.GoalContext, mainCliSystem.outputFormat, goalV)
+			}
 			return 0
 		}
 	}
@@ -230,10 +278,13 @@ func ariMain(cmd *cobra.Command, args []string) int {
 			fmt.Fprintf(os.Stderr, "File %q is not recognized as a path on your system: %v", f, err)
 		}
 		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
-		err = runScript(&mainCliSystem, f)
-		if err != nil {
+		goalV, errr := runScript(&mainCliSystem, f)
+		if errr != nil {
 			fmt.Fprintf(os.Stderr, "Failed to run file %q with error: %v", f, err)
 			return 1
+		}
+		if printFinalValue {
+			printInOutputFormat(ariContext.GoalContext, mainCliSystem.outputFormat, goalV)
 		}
 		return 0
 	}
@@ -332,18 +383,54 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 	}
 
 	if !goalContext.AssignedLast() {
-		ariPrintFn := cliSystem.detectAriPrint()
+		// In the REPL, make it easy to get the value of the _p_revious expression
+		// just evaluated. Equivalent of *1 in Lisp REPLs. Skip assignments.
+		printInOutputFormat(goalContext, cliSystem.outputFormat, value)
+	}
+
+	cliSystem.detectAriPrompt()
+}
+
+func printInOutputFormat(goalContext *goal.Context, outputFormat outputFormat, value goal.V) {
+	goalContext.AssignGlobal("ari.p", value)
+	switch outputFormat {
+	case outputFormatGoal:
+		ariPrintFn := detectAriPrint(goalContext)
 		if ariPrintFn != nil {
 			ariPrintFn(value)
 		} else {
 			fmt.Fprintln(os.Stdout, value.Sprint(goalContext, false))
 		}
-		// In the REPL, make it easy to get the value of the _p_revious expression
-		// just evaluated. Equivalent of *1 in Lisp REPLs. Skip assignments.
-		goalContext.AssignGlobal("ari.p", value)
+	case outputFormatCSV:
+		evalThen(goalContext, value, `csv ari.p`)
+	case outputFormatJSON:
+		evalThen(goalContext, value, `""json ari.p`)
+	case outputFormatJSONPretty:
+		evalThen(goalContext, value, `" "json ari.p`)
+	case outputFormatLatex:
+		evalThen(goalContext, value, `out.ltx[ari.p;"%.2f"]`)
+	case outputFormatMarkdown:
+		evalThen(goalContext, value, `out.md[ari.p;"%.2f"]`)
+	case outputFormatTSV:
+		evalThen(goalContext, value, `"\t"csv ari.p`)
 	}
+}
 
-	cliSystem.detectAriPrompt()
+// evalThen evaluates the given goalProgram for side effects, with ari.p already bound to previous evaluation.
+func evalThen(goalContext *goal.Context, value goal.V, goalProgram string) {
+	nextValue, err := goalContext.Eval(goalProgram)
+	if err != nil {
+		formatREPLError(err)
+	}
+	if value.IsError() {
+		formatREPLError(newExitError(goalContext, value.Error()))
+	}
+	switch jsonS := nextValue.BV().(type) {
+	case goal.S:
+		fmt.Fprintln(os.Stdout, string(jsonS))
+	default:
+		formatREPLError(errors.New("developer error: json must produce a string"))
+	}
 }
 
 // ExitError is returned by Cmd when the program returns a Goal error value.
@@ -411,8 +498,7 @@ func (cliSystem *CliSystem) detectAriPrompt() {
 }
 
 // detectAriPrint returns a function for printing values at the REPL in goal mode.
-func (cliSystem *CliSystem) detectAriPrint() func(goal.V) {
-	goalContext := cliSystem.ariContext.GoalContext
+func detectAriPrint(goalContext *goal.Context) func(goal.V) {
 	printFn, found := goalContext.GetGlobal("ari.print")
 	if found {
 		if printFn.IsCallable() {
@@ -459,9 +545,22 @@ func (cliSystem *CliSystem) replEvalSystemCommand(line string) error {
 	cmdAndArgs := strings.Split(line, " ")
 	systemCommand := cmdAndArgs[0]
 	switch systemCommand {
-	// IDEA )help that doesn't require quoting
 	case ")goal":
 		return cliSystem.switchMode(cliModeGoal, nil)
+	case ")output.goal":
+		cliSystem.outputFormat = outputFormatGoal
+	case ")output.csv":
+		cliSystem.outputFormat = outputFormatCSV
+	case ")output.json":
+		cliSystem.outputFormat = outputFormatJSON
+	case ")output.json+pretty":
+		cliSystem.outputFormat = outputFormatJSONPretty
+	case ")output.latex":
+		cliSystem.outputFormat = outputFormatLatex
+	case ")output.markdown":
+		cliSystem.outputFormat = outputFormatMarkdown
+	case ")output.tsv":
+		cliSystem.outputFormat = outputFormatTSV
 	case ")sql":
 		return cliSystem.switchMode(cliModeSQLReadOnly, cmdAndArgs[1:])
 	case ")sql!":
@@ -510,15 +609,15 @@ func debugPrintStack(ctx *goal.Context, programName string) {
 }
 
 // Adapted from Goal's implementation.
-func runCommand(cliSystem *CliSystem, cmd string) error {
+func runCommand(cliSystem *CliSystem, cmd string) (goal.V, error) {
 	return runSource(cliSystem, cmd, "")
 }
 
 // Adapted from Goal's implementation.
-func runScript(cliSystem *CliSystem, fname string) error {
+func runScript(cliSystem *CliSystem, fname string) (goal.V, error) {
 	bs, err := os.ReadFile(fname)
 	if err != nil {
-		return fmt.Errorf("%s: %w", cliSystem.programName, err)
+		return goal.NewGap(), fmt.Errorf("%s: %w", cliSystem.programName, err)
 	}
 	// We avoid redundant copy in bytes->string conversion.
 	source := unsafe.String(unsafe.SliceData(bs), len(bs))
@@ -526,27 +625,27 @@ func runScript(cliSystem *CliSystem, fname string) error {
 }
 
 // Adapted from Goal's implementation.
-func runSource(cliSystem *CliSystem, source, loc string) error {
+func runSource(cliSystem *CliSystem, source, loc string) (goal.V, error) {
 	goalContext := cliSystem.ariContext.GoalContext
 	err := goalContext.Compile(source, loc, "")
 	if err != nil {
 		if cliSystem.debug {
 			printProgram(goalContext, cliSystem.programName)
 		}
-		return formatError(cliSystem.programName, err)
+		return goal.NewGap(), formatError(cliSystem.programName, err)
 	}
 	if cliSystem.debug {
 		printProgram(goalContext, cliSystem.programName)
-		return nil
+		return goal.NewGap(), nil
 	}
 	r, err := goalContext.Run()
 	if err != nil {
-		return formatError(cliSystem.programName, err)
+		return r, formatError(cliSystem.programName, err)
 	}
 	if r.IsError() {
-		return fmt.Errorf("%s", formatGoalError(goalContext, r))
+		return r, fmt.Errorf("%s", formatGoalError(goalContext, r))
 	}
-	return nil
+	return r, nil
 }
 
 // printProgram prints debug information about the context and any compiled
@@ -655,21 +754,15 @@ working with SQL and HTTP APIs.`,
 	var cfgFile string
 	cobra.OnInitialize(initConfigFn(cfgFile))
 
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 	cfgDir := path.Join(home, ".config", "ari")
-
 	defaultHistFile := path.Join(cfgDir, "ari-history.txt")
 	defaultCfgFile := path.Join(cfgDir, "ari-config.yaml")
 
 	// Config file has processing in initConfigFn outside of viper lifecycle, so it's a separate variable.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", defaultCfgFile, "ari configuration")
 
-	// Everything else should go through viper for consistency.
 	pFlags := rootCmd.PersistentFlags()
 
 	flagNameHistory := "history"
@@ -691,6 +784,12 @@ working with SQL and HTTP APIs.`,
 	cobra.CheckErr(err)
 	rootCmd.Flags().StringP("mode", "m", "goal", "language mode at startup")
 	err = viper.BindPFlag("mode", rootCmd.Flags().Lookup("mode"))
+	cobra.CheckErr(err)
+	rootCmd.Flags().StringP("output-format", "f", "goal", "evaluation output format")
+	err = viper.BindPFlag("output-format", rootCmd.Flags().Lookup("output-format"))
+	cobra.CheckErr(err)
+	rootCmd.Flags().BoolP("println", "p", false, "print final value of the script + newline")
+	err = viper.BindPFlag("println", rootCmd.Flags().Lookup("println"))
 	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("version", "v", false, "print version info and exit")
 

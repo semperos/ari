@@ -397,7 +397,18 @@ func (autoCompleter *AutoCompleter) cacheSystemCommands() {
 
 func systemCommands() (map[string]string, []string) {
 	m := map[string]string{
-		")goal": "Goal array language mode", ")sql": "Read-only SQL mode (querying)", ")sql!": "Read/write SQL mode",
+		")goal": "Goal array language mode",
+		// TODO Output formats: https://duckdb.org/docs/api/cli/output_formats.html
+		// In particular csv, json, markdown, latex, and one of the boxed ones
+		")output.csv":         "Print results as CSV",
+		")output.goal":        "Print results as Goal values (default)",
+		")output.json":        "Print results as JSON",
+		")output.json+pretty": "Print results as JSON with indentation",
+		")output.latex":       "Print results as LaTeX",
+		")output.markdown":    "Print results as Markdown",
+		")output.tsv":         "Print results as TSV",
+		")sql":                "Read-only SQL mode (querying)",
+		")sql!":               "Read/write SQL mode",
 	}
 	// Prepare sorted keys ahead of time
 	keys := make([]string, 0, len(m))
