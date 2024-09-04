@@ -1,24 +1,37 @@
 istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]} / is x a dictionary-as-table
 reshape:{((*/x)#y){(-y)$x}/|1_x} / Implementation by anaseto, shared on Matrix
 shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
+depths:{[l;ind] ,/(..?[(@x)¿"ANSI";q.depths[x;p.ind+1];p.ind])'l}
+{ind:1; ..?[(@x)¿"ANSI";q.depths[x;p.ind+1];p.ind]}
+/ depth of each item relative to root
 md.tbl:{[t;fmt] / helper
   k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
   (k;v):(-w)!'´(k;v); "|"+("|\n|"/,/"|"/(k;"-"*w;+v))+"|"}
-md.depths:{[l;ind] ,/(..?[(@x)¿"ANSI";md.depths[x;p.ind+1];p.ind])'l} / helper
 md.lst:{[l;fmt] / helper
-  ds:md.depths[l;0]; v:(..?["n"=@x;p.fmt$x;$'x])',//l
+  ds:depths[l;0]; v:(..?["n"=@x;p.fmt$x;$'x])',//l
   ind:..x*"  "; pfx:(ind'ds)+"- "
   "\n"/v;"\n"/pfx+v}
 md:{[x;fmt]?[istbl x;md.tbl[x;fmt]; (@x)¿"ANSI";md.lst[x;fmt]; "n"=@x;fmt$x; $x]} / Markdown output
 ltx.lq:{sub[rq/ "/;" ``"]sub[rx/(?m)^"/;"``"]x} / helper
 ltx.rq:{sub[rq/" /;"'' "]sub[rx/(?m)"$/;"''"]x} / helper
-ltx:{[t;fmt] / LaTeX output
+ltx.tbl:{[t;fmt] / helper
   algn:!"r l"; algns:""/algn["S"=@'t]
   k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
   (k;v):(-w)!'´(k;v); rs:" \\\\\n"/,/" & "/(k;"\\hline %";+v)
   ltx.lq@ltx.rq@qq`\\begin{tabular}{|$algns|}\n\\hline
   $rs \\\\\n\\hline\n\\end{tabular}`
 }
+ltx.be:"\\begin{enumerate}"; ltx.ee:"\\end{enumerate}" / helpers
+ltx.lstenv:{ / helper
+  (n;sig):(abs x;sign x);
+  ?[sig=-1;"\n"+(""/(n-1)#"$ltx.be\n\\item\n")+"$ltx.be\n\\item %v\n"
+    sig=0;"\\item %v\n"
+    "\n"+(""/n#"$ltx.ee\n")+"\n\\item %v\n"]}
+ltx.lst:{[l;fmt] / helper
+  v:(..?["n"=@x;p.fmt$x;$'x])',//l;
+  ds:depths[l;0]; cs:(»ds)-ds; fs:,/ltx.lstenv'cs
+  "$ltx.be\n"+(""/fs$'v)+"$ltx.ee"}
+ltx:{[x;fmt]?[istbl x;ltx.tbl[x;fmt]; (@x)¿"ANSI";ltx.lst[x;fmt]; "n"=@x;fmt$x; $x]} / LaTeX output
 csv.tbl:{(*'x)!(1_'x)} / table from csv parsing, assumes header
 json.tbl:{ks:!*x; vs:@[;ks]'x; ks!+vs} / table from parsing json array of like objects
 1
