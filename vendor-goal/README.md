@@ -4,14 +4,14 @@ Goal code that is loaded by default into the Ari runtime is located here as file
 
 ## [goal] repo
 
-Last fetched at commit `a7797629ad427b77f3608f1c3a0c725e5cb692d3`:
+Last fetched at commit [`123b0b2e2432bcb4b8518eea734cf3c3428017b2`](https://codeberg.org/anaseto/goal/commit/123b0b2e2432bcb4b8518eea734cf3c3428017b2):
 
 ```
-commit a7797629ad427b77f3608f1c3a0c725e5cb692d3
+commit 123b0b2e2432bcb4b8518eea734cf3c3428017b2
 Author: Yon <anaseto@bardinflor.perso.aquilenet.fr>
-Date:   Mon Jul 15 15:53:23 2024 +0000
+Date:   Wed Sep 4 07:42:25 2024 +0000
 
-    add a couple of examples
+    lib/table.goal: minor tweak in join & more testing
 ```
 
 The Goal code vendored in this repository is licensed as follows:

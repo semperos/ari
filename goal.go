@@ -24,11 +24,13 @@ const (
 // loading them into the Goal context.
 func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	additionalPackages := map[string]string{
-		"fmt":  goalSourceFmt,
-		"html": goalSourceHTML,
-		"k":    goalSourceK,
-		"math": goalSourceMath,
-		"mods": goalSourceMods,
+		"fmt":   goalSourceFmt,
+		"html":  goalSourceHTML,
+		"k":     goalSourceK,
+		"math":  goalSourceMath,
+		"mods":  goalSourceMods,
+		"path":  goalSourcePath,
+		"table": goalSourceTable,
 	}
 	for pkg, source := range additionalPackages {
 		_, err := ctx.EvalPackage(source, "<builtin>", pkg)
@@ -57,6 +59,12 @@ var goalSourceMath string
 
 //go:embed vendor-goal/mods.goal
 var goalSourceMods string
+
+//go:embed vendor-goal/path.goal
+var goalSourcePath string
+
+//go:embed vendor-goal/table.goal
+var goalSourceTable string
 
 //go:embed ari.goal
 var goalSourceAri string
