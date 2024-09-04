@@ -1,0 +1,24 @@
+istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]} / is x a dictionary-as-table
+reshape:{((*/x)#y){(-y)$x}/|1_x} / Implementation by anaseto, shared on Matrix
+shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
+md.tbl:{[t;fmt] / helper
+  k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
+  (k;v):(-w)!'´(k;v); "|"+("|\n|"/,/"|"/(k;"-"*w;+v))+"|"}
+md.depths:{[l;ind] ,/(..?[(@x)¿"ANSI";md.depths[x;p.ind+1];p.ind])'l} / helper
+md.lst:{[l;fmt] / helper
+  ds:md.depths[l;0]; v:(..?["n"=@x;p.fmt$x;$'x])',//l
+  ind:..x*"  "; pfx:(ind'ds)+"- "
+  "\n"/v;"\n"/pfx+v}
+md:{[x;fmt]?[istbl x;md.tbl[x;fmt]; (@x)¿"ANSI";md.lst[x;fmt]; "n"=@x;fmt$x; $x]} / Markdown output
+ltx.lq:{sub[rq/ "/;" ``"]sub[rx/(?m)^"/;"``"]x} / helper
+ltx.rq:{sub[rq/" /;"'' "]sub[rx/(?m)"$/;"''"]x} / helper
+ltx:{[t;fmt] / LaTeX output
+  algn:!"r l"; algns:""/algn["S"=@'t]
+  k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
+  (k;v):(-w)!'´(k;v); rs:" \\\\\n"/,/" & "/(k;"\\hline %";+v)
+  ltx.lq@ltx.rq@qq`\\begin{tabular}{|$algns|}\n\\hline
+  $rs \\\\\n\\hline\n\\end{tabular}`
+}
+csv.tbl:{(*'x)!(1_'x)} / table from csv parsing, assumes header
+json.tbl:{ks:!*x; vs:@[;ks]'x; ks!+vs} / table from parsing json array of like objects
+1

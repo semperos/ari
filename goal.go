@@ -23,28 +23,22 @@ const (
 // goalLoadExtendedPreamble loads the goalSource* snippets below,
 // loading them into the Goal context.
 func goalLoadExtendedPreamble(ctx *goal.Context) error {
-	corePackages := map[string]string{
-		"": goalSourceShape + "\n" + goalSourceTable,
-	}
 	additionalPackages := map[string]string{
 		"fmt":  goalSourceFmt,
 		"html": goalSourceHTML,
 		"k":    goalSourceK,
-		"out":  goalSourceOut,
 		"math": goalSourceMath,
 		"mods": goalSourceMods,
-	}
-	for pkg, source := range corePackages {
-		_, err := ctx.EvalPackage(source, "<builtin>", pkg)
-		if err != nil {
-			return err
-		}
 	}
 	for pkg, source := range additionalPackages {
 		_, err := ctx.EvalPackage(source, "<builtin>", pkg)
 		if err != nil {
 			return err
 		}
+	}
+	_, err := ctx.EvalPackage(goalSourceAri, "<builtin>", "")
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -64,14 +58,8 @@ var goalSourceMath string
 //go:embed vendor-goal/mods.goal
 var goalSourceMods string
 
-//go:embed vendor-goal/shape.goal
-var goalSourceShape string
-
-//go:embed vendor-goal/out.goal
-var goalSourceOut string
-
-//go:embed vendor-goal/table.goal
-var goalSourceTable string
+//go:embed ari.goal
+var goalSourceAri string
 
 // Goal functions implemented in Go
 

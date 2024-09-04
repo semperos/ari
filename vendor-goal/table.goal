@@ -1,3 +1,0 @@
-istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]}
-csv.tbl:{(*'x)!(1_'x)}
-json.tbl:{ks:!*x; vs:@[;ks]'x; ks!+vs}
