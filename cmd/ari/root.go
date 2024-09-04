@@ -408,9 +408,9 @@ func printInOutputFormat(goalContext *goal.Context, outputFormat outputFormat, v
 	case outputFormatJSONPretty:
 		evalThen(goalContext, value, `" "json ari.p`)
 	case outputFormatLatex:
-		evalThen(goalContext, value, `out.ltx[ari.p;"%.2f"]`)
+		evalThen(goalContext, value, `sprintf.ltx[ari.p;"%.2f"]`)
 	case outputFormatMarkdown:
-		evalThen(goalContext, value, `out.md[ari.p;"%.2f"]`)
+		evalThen(goalContext, value, `sprintf.md[ari.p;"%.2f"]`)
 	case outputFormatTSV:
 		evalThen(goalContext, value, `"\t"csv ari.p`)
 	}
