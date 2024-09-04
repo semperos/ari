@@ -1,2 +1,2 @@
-t:csv.t ","csv 'read"data/starwars.csv";(#*t;!t) / (87;"name""height""mass""hair_color""skin_color""eye_color""birth_year""sex""gender""homeworld""species""films""vehicles""starships")
-t:json.t@json rq/[{"a":1,"b":2},{"a":10,"b":20},{"a":100,"b":200}]/;(#*t;!t) / (3;"a""b")
+t:csv.tbl ","csv 'read"data/starwars.csv";(#*t;!t) / (87;"name""height""mass""hair_color""skin_color""eye_color""birth_year""sex""gender""homeworld""species""films""vehicles""starships")
+t:json.tbl@json rq/[{"a":1,"b":2},{"a":10,"b":20},{"a":100,"b":200}]/;(#*t;!t) / (3;"a""b")
