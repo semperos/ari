@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -308,7 +309,12 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	}
 
 	// REPL
-	readEvalPrintLoop(mainCliSystem)
+	useRawREPL := viper.GetBool("raw")
+	if useRawREPL {
+		rawREPL(mainCliSystem)
+	} else {
+		editorREPL(mainCliSystem)
+	}
 	return 0
 }
 
@@ -319,13 +325,17 @@ func registerCliGoalBindings(ariContext *ari.Context) {
 	goalContext.RegisterDyad("tui.render", VFTuiRender)
 }
 
-func readEvalPrintLoop(mainCliSystem CliSystem) {
-	cliEditor := mainCliSystem.cliEditor
+func rawREPL(cliSystem CliSystem) {
+	runStdin(cliSystem.ariContext.GoalContext, cliSystem.outputFormat)
+}
+
+func editorREPL(cliSystem CliSystem) {
+	cliEditor := cliSystem.cliEditor
 	for {
 		line, err := cliEditor.GetLine()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				mainCliSystem.shutdown()
+				cliSystem.shutdown()
 				break
 			}
 			if errors.Is(err, bubbline.ErrInterrupted) {
@@ -346,20 +356,20 @@ func readEvalPrintLoop(mainCliSystem CliSystem) {
 
 		// Future: Consider user commands with ]
 		if matchesSystemCommand(line) {
-			err = mainCliSystem.replEvalSystemCommand(line)
+			err = cliSystem.replEvalSystemCommand(line)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Failed to execute system command %q with error: %v\n", line, err)
 			}
 			continue
 		}
 
-		switch mainCliSystem.cliMode {
+		switch cliSystem.cliMode {
 		case cliModeGoal:
-			mainCliSystem.replEvalGoal(line)
+			cliSystem.replEvalGoal(line)
 		case cliModeSQLReadOnly:
-			mainCliSystem.replEvalSQLReadOnly(line)
+			cliSystem.replEvalSQLReadOnly(line)
 		case cliModeSQLReadWrite:
-			mainCliSystem.replEvalSQLReadWrite(line)
+			cliSystem.replEvalSQLReadWrite(line)
 		}
 	}
 }
@@ -638,14 +648,36 @@ func runSource(cliSystem *CliSystem, source, loc string) (goal.V, error) {
 		printProgram(goalContext, cliSystem.programName)
 		return goal.NewGap(), nil
 	}
-	r, err := goalContext.Run()
+	value, err := goalContext.Run()
 	if err != nil {
-		return r, formatError(cliSystem.programName, err)
+		return value, formatError(cliSystem.programName, err)
 	}
-	if r.IsError() {
-		return r, fmt.Errorf("%s", formatGoalError(goalContext, r))
+	if value.IsError() {
+		return value, fmt.Errorf("%s", formatGoalError(goalContext, value))
 	}
-	return r, nil
+	return value, nil
+}
+
+// Adapted from Goal's implementation.
+func runStdin(ctx *goal.Context, outputFormat outputFormat) {
+	sc := &scanner{r: bufio.NewReader(os.Stdin)}
+	for {
+		fmt.Fprint(os.Stdout, "  ")
+		s, err := sc.readLine()
+		s = strings.TrimRight(s, "\n\r")
+		if err != nil && s == "" {
+			return
+		}
+		value, err := ctx.Eval(s)
+		if err != nil {
+			formatREPLError(err)
+			continue
+		}
+		assigned := ctx.AssignedLast()
+		if !assigned && value != (goal.V{}) {
+			printInOutputFormat(ctx, outputFormat, value)
+		}
+	}
 }
 
 // printProgram prints debug information about the context and any compiled
@@ -776,8 +808,8 @@ working with SQL and HTTP APIs.`,
 	err = viper.BindPFlag(flagNameDatabase, pFlags.Lookup(flagNameDatabase))
 	cobra.CheckErr(err)
 
-	rootCmd.Flags().Bool("debug", false, "enable detailed debugging output on panic")
 	rootCmd.Flags().Bool("cpu-profile", false, "write CPU profile to file")
+	rootCmd.Flags().Bool("debug", false, "enable detailed debugging output on panic")
 	rootCmd.Flags().StringP("execute", "e", "", "string of Goal code to execute, last result not printed automatically")
 	rootCmd.Flags().StringArrayP("load", "l", nil, "Goal source files to load on startup")
 	err = viper.BindPFlag("load", rootCmd.Flags().Lookup("load"))
@@ -790,6 +822,9 @@ working with SQL and HTTP APIs.`,
 	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("println", "p", false, "print final value of the script + newline")
 	err = viper.BindPFlag("println", rootCmd.Flags().Lookup("println"))
+	cobra.CheckErr(err)
+	rootCmd.Flags().BoolP("raw", "r", false, "raw REPL w/out history or auto-complete")
+	err = viper.BindPFlag("raw", rootCmd.Flags().Lookup("raw"))
 	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("version", "v", false, "print version info and exit")
 
