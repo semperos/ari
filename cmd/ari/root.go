@@ -63,6 +63,7 @@ type CliSystem struct {
 	debug         bool
 	outputFormat  outputFormat
 	programName   string
+	rawREPL       bool
 }
 
 func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
@@ -79,12 +80,14 @@ func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
 
 func (cliSystem *CliSystem) switchModeToGoal() error {
 	cliSystem.cliMode = cliModeGoal
-	cliSystem.cliEditor.Prompt = cliModeGoalPrompt
-	cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
-	cliSystem.detectAriPrompt()
-	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
-	cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
-	cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
+	if !cliSystem.rawREPL {
+		cliSystem.cliEditor.Prompt = cliModeGoalPrompt
+		cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
+		cliSystem.detectAriPrompt()
+		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
+		cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
+		cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
+	}
 	return nil
 }
 
@@ -110,11 +113,13 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly(args []string) error {
 		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
-	cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
-	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
-	cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
-	cliSystem.cliEditor.Prompt = cliModeSQLReadOnlyPrompt
-	cliSystem.cliEditor.NextPrompt = cliModeSQLReadOnlyNextPrompt
+	if !cliSystem.rawREPL {
+		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
+		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
+		cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
+		cliSystem.cliEditor.Prompt = cliModeSQLReadOnlyPrompt
+		cliSystem.cliEditor.NextPrompt = cliModeSQLReadOnlyNextPrompt
+	}
 	return nil
 }
 
@@ -135,11 +140,13 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite(args []string) error {
 		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
-	cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
-	cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
-	cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
-	cliSystem.cliEditor.Prompt = cliModeSQLReadWritePrompt
-	cliSystem.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
+	if !cliSystem.rawREPL {
+		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
+		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
+		cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
+		cliSystem.cliEditor.Prompt = cliModeSQLReadWritePrompt
+		cliSystem.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
+	}
 	return nil
 }
 
@@ -193,16 +200,12 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		ariContext:  ariContext,
 		debug:       viper.GetBool("debug"),
 		programName: programName,
+		rawREPL:     viper.GetBool("raw"),
 	}
 
 	// MUST COME FIRST
 	// Engage detailed print on panic.
-	debug, err := cmd.Flags().GetBool("debug")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return 1
-	}
-	if debug {
+	if mainCliSystem.debug {
 		defer debugPrintStack(ariContext.GoalContext, programName)
 	}
 
@@ -293,8 +296,10 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	// With files loaded (which might adjust the prompt via Goal code)
 	// and knowing we're not executing and exiting immediately,
 	// set up the CLI REPL.
-	mainCliSystem.cliEditor = cliEditorInitialize()
-	mainCliSystem.autoCompleter = &AutoCompleter{ariContext: ariContext}
+	if !mainCliSystem.rawREPL {
+		mainCliSystem.cliEditor = cliEditorInitialize()
+		mainCliSystem.autoCompleter = &AutoCompleter{ariContext: ariContext}
+	}
 	startupCliModeString := viper.GetString("mode")
 	startupCliMode, err := cliModeFromString(startupCliModeString)
 	if err != nil {
@@ -309,11 +314,10 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	}
 
 	// REPL
-	useRawREPL := viper.GetBool("raw")
-	if useRawREPL {
-		rawREPL(mainCliSystem)
+	if mainCliSystem.rawREPL {
+		rawREPL(&mainCliSystem)
 	} else {
-		editorREPL(mainCliSystem)
+		editorREPL(&mainCliSystem)
 	}
 	return 0
 }
@@ -325,11 +329,35 @@ func registerCliGoalBindings(ariContext *ari.Context) {
 	goalContext.RegisterDyad("tui.render", VFTuiRender)
 }
 
-func rawREPL(cliSystem CliSystem) {
-	runStdin(cliSystem.ariContext.GoalContext, cliSystem.outputFormat)
+func rawREPL(cliSystem *CliSystem) {
+	sc := &scanner{r: bufio.NewReader(os.Stdin)}
+	for {
+		fmt.Fprint(os.Stdout, "  ")
+		line, err := sc.readLine()
+		line = strings.TrimRight(line, "\n\r")
+		if err != nil && line == "" {
+			return
+		}
+		if matchesSystemCommand(line) {
+			err = cliSystem.replEvalSystemCommand(line)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Failed to execute system command %q with error: %v\n", line, err)
+			}
+			continue
+		}
+
+		switch cliSystem.cliMode {
+		case cliModeGoal:
+			cliSystem.replEvalGoal(line)
+		case cliModeSQLReadOnly:
+			cliSystem.replEvalSQLReadOnly(line)
+		case cliModeSQLReadWrite:
+			cliSystem.replEvalSQLReadWrite(line)
+		}
+	}
 }
 
-func editorREPL(cliSystem CliSystem) {
+func editorREPL(cliSystem *CliSystem) {
 	cliEditor := cliSystem.cliEditor
 	for {
 		line, err := cliEditor.GetLine()
@@ -656,28 +684,6 @@ func runSource(cliSystem *CliSystem, source, loc string) (goal.V, error) {
 		return value, fmt.Errorf("%s", formatGoalError(goalContext, value))
 	}
 	return value, nil
-}
-
-// Adapted from Goal's implementation.
-func runStdin(ctx *goal.Context, outputFormat outputFormat) {
-	sc := &scanner{r: bufio.NewReader(os.Stdin)}
-	for {
-		fmt.Fprint(os.Stdout, "  ")
-		s, err := sc.readLine()
-		s = strings.TrimRight(s, "\n\r")
-		if err != nil && s == "" {
-			return
-		}
-		value, err := ctx.Eval(s)
-		if err != nil {
-			formatREPLError(err)
-			continue
-		}
-		assigned := ctx.AssignedLast()
-		if !assigned && value != (goal.V{}) {
-			printInOutputFormat(ctx, outputFormat, value)
-		}
-	}
 }
 
 // printProgram prints debug information about the context and any compiled

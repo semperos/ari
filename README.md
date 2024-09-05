@@ -28,6 +28,7 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
     - Replace default REPL printing by setting a function value for the `ari.print` global (function receives a single Goal value to print)
     - Configure the output format with `--output-format` or using one of the `)output.` system commands at the REPL. Formats include CSV/TSV, JSON, Markdown, and LaTeX.
   - `ari.p` is bound to the previous result (value from last evaluation at the REPL)
+  - Alternatively run `ari` with `--raw` for a simpler, raw REPL that lacks line editing, history, and auto-complete, but is better suited for interaction via an editor like (Neo)Vim, or if you prefer rlwrap or another line editor to the one that ships with ari.
 - Extensible help system
   - `help"help"` for an overview
   - `help"TOPIC"` similar to Goal's CLI help
@@ -53,7 +54,6 @@ Non-exhaustive list:
 
 - TODO: Test coverage.
 - TODO: Correct usage of `goal.NewError` vs. `goal.NewPanicError`
-- TODO: Option for raw REPL (modeled on Goal's) with better input performance, no auto-complete etc.
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
