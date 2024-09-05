@@ -1,0 +1,25 @@
+/ base[s] returns the last element of a path.
+base:{[path]
+  path or:"."
+  path:{"/"~x -1}(-1_)/path
+  ?["/"¿path;rx`[^/]*$`[path;"s"];path]or"/"
+}
+/ clean[s] returns the shortest equivalent path.
+clean:{[path]
+  elts:in[;"."]^"/"\path / get non-. non-empty path elements
+  elts:(0#""){?[and[y~"..";x;~".."~*|x];-1_x;x,y]}/elts / clean .. after non-.. dir
+  ?[isAbs path
+    "/"+"/"/&elts!~&\elts=".." / remove .. elements that begin a rooted path
+    ("/"/elts)or"."]
+}
+/ dir[s] returns all but the last element of a path, after cleaning.
+dir:{[path]clean@*split path}
+/ ext[s] returns the filename extension.
+ext:{[path]rx`\.[^/.]*$`[path;"s"]}
+/ isAbs[s] reports whether the path is absolute.
+isAbs:{[path]path[;1]~"/"}
+/ join[S] joins non-empty path elements into a cleaned slash-separated path.
+join:{[elts]?[+/&elts;clean@"/"/(""=)^elts;""]}
+/ split[s] splits a path just after any final slash into a (dir;filename) pair.
+split:{[path]1_rx`^(.*?/?)([^/]*)$`path}
+1

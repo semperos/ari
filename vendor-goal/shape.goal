@@ -1,4 +1,0 @@
-/ Implementation by anaseto, shared on Matrix
-reshape:{((*/x)#y){(-y)$x}/|1_x}
-/ Implementation by John Earnest, shared on k-tree
-shape:{-1_#:'*:\x}

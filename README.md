@@ -2,7 +2,7 @@
 
 Ari stands for **A**rray **R**elational **I**nteractive programming environment.
 
-Ari is a set of extensions to the [Goal] programming language, also providing an extensible CLI with dedicated SQL mode.
+Ari is a set of extensions to the [Goal] programming language with an extensible CLI and dedicated SQL mode.
 
 ## Installation
 
@@ -26,6 +26,7 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
   - Runtime configuration:
     - Configure the REPL prompt by setting string values for the `ari.prompt` and `ari.nextprompt` (for multiline input) globals
     - Replace default REPL printing by setting a function value for the `ari.print` global (function receives a single Goal value to print)
+    - Configure the output format with `--output-format` or using one of the `)output.` system commands at the REPL. Formats include CSV/TSV, JSON, Markdown, and LaTeX.
   - `ari.p` is bound to the previous result (value from last evaluation at the REPL)
 - Extensible help system
   - `help"help"` for an overview
@@ -37,7 +38,10 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
 - New Goal functions:
   - `http.` functions for HTTP requests using [Resty]
   - `sql.` functions for SQL queries and commands
-- Dedicated SQL mode for DuckDB
+  - _(WIP)_ `time.` functions for more extensive date/time handling
+  - `tui.` functions for basic terminal UI styling (colors, padding/margin, borders)
+- Dedicated SQL mode
+  - The ari CLI uses DuckDB, but the `github.com/semperos/ari` Go package doesn't directly depend on a specific SQL database driver, so you can BYODB.
   - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.
   - Auto-completion of SQL keywords
   - Help entries for SQL keywords (shown during auto-complete, still WIP)
@@ -50,19 +54,19 @@ Non-exhaustive list:
 - TODO: Test coverage.
 - TODO: Correct usage of `goal.NewError` vs. `goal.NewPanicError`
 - TODO: Option for raw REPL (modeled on Goal's) with better input performance, no auto-complete etc.
-- TODO: Goal function to return auto-complete results (esp. if raw REPL is being used).
-- TODO: Looser auto-complete, not just prefix-based
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
 
 I plan to support the above items. The following are stretch goals or nice-to-have's:
 
+- TODO: Use custom table functions via replacement scan to query Goal tables from DuckDB.
+- TODO: Looser auto-complete, not just prefix-based
+- TODO: `)help`
 - TODO: Functions leveraging [time.Time](https://pkg.go.dev/time@go1.22.5)
-- TODO: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
+- IN PROGRESS: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
 - TODO: Implement a subset of [q](https://code.kx.com/q/) functions to extend what Goal already has.
 - Specific user commands:
-  - TODO: Choosing output format (e.g., as JSON, perhaps all the ones DuckDB supports)
   - TODO: Toggle pretty-printing
   - TODO: Toggle paging at the REPL (as found in [PicoLisp](https://picolisp.com/wiki/?home))
   - TODO: Toggle colored output

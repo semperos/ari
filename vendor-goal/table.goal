@@ -1,2 +1,18 @@
-csv.t:{(*'x)!(1_'x)}
-json.t:{ks:!*x; vs:@[;ks]'x; ks!+vs}
+/ by[c;f;t] groups by column(s) named c, joining summary table f[t;by], where
+/ parameter "by" contains the grouping indices.
+by:{[c;f;t]t[&¿by;c],f[t;by:%?["A"~@g:t c;{(1+|/'x)/x}@%'g;g]]}
+/ sort[f;t] sorts table t by function(s) f; f takes a table argument.
+sort:{[f;t]?["A"~@f;t{x@y x}/|f;t@f t]}
+/ ij[c;t1;t2] returns the inner join of tables t1 and t2, using a single common
+/ column named c, and assuming t1 c contains distinct values. It gives t2
+/ priority for any other common columns.
+ij:{[c;t1;t2]i:(k:t1 c)?t2 c; (((c=!:)^t1)@&i!m),(1;m:i<#k)#t2}
+/ join is a more general variant of ij that handles duplicate entries in the c
+/ column. Implementation is based on code shared by @Marshall on the matrix
+/ chat.
+join:{[c;t1;t2],/(t1;t2)@'{(i;j):(0,#x)_%x,y; (&(=j)@i;,/(=(!#j)!j)@i)}[t1 c;t2 c]}
+/ oj[c;t1;t2] returns the outer join of tables t1 and t2, using a single common
+/ column named c, and assuming t1 c contains distinct values. It gives t2
+/ priority for any other common columns. It uses zero-values, instead of
+/ nulls/NaNs, for missing fields in t1.
+oj:{[c;t1;t2]i:(t1 c)?t2 c; (((c=!:)^t1)i),t2}
