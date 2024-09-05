@@ -63,6 +63,7 @@ type CliSystem struct {
 	debug         bool
 	outputFormat  outputFormat
 	programName   string
+	prompt        string
 	rawREPL       bool
 }
 
@@ -83,11 +84,11 @@ func (cliSystem *CliSystem) switchModeToGoal() error {
 	if !cliSystem.rawREPL {
 		cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 		cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
-		cliSystem.detectAriPrompt()
 		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
 		cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
 		cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
 	}
+	cliSystem.detectPrompt()
 	return nil
 }
 
@@ -200,6 +201,7 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		ariContext:  ariContext,
 		debug:       viper.GetBool("debug"),
 		programName: programName,
+		prompt:      cliModeGoalPrompt,
 		rawREPL:     viper.GetBool("raw"),
 	}
 
@@ -332,7 +334,7 @@ func registerCliGoalBindings(ariContext *ari.Context) {
 func rawREPL(cliSystem *CliSystem) {
 	sc := &scanner{r: bufio.NewReader(os.Stdin)}
 	for {
-		fmt.Fprint(os.Stdout, "  ")
+		fmt.Fprint(os.Stdout, cliSystem.prompt)
 		line, err := sc.readLine()
 		line = strings.TrimRight(line, "\n\r")
 		if err != nil && line == "" {
@@ -426,7 +428,7 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 		printInOutputFormat(goalContext, cliSystem.outputFormat, value)
 	}
 
-	cliSystem.detectAriPrompt()
+	cliSystem.detectPrompt()
 }
 
 func printInOutputFormat(goalContext *goal.Context, outputFormat outputFormat, value goal.V) {
@@ -509,29 +511,47 @@ func newExitError(ctx *goal.Context, e *goal.Error) error {
 	return ee
 }
 
-// detectAriPrompt interrogates Goal globals ari.prompt and ari.nextprompt
+// detectPrompt interrogates Goal globals ari.prompt and ari.nextprompt
 // to determine the prompt shown at the CLI REPL.
-func (cliSystem *CliSystem) detectAriPrompt() {
+func (cliSystem *CliSystem) detectPrompt() {
 	goalContext := cliSystem.ariContext.GoalContext
 
 	prompt, found := goalContext.GetGlobal("ari.prompt")
 	if found {
 		promptS, ok := prompt.BV().(goal.S)
 		if ok {
-			cliSystem.cliEditor.Prompt = string(promptS)
+			setPrompt(cliSystem, string(promptS))
 		} else {
 			fmt.Fprintf(os.Stderr, "ari.prompt must be a string, but found %q\n", prompt)
 		}
 	}
 
-	nextPrompt, found := goalContext.GetGlobal("ari.nextprompt")
-	if found {
-		nextPromptS, ok := nextPrompt.BV().(goal.S)
-		if ok {
-			cliSystem.cliEditor.NextPrompt = string(nextPromptS)
-		} else {
-			fmt.Fprintf(os.Stderr, "ari.nextprompt must be a string, but found %q\n", nextPrompt)
+	if !cliSystem.rawREPL {
+		nextPrompt, found := goalContext.GetGlobal("ari.nextprompt")
+		if found {
+			nextPromptS, ok := nextPrompt.BV().(goal.S)
+			if ok {
+				setNextPrompt(cliSystem, string(nextPromptS))
+			} else {
+				fmt.Fprintf(os.Stderr, "ari.nextprompt must be a string, but found %q\n", nextPrompt)
+			}
 		}
+	}
+}
+
+// setPrompt updates the REPL prompt, handling raw vs. rich REPL.
+func setPrompt(cliSystem *CliSystem, prompt string) {
+	if cliSystem.rawREPL {
+		cliSystem.prompt = prompt
+	} else {
+		cliSystem.cliEditor.Prompt = prompt
+	}
+}
+
+// setNextPrompt update the REPL prompt that appears on subsequent lines for multi-line entries. No effect for raw REPL.
+func setNextPrompt(cliSystem *CliSystem, nextPrompt string) {
+	if !cliSystem.rawREPL {
+		cliSystem.cliEditor.Prompt = nextPrompt
 	}
 }
 
