@@ -243,9 +243,15 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	// MUST PRECEDE EXECUTE/REPL
 	goalFilesToLoad := viper.GetStringSlice("load")
 	for _, f := range goalFilesToLoad {
+		var path string
+		path, err = filepath.Abs(f)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "File to load %s is not recognized as a path on your system: %v", f, err)
+		}
+		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
 		_, err = runScript(&mainCliSystem, f)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to load file %q with error: %v", f, err)
+			fmt.Fprintf(os.Stderr, "Failed to load file %s with error: %v", f, err)
 			return 1
 		}
 	}
@@ -281,7 +287,7 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		var path string
 		path, err = filepath.Abs(f)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "File %q is not recognized as a path on your system: %v", f, err)
+			fmt.Fprintf(os.Stderr, "File %s is not recognized as a path on your system: %v", f, err)
 		}
 		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
 		goalV, errr := runScript(&mainCliSystem, f)
