@@ -1,7 +1,9 @@
+/ Shape
 istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]} / is x a dictionary-as-table
 reshape:{((*/x)#y){(-y)$x}/|1_x} / Implementation by anaseto, shared on Matrix
 shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
 depths:{[ind;l]?[(@l)~"A";,/o[ind+1]'l; (@l)¿"NSI";(#l)#ind; ind-1]} / list depths
+/ Output formats
 md.tbl:{[t;fmt] / helper
   k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
   (k;v):(-w)!'´(k;v); "|"+("|\n|"/,/"|"/(k;"-"*w;+v))+"|"}
@@ -31,4 +33,37 @@ ltx.lst:{[l;fmt] / helper
 sprintf.ltx:{[x;fmt]?[istbl x;ltx.tbl[x;fmt]; (@x)¿"ANSI";ltx.lst[x;fmt]; "n"=@x;fmt$x; $x]} / LaTeX output
 csv.tbl:{(*'x)!(1_'x)} / table from csv parsing, assumes header
 json.tbl:{ks:!*x; vs:@[;ks]'x; ks!+vs} / table from parsing json array of like objects
+/ Test Framework
+tt.suite:"global"; / tt.suitestate:..[es:();fs:();ps:();ss:()]; tt.state:..[global:tt.suitestate] 
+tt.state:..[es:();fs:();ps:();ss:()]
+tt.st:tt.state; tt.throw:0; tt.clear:{tt.st::tt.state}
+/ TODO NEXT STEP Add concept of suite to the tt.st and report on it.
+tt.record:{[k;f;r] / key in test state; function tested; return value
+  vs:rt.get"v"; suite:?["FILE"¿(!vs);vs"FILE";tt.suite]
+  ?["ps"~k
+    tt.st::@[tt.st;,"ps";{f:y;r:z; x,..[f:p.f;e:p.r;msg:"function panicked: $p.r"]}[;f;r]]
+    "es"~k
+    tt.st::@[tt.st;,"es";{f:y;r:z; x,..[f:p.f;e:p.r;msg:"error returned: $p.r"]}[;f;r]]
+    "fs"~k
+    tt.st::@[tt.st;,"fs";{f:y;r:z; x,..[f:p.f;r:p.r;msg:"assertion failed: $p.f"]}[;f;r]]
+    "ss"~k
+    tt.st::@[tt.st;,"ss";..x,1]
+    :error"tt.record k must be one of ps, es, fs, ss, but received $k"]
+}
+tt.tfthrow:{
+  f:x; r:.[f;0;{pmsg:x;f:y; error[..[f:p.f;msg:p.pmsg;pnc:1]]}[;f]]
+  ?["e"~@r;?[("d"=@.r)and(.r)..pnc
+             :error[..[f:p.x;e:p.r;msg:"function panicked: $p.r"]]
+	     :error[..[f:p.x;e:p.r;msg:"error returned: $p.r"]]]
+    1=r;:r
+    :error[..[f:p.x;r:p.r;msg:"assertion failed: $p.x"]]]}
+tt.tfquiet:{
+  f:x; r:.[f;0;{pmsg:x;f:y; error[..[f:p.f;msg:p.pmsg;pnc:1]]}[;f]]
+  ?["e"~@r;?[("d"=@.r)and(.r)..pnc;tt.record["ps";f;r];tt.record["es";f;r]]
+    1=r;tt.record["ss";f;r]
+    tt.record["fs";f;r]]}
+tt.tf:{?[tt.throw;tt.tfthrow x;tt.tfquiet x]}
+tt.t:{?[("f"~@x);tt.tf@x;error"tt.t expects f, received %s: %v"$(@x;x)]}
+tt.report:{(fs;es;ps;ss):#'tt.st[!"fs es ps ss"]; bad:+/,/(fs;es;ps)
+  ?[bad;fmt.tbl[..[Succeeded:,ss;Failed:,fs;Errored:,es;Panicked:,ps];1;4;"%.2f"];say"PASS"]}
 1
