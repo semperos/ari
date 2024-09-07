@@ -268,8 +268,9 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 	if programToExecute != "" {
-		goalV, errr := runCommand(&mainCliSystem, programToExecute)
-		if errr != nil {
+		var goalV goal.V
+		goalV, err = runCommand(&mainCliSystem, programToExecute)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to execute program:\n%q\n    with error:\n%v\n", programToExecute, err)
 			return 1
 		}
@@ -287,11 +288,12 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		var path string
 		path, err = filepath.Abs(f)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "File %s is not recognized as a path on your system: %v", f, err)
+			fmt.Fprintf(os.Stderr, "File %q is not recognized as a path on your system: %v", f, err)
 		}
 		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
-		goalV, errr := runScript(&mainCliSystem, f)
-		if errr != nil {
+		var goalV goal.V
+		goalV, err = runScript(&mainCliSystem, f)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to run file %q with error: %v", f, err)
 			return 1
 		}
