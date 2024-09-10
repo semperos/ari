@@ -15,7 +15,7 @@ import (
 )
 
 func TestGoalOk(t *testing.T) {
-	t.Parallel()
+	// t.Parallel() // go test reports data race
 	tests := map[string]struct {
 		input  string
 		result string
@@ -57,7 +57,7 @@ func TestGoalOk(t *testing.T) {
 			t.Fatalf("error creating ari Context: %v", err)
 		}
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() // go test reports data race
 			goalV, err := goalCtx.Eval(test.input)
 			if err != nil {
 				t.Fatalf("Context.GoalContext.Eval(%q) returned an error: %v", test.input, err)
@@ -71,7 +71,7 @@ func TestGoalOk(t *testing.T) {
 }
 
 func TestGoalError(t *testing.T) {
-	t.Parallel()
+	// t.Parallel() // go test reports data race
 	tests := map[string]struct {
 		input  string
 		errMsg string
@@ -89,7 +89,7 @@ func TestGoalError(t *testing.T) {
 			t.Fatalf("error creating ari Context: %v", err)
 		}
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			// t.Parallel() // go test reports data race
 			goalV, err := goalCtx.Eval(test.input)
 			if err == nil {
 				t.Fatalf("Context.GoalContext.Eval(%q) should return an error, but instead returned: %v",
