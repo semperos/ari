@@ -19,4 +19,4 @@ jobs:
           go-version: stable
       - name: test
         run: |
-          go test -v -failfast -race -coverpkg=./... -covermode=atomic -coverprofile=coverage.txt ./...
+          ./script/test
