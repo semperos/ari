@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 
 go test -v -failfast -race -coverpkg=./... -covermode=atomic -coverprofile=coverage.txt ./...
+go run ./cmd/ari -e 'tt.all 0;tt.report 0'
