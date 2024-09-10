@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -99,6 +100,7 @@ func printV(ctx *goal.Context, x goal.V) error {
 	}
 }
 
+// Implements help dyad.
 func VFHelpFn(help Help) func(goalContext *goal.Context, args []goal.V) goal.V {
 	return func(goalContext *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
@@ -220,6 +222,20 @@ func helpTriadic(help Help, x goal.V, args []goal.V) goal.V {
 	return goal.NewI(1)
 }
 
+// Implements glob monad.
+func VFGlob(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	globPatternS, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("glob s", "s", x)
+	}
+	match, err := filepath.Glob(string(globPatternS))
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+	return goal.NewAS(match)
+}
+
 // Go <> Goal helpers
 
 func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
@@ -273,6 +289,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	gos.Import(goalContext, "")
 	// Ari
 	// Monads
+	goalContext.RegisterMonad("glob", VFGlob)
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.now", VFTimeNow)
