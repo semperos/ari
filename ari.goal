@@ -39,10 +39,10 @@ tt.st:tt.state; tt.throw:0; tt.clear:{tt.st::tt.state}
 tt.record:{[k;f;r] / key in test state; function tested; return value
   suite:@[.;"FILE";:[;tt.suite]]
   or[~suite¿tt.st;tt.st[suite]:tt.suitestate] / ensure starting suite state
-  ?["ps"~k;(d:..[f:p.f;p:p.r;msg:"function panicked: $p.r"]; tt.st[suite]:@[tt.st[suite];,"ps";..x,p.d])
-    "es"~k;(d:..[f:p.f;e:p.r;msg:"error returned: $p.r"];    tt.st[suite]:@[tt.st[suite];,"es";..x,p.d])
-    "fs"~k;(d:..[f:p.f;r:p.r;msg:"assertion failed: $p.f"];  tt.st[suite]:@[tt.st[suite];,"fs";..x,p.d])
-    "ss"~k;(d:..[f:p.f];                                     tt.st[suite]:@[tt.st[suite];,"ss";..x,p.d])
+  ?["ps"~k;(d:..[f:p.f;p:p.r;msg:"function panicked with: $p.r\n    $p.f"]; tt.st[suite]:@[tt.st[suite];,"ps";..x,p.d])
+    "es"~k;(d:..[f:p.f;e:p.r;msg:"function returned error: $p.r\n    $p.f"]; tt.st[suite]:@[tt.st[suite];,"es";..x,p.d])
+    "fs"~k;(d:..[f:p.f;r:p.r;msg:"function returned $p.r instead of 1\n    $p.f"];  tt.st[suite]:@[tt.st[suite];,"fs";..x,p.d])
+    "ss"~k;(d:..[f:p.f]; tt.st[suite]:@[tt.st[suite];,"ss";..x,p.d])
     :error"tt.record k must be one of ps, es, fs, ss, but received $k"]}
 tt.tfthrow:{[f]
   // TODO Take rt.try for a spin here
@@ -62,8 +62,12 @@ tt.tf:{?[tt.throw;tt.tfthrow x;tt.tfquiet x]}
 tt.t:{?[("f"~@x);tt.tf@x;error"tt.t expects f, received %s: %v"$(@x;x)];x}
 tt.file:{orig:@[.;"FILE";0]; ::["FILE";x]; eval 'read x; ::["FILE";or[orig;tt.suite]] ;x}
 tt.all:{sfx:"test.ari""test.goal"; pfx:"**/*""*"; tt.file',/glob',/pfx+`sfx}
+tt.saymsg:{say "  "+x"msg"}
 tt.report:{
-  {(ss;fs;es;ps):#'tt.st[x][!"ss fs es ps"]
-   and[~#fs;say"FAILURES"]; and[~#fs;say"ERRORS"]; and[~#fs;say"PANICS"]
-   say qq/Suite "$x" ${ss} succeeded, ${fs} failed, ${es} errored, ${ps} panicked/}'!tt.st}
+  {(ss;fs;es;ps):tt.st[x][!"ss fs es ps"];(css;cfs;ces;cps):#'(ss;fs;es;ps)
+   bad:~+/(cfs;ces;cps); or[bad;say qq/Suite "$x" has problems:/]
+   and[cfs;tt.saymsg'fs]; and[ces;tt.saymsg'es]; and[cps;tt.saymsg'ps]
+   s:qq/Suite "$x" ${css} succeeded, ${cfs} failed, ${ces} errored, ${cps} panicked/
+   ?[and[tt.suite~x;+/#'tt.st[tt.suite]];say s; ~tt.suite~x;say s;0]}'!tt.st
+   and[|//@[;!"es fs ps"]'#''tt.st;error["Tests failed."]]}
 1
