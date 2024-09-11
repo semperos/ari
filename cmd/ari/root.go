@@ -267,11 +267,17 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	//nolint:nestif // separate returns in each if
 	if programToExecute != "" {
 		var goalV goal.V
 		goalV, err = runCommand(&mainCliSystem, programToExecute)
+		if goalV.IsError() {
+			ee := newExitError(ariContext.GoalContext, goalV.Error())
+			formatREPLError(ee)
+			return ee.Code
+		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to execute program:\n%q\n    with error:\n%v\n", programToExecute, err)
+			fmt.Fprintf(os.Stderr, "Program panicked with: %v\n  \n%q\n", err, programToExecute)
 			return 1
 		}
 		// Support -e/--execute along with a file argument.
@@ -501,7 +507,7 @@ func (e *ExitError) Error() string {
 // newExitError produces an *ExitError from a Goal error value.
 //
 // Adapted from Goal's implementation.
-func newExitError(ctx *goal.Context, e *goal.Error) error {
+func newExitError(ctx *goal.Context, e *goal.Error) *ExitError {
 	ee := &ExitError{Msg: e.Msg(ctx)}
 	if d, ok := e.Value().BV().(*goal.D); ok {
 		if v, ok := d.Get(goal.NewS("code")); ok {
