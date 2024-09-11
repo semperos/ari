@@ -49,9 +49,9 @@ const (
 const (
 	cliModeGoalPrompt             = "  "
 	cliModeGoalNextPrompt         = "  "
-	cliModeSQLReadOnlyPrompt      = "sql> "
+	cliModeSQLReadOnlyPrompt      = "sql) "
 	cliModeSQLReadOnlyNextPrompt  = "   > "
-	cliModeSQLReadWritePrompt     = "sql!> "
+	cliModeSQLReadWritePrompt     = "sql!) "
 	cliModeSQLReadWriteNextPrompt = "    > "
 )
 
@@ -81,6 +81,7 @@ func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
 
 func (cliSystem *CliSystem) switchModeToGoal() error {
 	cliSystem.cliMode = cliModeGoal
+	cliSystem.prompt = cliModeGoalPrompt
 	if !cliSystem.rawREPL {
 		cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 		cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
@@ -114,6 +115,7 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly(args []string) error {
 		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
+	cliSystem.prompt = cliModeSQLReadOnlyPrompt
 	if !cliSystem.rawREPL {
 		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
 		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
@@ -141,6 +143,7 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite(args []string) error {
 		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
+	cliSystem.prompt = cliModeSQLReadWritePrompt
 	if !cliSystem.rawREPL {
 		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
 		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
@@ -590,27 +593,34 @@ func detectAriPrint(goalContext *goal.Context) func(goal.V) {
 }
 
 func (cliSystem *CliSystem) replEvalSQLReadOnly(line string) {
-	_, err := cliSystem.sqlQuery(line, nil)
+	goalV, err := cliSystem.sqlQuery(line, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
-	} else {
+		return
+	}
+	if cliSystem.outputFormat == outputFormatGoal {
 		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.p;*#'sql.p;#sql.p;"%.1f"]`)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to print SQL query results via Goal evaluation: %v\n", err)
 		}
+		return
 	}
+	printInOutputFormat(cliSystem.ariContext.GoalContext, cliSystem.outputFormat, goalV)
 }
 
 func (cliSystem *CliSystem) replEvalSQLReadWrite(line string) {
-	_, err := cliSystem.sqlExec(line, nil)
+	goalV, err := cliSystem.sqlExec(line, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
-	} else {
+		return
+	}
+	if cliSystem.outputFormat == outputFormatGoal {
 		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.p;*#'sql.p;#sql.p;"%.1f"]`)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to print SQL exec results via Goal evaluation: %v\n", err)
 		}
 	}
+	printInOutputFormat(cliSystem.ariContext.GoalContext, cliSystem.outputFormat, goalV)
 }
 
 func (cliSystem *CliSystem) replEvalSystemCommand(line string) error {
