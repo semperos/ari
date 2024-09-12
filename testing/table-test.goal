@@ -1,0 +1,5 @@
+f:(path.dir abspath FILE)+"/data/starwars.csv"
+t:csv.tbl ","csv 'read f
+tt.t{87=#*t}; tt.t{14=#t}
+t:json.tbl@json rq/[{"a":1,"b":2},{"a":10,"b":20},{"a":100,"b":200}]/
+tt.t{3=#*t}; tt.t{(1 10 100)~t"a"}

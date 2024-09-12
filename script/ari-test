@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+
+set -e
+
+ari -e " 'tt.chkall 0; tt.report 0"

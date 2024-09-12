@@ -38,36 +38,45 @@ tt.suite:"global"; tt.suitestate:..[es:();fs:();ps:();ss:()]; tt.state:..[global
 tt.st:tt.state; tt.throw:0; tt.clear:{tt.st::tt.state}
 tt.record:{[k;f;r] / key in test state; function tested; return value
   suite:@[.;"FILE";:[;tt.suite]]
-  or[~suite¿tt.st;tt.st[suite]:tt.suitestate] / ensure starting suite state
-  ?["ps"~k;(d:..[f:p.f;p:p.r;msg:"function panicked with: $p.r\n    $p.f"]; tt.st[suite]:@[tt.st[suite];,"ps";..x,p.d])
-    "es"~k;(d:..[f:p.f;e:p.r;msg:"function returned error: $p.r\n    $p.f"]; tt.st[suite]:@[tt.st[suite];,"es";..x,p.d])
-    "fs"~k;(d:..[f:p.f;r:p.r;msg:"function returned $p.r instead of 1\n    $p.f"];  tt.st[suite]:@[tt.st[suite];,"fs";..x,p.d])
-    "ss"~k;(d:..[f:p.f]; tt.st[suite]:@[tt.st[suite];,"ss";..x,p.d])
+  or[suite¿!tt.st;tt.st[suite]:tt.suitestate] / ensure starting suite state
+  ?["ps"~k;(d:..[f:p.f;p:p.r;msg:"function panicked with: $p.r\n    $p.f"]; tt.st[suite]:@[tt.st[suite];"ps";..x,p.d])
+    "es"~k;(d:..[f:p.f;e:p.r;msg:"function returned error: $p.r\n    $p.f"]; tt.st[suite]:@[tt.st[suite];"es";..x,p.d])
+    "fs"~k;(d:..[f:p.f;r:p.r;msg:"function returned $p.r instead of 1\n    $p.f"];  tt.st[suite]:@[tt.st[suite];"fs";..x,p.d])
+    "ss"~k;(d:..[f:p.f]; tt.st[suite]:@[tt.st[suite];"ss";..x,p.d])
     :error"tt.record k must be one of ps, es, fs, ss, but received $k"]}
 tt.tfthrow:{[f]
   // TODO Take rt.try for a spin here
   r:.[f;0;{pmsg:x;f:y; error[..[f:p.f;msg:p.pmsg;pnc:1]]}[;f]]
   ?["e"~@r;?[("d"=@.r)and(.r)..pnc
-             :error[..[f:p.x;p:p.r;msg:"function panicked: $p.r"]]
-	     :error[..[f:p.x;e:p.r;msg:"error returned: $p.r"]]]
+             :error[..[f:p.f;p:p.r;msg:"function panicked: $p.r"]]
+	     :error[..[f:p.f;e:p.r;msg:"error returned: $p.r"]]]
     1~r;:r
-    :error[..[f:p.x;r:p.r;msg:"assertion failed: $p.x"]]]}
+    :error[..[f:p.f;r:p.r;msg:"assertion failed: $p.f"]]]
+  r}
 tt.tfquiet:{[f]
   // TODO Take rt.try for a spin here
   r:.[f;0;{pmsg:x;f:y; error[..[f:p.f;msg:p.pmsg;pnc:1]]}[;f]]
   ?["e"~@r;?[("d"=@.r)and(.r)..pnc;tt.record["ps";f;r];tt.record["es";f;r]]
     1~r;tt.record["ss";f;r]
-    tt.record["fs";f;r]]}
+    tt.record["fs";f;r]]
+  r}
 tt.tf:{?[tt.throw;tt.tfthrow x;tt.tfquiet x]}
-tt.t:{?[("f"~@x);tt.tf@x;error"tt.t expects f, received %s: %v"$(@x;x)];x}
-tt.file:{orig:@[.;"FILE";0]; ::["FILE";x]; eval 'read x; ::["FILE";or[orig;tt.suite]] ;x}
-tt.all:{sfx:"test.ari""test.goal"; pfx:"**/*""*"; tt.file',/glob',/pfx+`sfx}
+tt.t:{?[("f"~@x);:tt.tf@x;error"tt.t expects f, received %s: %v"$(@x;x)]}
+tt.fs:{sfx:"test.ari""test.goal"; pfx:"**/*""*"; fs:,/glob',/pfx+`sfx}
+tt.file:{orig:@[.;"FILE";0]; ::["FILE";x]; 'eval 'read x; ::["FILE";or[orig;tt.suite]]; x}
+tt.chkall:{
+  fs:tt.fs 0; rs:tt.file'fs; es:"e"=@'rs
+  ?[|/es
+    [errors:(..p.es)#rs; files:(..p.es)#fs; error[files,(..msg)'errors]]
+    rs]}
 tt.saymsg:{say "  "+x"msg"}
+tt.repsut:{[suite]
+  (ss;fs;es;ps):tt.st[suite][!"ss fs es ps"];(css;cfs;ces;cps):#'(ss;fs;es;ps)
+  bad:~+/(cfs;ces;cps); or[bad;say qq/Suite "$suite" has problems:/]
+  and[cfs;tt.saymsg'fs]; and[ces;tt.saymsg'es]; and[cps;tt.saymsg'ps]
+  s:qq/Suite "$suite" $css succeeded, $cfs failed, $ces errored, $cps panicked/
+  ?[and[tt.suite~suite;+/#'tt.st[tt.suite]];say s; ~tt.suite~suite;say s;0]}
 tt.report:{
-  {(ss;fs;es;ps):tt.st[x][!"ss fs es ps"];(css;cfs;ces;cps):#'(ss;fs;es;ps)
-   bad:~+/(cfs;ces;cps); or[bad;say qq/Suite "$x" has problems:/]
-   and[cfs;tt.saymsg'fs]; and[ces;tt.saymsg'es]; and[cps;tt.saymsg'ps]
-   s:qq/Suite "$x" ${css} succeeded, ${cfs} failed, ${ces} errored, ${cps} panicked/
-   ?[and[tt.suite~x;+/#'tt.st[tt.suite]];say s; ~tt.suite~x;say s;0]}'!tt.st
-   and[|//@[;!"es fs ps"]'#''tt.st;error["Tests failed."]]}
+  tt.repsut'!tt.st; (tes;tfs;tps;tss):+/#''. .'tt.st; say "Total $tss succeeded, $tfs failed, $tes errored, $tps panicked"
+  and[|//@[;!"es fs ps"]'#''tt.st;error["Tests failed."]]}
 1

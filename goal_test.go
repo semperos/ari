@@ -118,7 +118,7 @@ type matchTest struct {
 
 // Adapted from Goal implementation.
 func getMatchTests(glob string) ([]matchTest, error) {
-	d := os.DirFS("testing/")
+	d := os.DirFS("testing/via-go/")
 	fnames, err := fs.Glob(d, glob)
 	if err != nil {
 		return nil, err
@@ -192,15 +192,11 @@ func TestEval(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getMatchTests: %v", err)
 	}
-	smts, err := getScriptMatchTests("*.goal")
-	if err != nil {
-		t.Fatalf("getScriptMatchTests: %v", err)
-	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("failed to get current working directory: %v", err)
 	}
-	for _, mt := range append(mts, smts...) {
+	for _, mt := range mts {
 		if mt.Fname == "errors.goal" {
 			continue
 		}
@@ -229,17 +225,9 @@ func TestEval(t *testing.T) {
 			defer httpmock.DeactivateAndReset()
 			registerHTTPMocks()
 
-			if mt.IsScript {
-				ariContextLeft.GoalContext.AssignGlobal("ARGS", goal.NewAS([]string{mt.Fname}))
-				err = os.Chdir(cwd + "/testing/scripts")
-				if err != nil {
-					t.Fatalf("failed to chdir to 'testing/scripts': %v", err)
-				}
-			} else {
-				err = os.Chdir(cwd + "/testing")
-				if err != nil {
-					t.Fatalf("failed to chdir to 'testing': %v", err)
-				}
+			err = os.Chdir(cwd + "/testing/via-go/")
+			if err != nil {
+				t.Fatalf("failed to chdir to 'testing/via-go': %v", err)
 			}
 			err = ariContextLeft.GoalContext.Compile(mt.Left, "", "")
 			ps := ariContextLeft.GoalContext.String()

@@ -4,4 +4,4 @@ set -e
 
 go test -v -failfast -race -coverpkg=./... -covermode=atomic -coverprofile=coverage.txt ./...
 go install ./cmd/ari
-ari -e 'tt.all 0;tt.report 0'
+./script/ari-test
