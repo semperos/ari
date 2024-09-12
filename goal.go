@@ -236,6 +236,20 @@ func VFGlob(_ *goal.Context, args []goal.V) goal.V {
 	return goal.NewAS(match)
 }
 
+// Implements abspath monad.
+func VFAbsPath(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	globPatternS, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("abspath s", "s", x)
+	}
+	path, err := filepath.Abs(string(globPatternS))
+	if err != nil {
+		return goal.NewPanicError(err)
+	}
+	return goal.NewS(path)
+}
+
 // Go <> Goal helpers
 
 func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
@@ -289,6 +303,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	gos.Import(goalContext, "")
 	// Ari
 	// Monads
+	goalContext.RegisterMonad("abspath", VFAbsPath)
 	goalContext.RegisterMonad("glob", VFGlob)
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
