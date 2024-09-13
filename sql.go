@@ -254,7 +254,7 @@ func sqlQMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Context) 
 	}
 	var err error
 	if sqlDatabase.DB == nil || !sqlDatabase.IsOpen {
-		fmt.Fprintf(os.Stdout, "Opening database %q\n", sqlDatabase.DataSource)
+		// fmt.Fprintf(os.Stdout, "Opening database %q\n", sqlDatabase.DataSource)
 		err = sqlDatabase.Open()
 		if err != nil {
 			return goal.NewPanicError(err)
@@ -307,7 +307,7 @@ func sqlExecMonadic(x goal.V, sqlDatabase *SQLDatabase, goalContext *goal.Contex
 	}
 	var err error
 	if sqlDatabase.DB == nil || !sqlDatabase.IsOpen {
-		fmt.Fprintf(os.Stdout, "Opening database %q\n", sqlDatabase.DataSource)
+		// fmt.Fprintf(os.Stdout, "Opening database %q\n", sqlDatabase.DataSource)
 		err = sqlDatabase.Open()
 		if err != nil {
 			return goal.NewPanicError(err)

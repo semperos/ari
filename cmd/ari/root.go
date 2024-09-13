@@ -49,9 +49,9 @@ const (
 const (
 	cliModeGoalPrompt             = "  "
 	cliModeGoalNextPrompt         = "  "
-	cliModeSQLReadOnlyPrompt      = "sql> "
+	cliModeSQLReadOnlyPrompt      = "sql) "
 	cliModeSQLReadOnlyNextPrompt  = "   > "
-	cliModeSQLReadWritePrompt     = "sql!> "
+	cliModeSQLReadWritePrompt     = "sql!) "
 	cliModeSQLReadWriteNextPrompt = "    > "
 )
 
@@ -81,6 +81,7 @@ func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
 
 func (cliSystem *CliSystem) switchModeToGoal() error {
 	cliSystem.cliMode = cliModeGoal
+	cliSystem.prompt = cliModeGoalPrompt
 	if !cliSystem.rawREPL {
 		cliSystem.cliEditor.Prompt = cliModeGoalPrompt
 		cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
@@ -114,6 +115,7 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly(args []string) error {
 		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
+	cliSystem.prompt = cliModeSQLReadOnlyPrompt
 	if !cliSystem.rawREPL {
 		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
 		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
@@ -141,6 +143,7 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite(args []string) error {
 		}
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
+	cliSystem.prompt = cliModeSQLReadWritePrompt
 	if !cliSystem.rawREPL {
 		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
 		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
@@ -243,6 +246,12 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	// MUST PRECEDE EXECUTE/REPL
 	goalFilesToLoad := viper.GetStringSlice("load")
 	for _, f := range goalFilesToLoad {
+		var path string
+		path, err = filepath.Abs(f)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "File to load %s is not recognized as a path on your system: %v", f, err)
+		}
+		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
 		_, err = runScript(&mainCliSystem, f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to load file %q with error: %v", f, err)
@@ -261,10 +270,17 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		return 1
 	}
+	//nolint:nestif // separate returns in each if
 	if programToExecute != "" {
-		goalV, errr := runCommand(&mainCliSystem, programToExecute)
-		if errr != nil {
-			fmt.Fprintf(os.Stderr, "Failed to execute program:\n%q\n    with error:\n%v\n", programToExecute, err)
+		var goalV goal.V
+		goalV, err = runCommand(&mainCliSystem, programToExecute)
+		if goalV.IsError() {
+			ee := newExitError(ariContext.GoalContext, goalV.Error())
+			formatREPLError(ee)
+			return ee.Code
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Program panicked with: %v\n  \n%q\n", err, programToExecute)
 			return 1
 		}
 		// Support -e/--execute along with a file argument.
@@ -284,8 +300,9 @@ func ariMain(cmd *cobra.Command, args []string) int {
 			fmt.Fprintf(os.Stderr, "File %q is not recognized as a path on your system: %v", f, err)
 		}
 		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
-		goalV, errr := runScript(&mainCliSystem, f)
-		if errr != nil {
+		var goalV goal.V
+		goalV, err = runScript(&mainCliSystem, f)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to run file %q with error: %v", f, err)
 			return 1
 		}
@@ -493,7 +510,7 @@ func (e *ExitError) Error() string {
 // newExitError produces an *ExitError from a Goal error value.
 //
 // Adapted from Goal's implementation.
-func newExitError(ctx *goal.Context, e *goal.Error) error {
+func newExitError(ctx *goal.Context, e *goal.Error) *ExitError {
 	ee := &ExitError{Msg: e.Msg(ctx)}
 	if d, ok := e.Value().BV().(*goal.D); ok {
 		if v, ok := d.Get(goal.NewS("code")); ok {
@@ -576,27 +593,34 @@ func detectAriPrint(goalContext *goal.Context) func(goal.V) {
 }
 
 func (cliSystem *CliSystem) replEvalSQLReadOnly(line string) {
-	_, err := cliSystem.sqlQuery(line, nil)
+	goalV, err := cliSystem.sqlQuery(line, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
-	} else {
+		return
+	}
+	if cliSystem.outputFormat == outputFormatGoal {
 		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.p;*#'sql.p;#sql.p;"%.1f"]`)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to print SQL query results via Goal evaluation: %v\n", err)
 		}
+		return
 	}
+	printInOutputFormat(cliSystem.ariContext.GoalContext, cliSystem.outputFormat, goalV)
 }
 
 func (cliSystem *CliSystem) replEvalSQLReadWrite(line string) {
-	_, err := cliSystem.sqlExec(line, nil)
+	goalV, err := cliSystem.sqlExec(line, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to run SQL query %q\nDatabase Error:%s\n", line, err)
-	} else {
+		return
+	}
+	if cliSystem.outputFormat == outputFormatGoal {
 		_, err := cliSystem.ariContext.GoalContext.Eval(`fmt.tbl[sql.p;*#'sql.p;#sql.p;"%.1f"]`)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to print SQL exec results via Goal evaluation: %v\n", err)
 		}
 	}
+	printInOutputFormat(cliSystem.ariContext.GoalContext, cliSystem.outputFormat, goalV)
 }
 
 func (cliSystem *CliSystem) replEvalSystemCommand(line string) error {

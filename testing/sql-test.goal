@@ -1,0 +1,36 @@
+f:(path.dir abspath FILE)+"/data/starwars.csv"
+stmt:qq`
+CREATE TABLE starwars
+  AS SELECT *
+       FROM read_csv(
+              '$f',
+              header = true,
+              nullstr = 'NA',
+              columns = {
+                  'name': 'VARCHAR',
+                  'height': 'INT',
+                  'mass': 'INT',
+                  'haircolor': 'VARCHAR',
+                  'skin_color': 'VARCHAR',
+                  'eye_color': 'VARCHAR',
+                  'birth_year': 'INT',
+                  'sex': 'VARCHAR',
+                  'gender': 'VARCHAR',
+                  'homeworld': 'VARCHAR',
+                  'species': 'VARCHAR',
+                  'films': 'VARCHAR',
+                  'vehicles': 'VARCHAR',
+                  'starships': 'VARCHAR'
+	      });
+`
+q:rq`
+  SELECT species, sex, avg(height) AS avgheight, avg(mass) AS avgmass
+    FROM starwars
+GROUP BY (species, sex)
+ORDER BY species;
+`
+sql.exec stmt
+t:sql.q q
+tt.t{41=#t"avgheight"}
+tt.t{173=_math.avg t"avgheight"}
+sql.exec "DROP TABLE starwars;" / idempotency

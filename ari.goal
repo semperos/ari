@@ -1,7 +1,9 @@
+/ Shape
 istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]} / is x a dictionary-as-table
 reshape:{((*/x)#y){(-y)$x}/|1_x} / Implementation by anaseto, shared on Matrix
 shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
 depths:{[ind;l]?[(@l)~"A";,/o[ind+1]'l; (@l)¿"NSI";(#l)#ind; ind-1]} / list depths
+/ Output formats
 md.tbl:{[t;fmt] / helper
   k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
   (k;v):(-w)!'´(k;v); "|"+("|\n|"/,/"|"/(k;"-"*w;+v))+"|"}
@@ -31,4 +33,43 @@ ltx.lst:{[l;fmt] / helper
 sprintf.ltx:{[x;fmt]?[istbl x;ltx.tbl[x;fmt]; (@x)¿"ANSI";ltx.lst[x;fmt]; "n"=@x;fmt$x; $x]} / LaTeX output
 csv.tbl:{(*'x)!(1_'x)} / table from csv parsing, assumes header
 json.tbl:{ks:!*x; vs:@[;ks]'x; ks!+vs} / table from parsing json array of like objects
+/ Test Framework
+tt.suite:"global"; tt.suitestate:..[es:();fs:();ps:();ss:()]; tt.state:..[global:tt.suitestate]
+tt.st:tt.state; tt.ffast:0; tt.clear:{tt.st::tt.state}
+tt.record:{[k;f;r] / key in test state; function tested; return value
+  suite:@[.;"FILE";:[;tt.suite]]
+  or[suite¿!tt.st;tt.st[suite]:tt.suitestate] / ensure starting suite state
+  ?["ps"~k;(m:"\n"/"    "+=r"msg"
+            d:..[f:p.f;p:p.r;msg:"function panicked with:\n$p.m"]
+            tt.st[suite]:@[tt.st[suite];"ps";..x,p.d])
+    "es"~k;(d:..[f:p.f;e:p.r;msg:"function returned error: $p.r\n    $p.f"]
+            tt.st[suite]:@[tt.st[suite];"es";..x,p.d])
+    "fs"~k;(d:..[f:p.f;r:p.r;msg:"function returned $p.r instead of 1\n    $p.f"]
+            tt.st[suite]:@[tt.st[suite];"fs";..x,p.d])
+    "ss"~k;(d:..[f:p.f]; tt.st[suite]:@[tt.st[suite];"ss";..x,p.d])
+    :error"tt.record k must be one of ps, es, fs, ss, but received $k"]}
+tt.tf:{[f]
+  r:rt.try[f;0;{pmsg:x"msg";f:y; error[..[f:p.f;msg:p.pmsg;pnc:1]]}[;f]]
+  ?["e"~@r;?[("d"=@.r)and(.r)..pnc;tt.record["ps";f;r];tt.record["es";f;r]]
+    1~r;tt.record["ss";f;r]
+    tt.record["fs";f;r]]
+  r}
+tt.t:{?[("f"~@x);:tt.tf@x;error"tt.t expects f, received %s: %v"$(@x;x)]}
+tt.fs:{sfx:"test.ari""test.goal"; pfx:"**/*""*"; fs:,/glob',/pfx+`sfx}
+tt.file:{orig:@[.;"FILE";0]; ::["FILE";x]; ?[tt.ffast; 'eval 'read x;eval 'read x]; ::["FILE";or[orig;tt.suite]]; x}
+tt.chkall:{
+  fs:tt.fs 0; rs:tt.file'fs; es:"e"=@'rs
+  ?[|/es
+    [errors:(..p.es)#rs; files:(..p.es)#fs; error[(,"msg")!,"\n"/(files+": ")+(..msg)'errors]]
+    rs]}
+tt.saymsg:{say "  "+x"msg"}
+tt.repsut:{[suite]
+  (ss;fs;es;ps):tt.st[suite][!"ss fs es ps"];(css;cfs;ces;cps):#'(ss;fs;es;ps)
+  bad:~+/(cfs;ces;cps); or[bad;say qq/Suite "$suite" has problems:/]
+  and[cfs;tt.saymsg'fs]; and[ces;tt.saymsg'es]; and[cps;tt.saymsg'ps]
+  s:qq/Suite "$suite" $css succeeded, $cfs failed, $ces errored, $cps panicked/
+  ?[and[tt.suite~suite;+/#'tt.st[tt.suite]];say s; ~tt.suite~suite;say s;0]}
+tt.report:{
+  tt.repsut'!tt.st; (tes;tfs;tps;tss):+/#''. .'tt.st; say "Total $tss succeeded, $tfs failed, $tes errored, $tps panicked"
+  and[|//@[;!"es fs ps"]'#''tt.st;error["Tests failed."]]}
 1
