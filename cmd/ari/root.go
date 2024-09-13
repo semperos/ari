@@ -254,7 +254,7 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
 		_, err = runScript(&mainCliSystem, f)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to load file %s with error: %v", f, err)
+			fmt.Fprintf(os.Stderr, "Failed to load file %q with error: %v", f, err)
 			return 1
 		}
 	}
