@@ -48,6 +48,23 @@ func VFTimeNow(_ *goal.Context, _ []goal.V) goal.V {
 	return goal.NewV(&tt)
 }
 
+// Implement time.utc function.
+func VFTimeUTC(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	tLocal, ok := x.BV().(*Time)
+	if !ok {
+		return panicType("time.utc time", "time", x)
+	}
+	switch len(args) {
+	case monadic:
+		t := tLocal.Time.UTC()
+		tt := Time{&t}
+		return goal.NewV(&tt)
+	default:
+		return goal.Panicf("time.utc : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
 // Implements time.parse function.
 func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
@@ -70,6 +87,27 @@ func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
 		return goal.NewV(&tt)
 	default:
 		return goal.Panicf("time.parse : too many arguments (%d), expects 2 arguments", len(args))
+	}
+}
+
+// Implements time.format function.
+func VFTimeFormat(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	t, ok := x.BV().(*Time)
+	if !ok {
+		return panicType("time time.format sformat", "time", x)
+	}
+	switch len(args) {
+	case dyadic:
+		y := args[0]
+		formatS, ok := y.BV().(goal.S)
+		if !ok {
+			return panicType("time time.format sformat", "sformat", y)
+		}
+		s := t.Time.Format(string(formatS))
+		return goal.NewS(s)
+	default:
+		return goal.Panicf("time.format : too many arguments (%d), expects 2 arguments", len(args))
 	}
 }
 

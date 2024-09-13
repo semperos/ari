@@ -308,6 +308,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.now", VFTimeNow)
+	goalContext.RegisterMonad("time.utc", VFTimeUTC)
 	// Dyads
 	goalContext.RegisterDyad("help", VFHelpFn(help))
 	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
@@ -321,6 +322,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
 	goalContext.RegisterDyad("time.add", VFTimeAdd)
+	goalContext.RegisterDyad("time.format", VFTimeFormat)
 	goalContext.RegisterDyad("time.parse", VFTimeParse)
 	goalContext.RegisterDyad("time.sub", VFTimeSub)
 	// Globals
