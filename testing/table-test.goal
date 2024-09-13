@@ -2,4 +2,14 @@ f:(path.dir abspath FILE)+"/data/starwars.csv"
 t:csv.tbl ","csv 'read f
 tt.t{87=#*t}; tt.t{14=#t}
 t:json.tbl@json rq/[{"a":1,"b":2},{"a":10,"b":20},{"a":100,"b":200}]/
+tt.t{t~..[a:(1 10 100);b:(2 20 200)]}
 tt.t{3=#*t}; tt.t{(1 10 100)~t"a"}
+/ BUG to be fixed
+t:json.tbl@json rq/[{"a":1,"b":2},{"a":10},{"a":100,"b":200}]/
+tt.t{t~..[a:(1.0 10.0 100.0);b:(2.0 0.0 200.0)]}
+t:json.tbl@json rq/[{"a":"one","b":2},{"b":20},{"a":"hundred","b":200}]/
+tt.t{t~..[a:("one" 0.0 "hundred");b:(2.0 20.0 200.0)]}
+t:json.tbl@json rq/[{"a":"one","b":"two"},{"b":"twenty"},{"a":"hundred","b":"two hundred"}]/
+tt.t{t~..[a:("one" "" "hundred");b:("two" "twenty" "two hundred")]}
+:t:json.tbl@json rq/[{"a":"one","b":"two","c":0},{"b":"twenty"},{"a":"hundred","b":"two hundred"}]/
+tt.t{t~..[a:("one" "" "hundred");b:("two" "twenty" "two hundred")]}
