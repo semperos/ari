@@ -19,8 +19,6 @@
   JSON payload is expected to be a JSON array of JSON objects with common keys.
 * `tui.style`, `tui.color`, and `tui.render` functions for creating colorized/stylized output at the terminal.
 
-* Planned: Simpler REPL for use with editor environments where auto-complete and line editing aren't necessary, based on Goal's REPL.
-
 # v0.1.0 2024-08-26
 
 * Initial release
