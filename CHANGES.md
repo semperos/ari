@@ -1,6 +1,6 @@
 # v "next"
 
-# v0.2.0 2024-09-12
+# v0.1.1 2024-09-13
 
 * Goal version from commit [fa948e4ad6cb7c9d5d8d1b0d6b95e5128d600087](https://codeberg.org/anaseto/goal/commit/fa948e4ad6cb7c9d5d8d1b0d6b95e5128d600087)
 * Test framework. See usage in the `testing/` folder and the test scripts in the `script/` folder.
