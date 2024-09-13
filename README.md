@@ -39,8 +39,11 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
 - New Goal functions:
   - `http.` functions for HTTP requests using [Resty]
   - `sql.` functions for SQL queries and commands
+  - `tt.` test framework
+  - `csv.tbl` and `json.tbl` to make Goal tables from the output of `csv` and `json` respectively
   - _(WIP)_ `time.` functions for more extensive date/time handling
   - `tui.` functions for basic terminal UI styling (colors, padding/margin, borders)
+  - `glob` and `abspath` wrapping Go's `path/filepath.Glob` and `path/filepath.Abs` functions respectively
 - Dedicated SQL mode
   - The ari CLI uses DuckDB, but the `github.com/semperos/ari` Go package doesn't directly depend on a specific SQL database driver, so you can BYODB.
   - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.
@@ -49,6 +52,8 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
   - Results of the last-run query/command set to the `sql.p` Goal global (for "SQL previous" and mirroring `ari.p`), so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
 
 ## To Do
+
+See [CHANGES.md](CHANGES.md) for recent changes.
 
 Non-exhaustive list:
 
