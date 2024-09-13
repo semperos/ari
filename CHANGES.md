@@ -1,5 +1,6 @@
 # v "next"
 
+- `pp.tbl` and `pp.dict` which invoke `fmt.tbl` and `fmt.dict` with default values (all rows/columns; `"%.2f"` float format)
 - `time.utc` to set location of a time value to UTC
 - `time.format` to format a time with a given format. Format constants from Go's `time` package are already defined.
 
