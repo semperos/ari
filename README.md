@@ -60,7 +60,8 @@ Non-exhaustive list:
 - TODO: Test coverage (Go reports 14% coverage, currently minimal Goal-level testing as well)
 - TODO: Make `json.tbl` also accept a dictionary of lists (current just accepts list of dictionaries)
 - TODO: BUG `json.tbl` produces improper zero values when keys are missing. Where possible, column lists should be of uniform type and not generic if the data allows for it.
-- TODO: Correct usage of `goal.NewError` vs. `goal.NewPanicError`
+- TODO: Make version of `fmt.tbl` that allows setting maximum column width.
+- TODO: Validate correct usage of `goal.NewError` vs. `goal.NewPanicError`
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
