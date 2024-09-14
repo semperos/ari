@@ -74,6 +74,8 @@ type scanState int
 
 const (
 	scanNormal scanState = iota
+	scanComment
+	scanCommentBlock
 	scanString
 	scanQuote
 	scanRawQuote
@@ -85,11 +87,14 @@ const delimchars = ":+-*%!&|=~,^#_?@/`"
 //
 // Adapated from Goal's implementation.
 //
-//nolint:cyclop,gocognit,funlen // Vendored code
+//nolint:cyclop,funlen,gocognit,gocyclo // Vendored code
 func (sc *scanner) readLine() (string, error) {
 	*sc = scanner{r: sc.r, depth: sc.depth[:0]}
 	sb := strings.Builder{}
 	var qr byte = '/'
+	nl := true       // at newline
+	cs := true       // at possible start of comment
+	cbdelim := false // after possible comment block start/end delimiter
 	for {
 		c, err := sc.r.ReadByte()
 		if err != nil {
@@ -108,10 +113,15 @@ func (sc *scanner) readLine() (string, error) {
 				if len(sc.depth) == 0 || sc.done {
 					return sb.String(), nil
 				}
+				cs = true
+			case ' ', '\t':
+				cs = true
 			case '"':
 				sc.state = scanString
+				cs = false
 			case '{', '(', '[':
 				sc.depth = append(sc.depth, c)
+				cs = true
 			case '}', ')', ']':
 				if len(sc.depth) > 0 && sc.depth[len(sc.depth)-1] == opening(c) {
 					sc.depth = sc.depth[:len(sc.depth)-1]
@@ -119,6 +129,7 @@ func (sc *scanner) readLine() (string, error) {
 					// error, so return on next \n
 					sc.done = true
 				}
+				cs = false
 			default:
 				if strings.IndexByte(delimchars, c) != -1 {
 					acc := sb.String()
@@ -132,8 +143,37 @@ func (sc *scanner) readLine() (string, error) {
 					case strings.HasSuffix(acc[:len(acc)-1], "qq"):
 						qr = c
 						sc.state = scanQuote
+					default:
+						if c == '/' && cs {
+							sc.state = scanComment
+							cbdelim = nl
+						}
 					}
 				}
+				cs = false
+			}
+		case scanComment:
+			if c == '\n' {
+				//nolint:gocritic // vendored code
+				if cbdelim {
+					sc.state = scanCommentBlock
+				} else if len(sc.depth) == 0 || sc.done {
+					return sb.String(), nil
+				} else {
+					cs = true
+					sc.state = scanNormal
+				}
+			}
+			cbdelim = false
+		case scanCommentBlock:
+			if cbdelim && c == '\n' {
+				if len(sc.depth) == 0 || sc.done {
+					return sb.String(), nil
+				}
+				cs = true
+				sc.state = scanNormal
+			} else {
+				cbdelim = nl && c == '\\'
 			}
 		case scanQuote:
 			switch c {
@@ -160,8 +200,8 @@ func (sc *scanner) readLine() (string, error) {
 				sc.escape = false
 			}
 		case scanRawQuote:
-			//nolint:nestif // Vendored code
 			if c == qr {
+				//nolint:govet // vendored code
 				c, err := sc.r.ReadByte()
 				if err != nil {
 					return sb.String(), err
@@ -169,14 +209,13 @@ func (sc *scanner) readLine() (string, error) {
 				if c == qr {
 					sb.WriteByte(c)
 				} else {
-					err := sc.r.UnreadByte()
-					if err != nil {
-						return sb.String(), err
-					}
+					//nolint:errcheck // Goal impl says cannot error
+					sc.r.UnreadByte() // cannot error
 					sc.state = scanNormal
 				}
 			}
 		}
+		nl = c == '\n'
 	}
 }
 
