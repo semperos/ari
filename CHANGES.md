@@ -3,6 +3,7 @@
 - `pp.tbl` and `pp.dict` which invoke `fmt.tbl` and `fmt.dict` with default values (all rows/columns; `"%.2f"` float format)
 - `time.utc` to set location of a time value to UTC
 - `time.format` to format a time with a given format. Format constants from Go's `time` package are already defined.
+- Bug Fix: Raw REPL would not properly ignore comment content. Fix ported from anaseto's fix in the Goal repo [here](https://codeberg.org/anaseto/goal/commit/ec3e8a97179fd6ff8bfe035504cf0a9b506312c).
 
 # v0.1.1 2024-09-13
 
