@@ -1,3 +1,10 @@
 tt.t{"Mon Jan _2 15:04:05 MST 2006"~time.UnixDate}; ft:time.RFC3339
 t1:time.parse[ft;"2019-12-31T23:59:59Z"];t2:time.parse[ft;"2020-01-01T00:00:00Z"]
 tt.t{1000000000~time.sub[t2;t1]}
+tt.t{1577836799~time.unix t1}
+tt.t{-43201~time.unix time.parse[ft;"1969-12-31T11:59:59Z"]}
+tt.t{0~time.unix time.parse[ft;"1970-01-01T00:00:00Z"]}
+tt.t{1~time.unix time.parse[ft;"1970-01-01T00:00:01Z"]}
+tt.t{1e3~time.unixmilli time.parse[ft;"1970-01-01T00:00:01Z"]}
+tt.t{1e6~time.unixmicro time.parse[ft;"1970-01-01T00:00:01Z"]}
+tt.t{1e9~time.unixnano time.parse[ft;"1970-01-01T00:00:01Z"]}
