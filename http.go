@@ -478,7 +478,7 @@ func goalDictFromResponse(resp *resty.Response) goal.V {
 	} else {
 		isOk = goal.NewI(0)
 	}
-	ks := goal.NewAS([]string{"status", "headers", "string", "ok"})
+	ks := goal.NewAS([]string{"status", "headers", "bodystring", "ok"})
 	vs := goal.NewAV([]goal.V{statusS, headerD, bodyS, isOk})
 	return goal.NewD(ks, vs)
 }
