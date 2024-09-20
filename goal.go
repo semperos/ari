@@ -323,6 +323,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterDyad("http.patch", VFHTTPMaker(ariContext, "PATCH"))
 	goalContext.RegisterDyad("http.post", VFHTTPMaker(ariContext, "POST"))
 	goalContext.RegisterDyad("http.put", VFHTTPMaker(ariContext, "PUT"))
+	goalContext.RegisterDyad("http.serve", VFServe)
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
 	goalContext.RegisterDyad("time.add", VFTimeAdd)

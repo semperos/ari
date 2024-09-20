@@ -2,6 +2,7 @@ package ari
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -700,4 +701,158 @@ func processQueryParam(goalD *goal.D, goalFnName string) (url.Values, error) {
 			qpks)
 	}
 	return urlValues, nil
+}
+
+const (
+	defaultReadTimeout  = 30 * time.Second
+	defaultWriteTimeout = 30 * time.Second
+)
+
+// Implements http.serve dyad.
+func VFServe(goalContext *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	hostAndPort, ok := x.BV().(goal.S)
+	if !ok {
+		return panicType("hostAndPort http.serve handlerFn", "hostAndPort", x)
+	}
+	y := args[0]
+	if y.IsCallable() {
+		// TODO Extend to accept an HTTPServer argument via an http.server function, a goal.V wrapping http.Server
+		srv := &http.Server{
+			ReadTimeout:  defaultReadTimeout,
+			WriteTimeout: defaultWriteTimeout,
+		}
+		srv.Addr = string(hostAndPort)
+		srv.Handler = http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			requestD := serverRequestAsDictionary(goalContext, req)
+			serverHandleRequest(goalContext, y, requestD, w)
+		})
+		err := srv.ListenAndServe()
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+	} else {
+		return panicType("hostAndPort http.serve handlerFn", "handlerFn", y)
+	}
+	return goal.NewI(1)
+}
+
+func serverRequestAsDictionary(_ *goal.Context, req *http.Request) goal.V {
+	requestHeader := req.Header
+	headerKeys := make([]string, 0, len(requestHeader))
+	headerValues := make([]goal.V, 0, len(requestHeader))
+	for k := range requestHeader {
+		headerKeys = append(headerKeys, k)
+		headerValues = append(headerValues, goal.NewAS(requestHeader.Values(k)))
+	}
+	headerKs := goal.NewAS(headerKeys)
+	headerVs := goal.NewAV(headerValues)
+	headerD := goal.NewD(headerKs, headerVs)
+
+	bodyString := ""
+	if req.Body != nil {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return goal.NewPanicError(err)
+		}
+		bodyString = string(body)
+	}
+
+	method := req.Method
+	protocol := req.Proto
+	url := req.URL
+	host := req.Host
+	port := url.Port()
+	scheme := url.Scheme
+	path := url.Path
+	query := url.Query()
+	fragment := url.Fragment
+
+	queryKeys := make([]string, 0, len(query))
+	queryValues := make([]goal.V, 0, len(query))
+	for k := range query {
+		queryKeys = append(queryKeys, k)
+		queryValues = append(queryValues, goal.NewAS(query[k]))
+	}
+	queryKs := goal.NewAS(queryKeys)
+	queryVs := goal.NewAV(queryValues)
+	queryD := goal.NewD(queryKs, queryVs)
+
+	ks := goal.NewArray([]goal.V{
+		goal.NewS("headers"),
+		goal.NewS("bodystring"),
+		goal.NewS("method"),
+		goal.NewS("protocol"),
+		goal.NewS("host"),
+		goal.NewS("port"),
+		goal.NewS("scheme"),
+		goal.NewS("path"),
+		goal.NewS("query"),
+		goal.NewS("fragment"),
+	})
+	vs := goal.NewArray([]goal.V{
+		headerD,
+		goal.NewS(bodyString),
+		goal.NewS(method),
+		goal.NewS(protocol),
+		goal.NewS(host),
+		goal.NewS(port),
+		goal.NewS(scheme),
+		goal.NewS(path),
+		queryD,
+		goal.NewS(fragment),
+	})
+	return goal.NewDict(ks, vs)
+}
+
+//nolint:gocognit // Type checking adds layers.
+func serverHandleRequest(goalContext *goal.Context, goalHandler goal.V, requestD goal.V, w http.ResponseWriter) {
+	responseD := goalHandler.ApplyAt(goalContext, requestD)
+	d, ok := responseD.BV().(*goal.D)
+	if !ok {
+		//nolint:lll // Error message is long.
+		http.Error(w, fmt.Sprintf("Server Goal handler function must return a dictionary, but received a %q: %v", d.Type(), d), http.StatusInternalServerError)
+		return
+	}
+	karr := d.KeyArray()
+	varr := d.ValueArray()
+	switch ks := karr.(type) {
+	case *goal.AS:
+		badKeySet := make(map[string]bool)
+		for idx, k := range ks.Slice {
+			switch k {
+			case "status":
+				v := varr.At(idx)
+				if v.IsI() {
+					w.WriteHeader(int(v.I()))
+				} else {
+					//nolint:lll // Error message is long.
+					http.Error(w, fmt.Sprintf(`Server Goal handler function's "status" key must have an int value, received a %q: %v`, v.Type(), v), http.StatusInternalServerError)
+				}
+			case "headers":
+				continue
+			case "bodystring":
+				v := varr.At(idx)
+				s, ok := v.BV().(goal.S)
+				if !ok {
+					//nolint:lll // Error message is long.
+					http.Error(w, fmt.Sprintf(`Server Goal handler function's "bodystring" key must have a string value, received a %q: %v`, v.Type(), v), http.StatusInternalServerError)
+				}
+				_, err := w.Write([]byte(s))
+				if err != nil {
+					//nolint:lll // Error message is long.
+					http.Error(w, fmt.Sprintf(`Failed to write response body for request %v`, requestD), http.StatusInternalServerError)
+				}
+			default:
+				badKeySet[k] = true
+			}
+		}
+		if len(badKeySet) > 0 {
+			//nolint:lll // Error message is long.
+			http.Error(w, fmt.Sprintf(`Legal keys in return value of Goal handler function are "status", "headers", and "bodystring", but received: %v`, badKeySet), http.StatusInternalServerError)
+		}
+	default:
+		//nolint:lll // Error message is long.
+		http.Error(w, fmt.Sprintf(`Sever Goal handler function's return value must be a dictionary with string keys, but keys were of type %q: %v`, ks.Type(), ks), http.StatusInternalServerError)
+	}
 }
