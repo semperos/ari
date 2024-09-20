@@ -308,6 +308,10 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.now", VFTimeNow)
+	goalContext.RegisterMonad("time.unix", VFTimeUnix)
+	goalContext.RegisterMonad("time.unixmicro", VFTimeUnixMicro)
+	goalContext.RegisterMonad("time.unixmilli", VFTimeUnixMilli)
+	goalContext.RegisterMonad("time.unixnano", VFTimeUnixNano)
 	goalContext.RegisterMonad("time.utc", VFTimeUTC)
 	// Dyads
 	goalContext.RegisterDyad("help", VFHelpFn(help))

@@ -41,14 +41,78 @@ func (time *Time) Type() string {
 	return "ari.Time"
 }
 
-// Implement time.now function.
+// Implements time.now function.
 func VFTimeNow(_ *goal.Context, _ []goal.V) goal.V {
 	now := time.Now()
 	tt := Time{&now}
 	return goal.NewV(&tt)
 }
 
-// Implement time.utc function.
+// Implements time.unix function.
+func VFTimeUnix(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	tLocal, ok := x.BV().(*Time)
+	if !ok {
+		return panicType("time.unix time", "time", x)
+	}
+	switch len(args) {
+	case monadic:
+		ts := tLocal.Time.Unix()
+		return goal.NewI(ts)
+	default:
+		return goal.Panicf("time.unix : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.unixmilli function.
+func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	tLocal, ok := x.BV().(*Time)
+	if !ok {
+		return panicType("time.unixmilli time", "time", x)
+	}
+	switch len(args) {
+	case monadic:
+		ts := tLocal.Time.UnixMilli()
+		return goal.NewI(ts)
+	default:
+		return goal.Panicf("time.unixmilli : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.unixmicro function.
+func VFTimeUnixMicro(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	tLocal, ok := x.BV().(*Time)
+	if !ok {
+		return panicType("time.unixmicro time", "time", x)
+	}
+	switch len(args) {
+	case monadic:
+		ts := tLocal.Time.UnixMicro()
+		return goal.NewI(ts)
+	default:
+		return goal.Panicf("time.unixmicro : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.unixnano function.
+func VFTimeUnixNano(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	tLocal, ok := x.BV().(*Time)
+	if !ok {
+		return panicType("time.unixnano time", "time", x)
+	}
+	switch len(args) {
+	case monadic:
+		ts := tLocal.Time.UnixNano()
+		return goal.NewI(ts)
+	default:
+		return goal.Panicf("time.unixnano : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.utc function.
 func VFTimeUTC(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	tLocal, ok := x.BV().(*Time)
