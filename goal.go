@@ -313,6 +313,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterMonad("time.unixmilli", VFTimeUnixMilli)
 	goalContext.RegisterMonad("time.unixnano", VFTimeUnixNano)
 	goalContext.RegisterMonad("time.utc", VFTimeUTC)
+	goalContext.RegisterMonad("url.encode", VFUrlEncode)
 	// Dyads
 	goalContext.RegisterDyad("help", VFHelpFn(help))
 	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
