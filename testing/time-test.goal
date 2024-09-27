@@ -1,10 +1,30 @@
 tt.t{"Mon Jan _2 15:04:05 MST 2006"~time.UnixDate}; ft:time.RFC3339
-t1:time.parse[ft;"2019-12-31T23:59:59Z"];t2:time.parse[ft;"2020-01-01T00:00:00Z"]
-tt.t{1000000000~time.sub[t2;t1]}
-tt.t{1577836799~time.unix t1}
+t1:time.parse[ft;"2019-12-31T23:59:58.123456789Z"];t2:time.parse[ft;"2020-01-01T00:00:00Z"]
+tt.t{2=time.weekday t1} / Tuesday
+tt.t{3=time.weekday t2} / Wednesday
+tt.t{365=time.yearday t1}
+tt.t{1=time.yearday t2}
+tt.t{2019=time.year t1}
+tt.t{12=time.month t1}
+tt.t{31=time.day t1}
+tt.t{23=time.hour t1}
+tt.t{59=time.minute t1}
+tt.t{58=time.second t1}
+tt.t{123=time.millisecond t1}
+tt.t{123456=time.microsecond t1}
+tt.t{123456789=time.nanosecond t1}
+tt.t{1876543211~time.sub[t2;t1]}
+tt.t{1577836798~time.unix t1}
+tt.t{1577836798123~time.unixmilli t1}
+tt.t{1577836798123456~time.unixmicro t1}
+tt.t{1577836798123456789~time.unixnano t1}
 tt.t{-43201~time.unix time.parse[ft;"1969-12-31T11:59:59Z"]}
 tt.t{0~time.unix time.parse[ft;"1970-01-01T00:00:00Z"]}
 tt.t{1~time.unix time.parse[ft;"1970-01-01T00:00:01Z"]}
 tt.t{1e3~time.unixmilli time.parse[ft;"1970-01-01T00:00:01Z"]}
 tt.t{1e6~time.unixmicro time.parse[ft;"1970-01-01T00:00:01Z"]}
 tt.t{1e9~time.unixnano time.parse[ft;"1970-01-01T00:00:01Z"]}
+tt.t{0=time.zoneoffset t1}
+tt.t{"UTC"~time.zonename t1}
+tt.t{-18000=time.zoneoffset time.parse[ft;"2020-01-01T00:00:00-05:00"]}
+tt.t{"EST"~time.zonename time.parse[ft;"2020-01-01T00:00:00-05:00"]}

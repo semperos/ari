@@ -82,6 +82,216 @@ func VFTimeUnix(_ *goal.Context, args []goal.V) goal.V {
 	}
 }
 
+// Implements time.year function.
+func VFTimeYear(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.year time", "time", x)
+		}
+		year := tLocal.Time.Year()
+		return goal.NewI(int64(year))
+	default:
+		return goal.Panicf("time.year : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.yearday function.
+func VFTimeYearDay(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.yearday time", "time", x)
+		}
+		yearday := tLocal.Time.YearDay()
+		return goal.NewI(int64(yearday))
+	default:
+		return goal.Panicf("time.yearday : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.month function (January = 1).
+func VFTimeMonth(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.month time", "time", x)
+		}
+		month := tLocal.Time.Month()
+		return goal.NewI(int64(month))
+	default:
+		return goal.Panicf("time.month : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// CONSIDER: ISOWeek which is a tuple of year, week
+
+// Implements time.day function, for day of month.
+func VFTimeDay(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.day time", "time", x)
+		}
+		day := tLocal.Time.Day()
+		return goal.NewI(int64(day))
+	default:
+		return goal.Panicf("time.day : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.weekday function, for day of week (Sunday = 0).
+func VFTimeWeekDay(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.weekday time", "time", x)
+		}
+		weekday := tLocal.Time.Weekday()
+		return goal.NewI(int64(weekday))
+	default:
+		return goal.Panicf("time.weekday : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.hour function.
+func VFTimeHour(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.hour time", "time", x)
+		}
+		hour := tLocal.Time.Hour()
+		return goal.NewI(int64(hour))
+	default:
+		return goal.Panicf("time.hour : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.minute function.
+func VFTimeMinute(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.minute time", "time", x)
+		}
+		minute := tLocal.Time.Minute()
+		return goal.NewI(int64(minute))
+	default:
+		return goal.Panicf("time.minute : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.second function.
+func VFTimeSecond(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.second time", "time", x)
+		}
+		second := tLocal.Time.Second()
+		return goal.NewI(int64(second))
+	default:
+		return goal.Panicf("time.second : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.millisecond function.
+func VFTimeMillisecond(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.millisecond time", "time", x)
+		}
+		millisecond := tLocal.Time.Nanosecond() / int(time.Millisecond)
+		return goal.NewI(int64(millisecond))
+	default:
+		return goal.Panicf("time.millisecond : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.microsecond function.
+func VFTimeMicrosecond(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.microsecond time", "time", x)
+		}
+		microsecond := tLocal.Time.Nanosecond() / int(time.Microsecond)
+		return goal.NewI(int64(microsecond))
+	default:
+		return goal.Panicf("time.microsecond : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.nanosecond function.
+func VFTimeNanosecond(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.nanosecond time", "time", x)
+		}
+		nanosecond := tLocal.Time.Nanosecond()
+		return goal.NewI(int64(nanosecond))
+	default:
+		return goal.Panicf("time.nanosecond : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.zonename function.
+func VFTimeZoneName(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.zonename time", "time", x)
+		}
+		name, _ := tLocal.Time.Zone()
+		return goal.NewS(name)
+	default:
+		return goal.Panicf("time.zonename : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.zoneoffset function.
+func VFTimeZoneOffset(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.zoneoffset time", "time", x)
+		}
+		_, offset := tLocal.Time.Zone()
+		return goal.NewI(int64(offset))
+	default:
+		return goal.Panicf("time.zoneoffset : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
 // Implements time.unixmilli function.
 func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
