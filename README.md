@@ -58,8 +58,8 @@ See [CHANGES.md](CHANGES.md) for recent changes.
 Non-exhaustive list:
 
 - TODO: Test coverage (Go reports 14% coverage, currently minimal Goal-level testing as well)
+- TODO: Calculate help just in time; leverage Goal's new `HelpFunc`
 - TODO: BUG When using `-l` flag, loaded files aren't completely evaluated. Evaluation stops partway through and it's not immediately clear why.
-- TODO: Make `json.tbl` also accept a dictionary of lists (current just accepts list of dictionaries)
 - TODO: BUG `json.tbl` produces improper zero values when keys are missing. Where possible, column lists should be of uniform type and not generic if the data allows for it.
 - TODO: Make version of `fmt.tbl` that allows setting maximum column width.
 - TODO: Validate correct usage of `goal.NewError` vs. `goal.NewPanicError`
