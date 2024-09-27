@@ -51,28 +51,51 @@ func VFTimeNow(_ *goal.Context, _ []goal.V) goal.V {
 // Implements time.unix function.
 func VFTimeUnix(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
-	tLocal, ok := x.BV().(*Time)
-	if !ok {
-		return panicType("time.unix time", "time", x)
-	}
 	switch len(args) {
 	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			if x.IsI() {
+				t := time.Unix(x.I(), 0)
+				tt := Time{&t}
+				return goal.NewV(&tt)
+			}
+			return panicType("time.unix time-or-i", "time-or-i", x)
+		}
 		ts := tLocal.Time.Unix()
 		return goal.NewI(ts)
+	case dyadic:
+		if x.IsI() {
+			y := args[0]
+			if y.IsI() {
+				sec := x.I()
+				nsec := y.I()
+				t := time.Unix(sec, nsec)
+				tt := Time{&t}
+				return goal.NewV(&tt)
+			}
+			return panicType("isec time.unix insec", "insec", y)
+		}
+		return panicType("isec time.unix insec", "isec", x)
 	default:
-		return goal.Panicf("time.unix : too many arguments (%d), expects 1 argument", len(args))
+		return goal.Panicf("time.unix : too many arguments (%d), expects 1 or 2 arguments", len(args))
 	}
 }
 
 // Implements time.unixmilli function.
 func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
-	tLocal, ok := x.BV().(*Time)
-	if !ok {
-		return panicType("time.unixmilli time", "time", x)
-	}
 	switch len(args) {
 	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			if x.IsI() {
+				t := time.UnixMilli(x.I())
+				tt := Time{&t}
+				return goal.NewV(&tt)
+			}
+			return panicType("time.unixmilli time-or-i", "time-or-i", x)
+		}
 		ts := tLocal.Time.UnixMilli()
 		return goal.NewI(ts)
 	default:
@@ -83,12 +106,17 @@ func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 // Implements time.unixmicro function.
 func VFTimeUnixMicro(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
-	tLocal, ok := x.BV().(*Time)
-	if !ok {
-		return panicType("time.unixmicro time", "time", x)
-	}
 	switch len(args) {
 	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			if x.IsI() {
+				t := time.UnixMicro(x.I())
+				tt := Time{&t}
+				return goal.NewV(&tt)
+			}
+			return panicType("time.unixmicro time-or-i", "time-or-i", x)
+		}
 		ts := tLocal.Time.UnixMicro()
 		return goal.NewI(ts)
 	default:
