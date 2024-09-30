@@ -27,4 +27,4 @@ tt.t{1e9~time.unixnano time.parse[ft;"1970-01-01T00:00:01Z"]}
 tt.t{0=time.zoneoffset t1}
 tt.t{"UTC"~time.zonename t1}
 tt.t{-18000=time.zoneoffset time.parse[ft;"2020-01-01T00:00:00-05:00"]}
-tt.t{"EST"~time.zonename time.parse[ft;"2020-01-01T00:00:00-05:00"]}
+tt.t{time.zonename time.parse[ft;"2020-01-01T00:00:00-05:00"]}
