@@ -10,7 +10,7 @@ require (
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
-	github.com/marcboeker/go-duckdb v1.8.0
+	github.com/marcboeker/go-duckdb v1.8.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
 )
