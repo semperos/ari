@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -236,34 +235,6 @@ func helpTriadic(help Help, x goal.V, args []goal.V) goal.V {
 	return goal.NewI(1)
 }
 
-// Implements glob monad.
-func VFGlob(_ *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
-	globPatternS, ok := x.BV().(goal.S)
-	if !ok {
-		return panicType("glob s", "s", x)
-	}
-	match, err := filepath.Glob(string(globPatternS))
-	if err != nil {
-		return goal.NewPanicError(err)
-	}
-	return goal.NewAS(match)
-}
-
-// Implements abspath monad.
-func VFAbsPath(_ *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
-	globPatternS, ok := x.BV().(goal.S)
-	if !ok {
-		return panicType("abspath s", "s", x)
-	}
-	path, err := filepath.Abs(string(globPatternS))
-	if err != nil {
-		return goal.NewPanicError(err)
-	}
-	return goal.NewS(path)
-}
-
 // Go <> Goal helpers
 
 func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
@@ -315,11 +286,11 @@ func goalNewDictEmpty() *goal.D {
 func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
 	// From Goal itself, os lib imported without prefix
 	gos.Import(goalContext, "")
+	// Goal's help, exposed via HelpFunc.
+	// Vendored in this repository to support future use-case of using glob/regex matching of help content.
+	goalContext.RegisterMonad("help", VFHelpMonad(help))
 	// Ari
 	// Monads
-	goalContext.RegisterMonad("abspath", VFAbsPath)
-	goalContext.RegisterMonad("glob", VFGlob)
-	goalContext.RegisterMonad("help", VFHelpMonad(help))
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.day", VFTimeDay)
