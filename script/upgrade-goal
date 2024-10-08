@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+REPO="$(dirname $0)/.."
+GOAL="$REPO/../goal"
+git -C "$GOAL" pull --rebase --prune
+GOALSHA="$(git -C $GOAL rev-parse HEAD)"
+
+go get "codeberg.org/anaseto/goal@$GOALSHA"
+go mod tidy
+
+./script/vendor-help
