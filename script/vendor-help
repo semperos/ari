@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+REPO="$(dirname $0)/.."
+GOAL="$REPO/../goal"
+GOALSHA="$(git -C $GOAL rev-parse HEAD)"
+
+mkdir -p "$REPO/vendored"
+cp -R "$GOAL/help" "$REPO/vendored/"
+printf "# Vendored Go Code from Goal Project\n\nPulled from Goal at Git commit: \`$GOALSHA\`\n" > "$REPO/vendored/README.md"

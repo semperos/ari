@@ -100,6 +100,20 @@ func printV(ctx *goal.Context, x goal.V) error {
 	}
 }
 
+// Implements Goal's help monad.
+func VFHelpMonad(help Help) func(_ *goal.Context, args []goal.V) goal.V {
+	return func(_ *goal.Context, args []goal.V) goal.V {
+		if len(args) >= 1 {
+			arg, ok := args[0].BV().(goal.S)
+			if !ok {
+				return goal.Panicf("help x : x not a string (%s)", args[0].Type())
+			}
+			fmt.Fprintln(os.Stdout, strings.TrimSpace(help.Func(string(arg))))
+		}
+		return goal.NewI(1)
+	}
+}
+
 // Implements help dyad.
 func VFHelpFn(help Help) func(goalContext *goal.Context, args []goal.V) goal.V {
 	return func(goalContext *goal.Context, args []goal.V) goal.V {
@@ -140,7 +154,7 @@ func helpMonadic(goalContext *goal.Context, help Help, x goal.V) goal.V {
 }
 
 func helpPrintExactMatch(help Help, helpKeyword goal.S, goalContext *goal.Context) goal.V {
-	goalHelp := help["goal"]
+	goalHelp := help.Dictionary["goal"]
 	if helpString, ok := goalHelp[string(helpKeyword)]; ok {
 		err := printV(goalContext, goal.NewS(helpString))
 		if err != nil {
@@ -158,9 +172,9 @@ func helpPrintExactMatch(help Help, helpKeyword goal.S, goalContext *goal.Contex
 }
 
 func helpReturnAsDict(help Help) goal.V {
-	categories := make([]string, 0, len(help))
+	categories := make([]string, 0, len(help.Dictionary))
 	categoryDicts := make([]goal.V, 0)
-	for category, v := range help {
+	for category, v := range help.Dictionary {
 		categories = append(categories, category)
 		categoryDicts = append(categoryDicts, stringMapToGoalDict(v))
 	}
@@ -168,7 +182,7 @@ func helpReturnAsDict(help Help) goal.V {
 }
 
 func helpPrintRegexMatches(help Help, r *regexp.Regexp) bool {
-	goalHelp := help["goal"]
+	goalHelp := help.Dictionary["goal"]
 	anyMatches := false
 	for k, v := range goalHelp {
 		// Skip roll-up help topics that have a ":" in them,
@@ -193,7 +207,7 @@ func helpDyadic(help Help, x goal.V, args []goal.V) goal.V {
 	if !ok {
 		return panicType("s1 help s2", "s2", y)
 	}
-	goalHelp := help["goal"]
+	goalHelp := help.Dictionary["goal"]
 	goalHelp[string(helpKeyword)] = string(helpString)
 	return goal.NewI(1)
 }
@@ -213,9 +227,9 @@ func helpTriadic(help Help, x goal.V, args []goal.V) goal.V {
 	if !ok {
 		return panicType("help[category;keyword;helpstring]", "helpstring", z)
 	}
-	categoryHelp, ok := help["goal"]
+	categoryHelp, ok := help.Dictionary["goal"]
 	if !ok {
-		help[string(helpCategory)] = map[string]string{string(helpKeyword): string(helpString)}
+		help.Dictionary[string(helpCategory)] = map[string]string{string(helpKeyword): string(helpString)}
 	} else {
 		categoryHelp[string(helpKeyword)] = string(helpString)
 	}
@@ -305,6 +319,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	// Monads
 	goalContext.RegisterMonad("abspath", VFAbsPath)
 	goalContext.RegisterMonad("glob", VFGlob)
+	goalContext.RegisterMonad("help", VFHelpMonad(help))
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.day", VFTimeDay)
@@ -328,7 +343,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterMonad("time.zoneoffset", VFTimeZoneOffset)
 	goalContext.RegisterMonad("url.encode", VFUrlEncode)
 	// Dyads
-	goalContext.RegisterDyad("help", VFHelpFn(help))
+	// goalContext.RegisterDyad("help", VFHelpFn(help))
 	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
 	goalContext.RegisterDyad("http.delete", VFHTTPMaker(ariContext, "DELETE"))
 	goalContext.RegisterDyad("http.get", VFHTTPMaker(ariContext, "GET"))

@@ -360,7 +360,7 @@ func autoCompleteGoalGlobals(autoCompleter *AutoCompleter, lword string, perCate
 	// Globals cannot be cached; this is what assignment in Goal creates.
 	goalGlobals := goalContext.GlobalNames(nil)
 	sort.Strings(goalGlobals)
-	goalHelp := autoCompleter.ariContext.Help["goal"]
+	goalHelp := autoCompleter.ariContext.Help.Dictionary["goal"]
 	category := "Global"
 	for _, goalGlobal := range goalGlobals {
 		if strings.HasPrefix(strings.ToLower(goalGlobal), lword) {

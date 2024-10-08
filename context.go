@@ -4,9 +4,13 @@ import (
 	"os"
 
 	"codeberg.org/anaseto/goal"
+	"github.com/semperos/ari/vendored/help"
 )
 
-type Help map[string]map[string]string
+type Help struct {
+	Dictionary map[string]map[string]string
+	Func       func(string) string
+}
 
 type Context struct {
 	// GoalContext is needed to evaluate Goal programs and introspect the Goal execution environment.
@@ -71,7 +75,8 @@ func NewHelp() map[string]map[string]string {
 // Initialize a new Context without connecting to the database.
 func NewContext(dataSourceName string) (*Context, error) {
 	ctx := Context{}
-	help := NewHelp()
+	helpDictionary := NewHelp()
+	help := Help{Dictionary: helpDictionary, Func: help.HelpFunc()}
 	sqlDatabase, err := NewSQLDatabase(dataSourceName)
 	if err != nil {
 		return nil, err

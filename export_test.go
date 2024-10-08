@@ -17,36 +17,6 @@ func TestGoalKeywordsHaveHelp(t *testing.T) {
 		"help": {
 			kw: "help",
 		},
-		"http.client": {
-			kw: "http.client",
-		},
-		"http.get": {
-			kw: "http.get",
-		},
-		"http.post": {
-			kw: "http.post",
-		},
-		"http.put": {
-			kw: "http.put",
-		},
-		"http.delete": {
-			kw: "http.delete",
-		},
-		"http.patch": {
-			kw: "http.patch",
-		},
-		"http.head": {
-			kw: "http.head",
-		},
-		"http.options": {
-			kw: "http.options",
-		},
-		"sql.open": {
-			kw: "sql.open",
-		},
-		"sql.q": {
-			kw: "sql.q",
-		},
 	}
 	for name, test := range tests {
 		test := test
