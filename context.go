@@ -76,6 +76,7 @@ func NewHelp() map[string]map[string]string {
 func NewContext(dataSourceName string) (*Context, error) {
 	ctx := Context{}
 	helpDictionary := NewHelp()
+	// TODO HERE IS WHERE WE Wrap() a function that closes over helpDictionary to provide lookups for user-added help strings
 	help := Help{Dictionary: helpDictionary, Func: help.HelpFunc()}
 	sqlDatabase, err := NewSQLDatabase(dataSourceName)
 	if err != nil {

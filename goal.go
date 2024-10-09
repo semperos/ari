@@ -172,9 +172,6 @@ func goalNewDictEmpty() *goal.D {
 func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
 	// From Goal itself, os lib imported without prefix
 	gos.Import(goalContext, "")
-	// Goal's help, exposed via HelpFunc.
-	// Vendored in this repository to support future use-case of using glob/regex matching of help content.
-	goalContext.RegisterMonad("help", VFGoalHelp(help))
 	// Ari
 	// Monads
 	goalContext.RegisterMonad("rtnames", VFRTNames)
@@ -201,6 +198,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterMonad("time.zoneoffset", VFTimeZoneOffset)
 	goalContext.RegisterMonad("url.encode", VFUrlEncode)
 	// Dyads
+	goalContext.RegisterDyad("help", VFGoalHelp(help))
 	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
 	goalContext.RegisterDyad("http.delete", VFHTTPMaker(ariContext, "DELETE"))
 	goalContext.RegisterDyad("http.get", VFHTTPMaker(ariContext, "GET"))
