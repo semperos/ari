@@ -1,7 +1,6 @@
 package ari
 
 import (
-	"bufio"
 	_ "embed"
 	"fmt"
 	"os"
@@ -70,34 +69,6 @@ var goalSourceAri string
 
 // Goal functions implemented in Go
 
-// printV adapted from Goal's implementation found in the os.go file.
-func printV(ctx *goal.Context, x goal.V) error {
-	switch xv := x.BV().(type) {
-	case goal.S:
-		_, err := fmt.Fprint(os.Stdout, string(xv))
-		return err
-	case *goal.AS:
-		buf := bufio.NewWriter(os.Stdout)
-		imax := xv.Len() - 1
-		for i, s := range xv.Slice {
-			_, err := buf.WriteString(s)
-			if err != nil {
-				return err
-			}
-			if i < imax {
-				err := buf.WriteByte(' ')
-				if err != nil {
-					return err
-				}
-			}
-		}
-		return buf.Flush()
-	default:
-		_, err := fmt.Fprintf(os.Stdout, "%s", x.Append(ctx, nil, false))
-		return err
-	}
-}
-
 // Implements Goal's help monad + Ari's help dyad.
 func VFGoalHelp(help Help) func(_ *goal.Context, args []goal.V) goal.V {
 	return func(_ *goal.Context, args []goal.V) goal.V {
@@ -138,7 +109,7 @@ func helpDyadic(help Help, x goal.V, args []goal.V) goal.V {
 }
 
 // Implements rtnames monad.
-func VFRTNames(goalContext *goal.Context, args []goal.V) goal.V {
+func VFRTNames(goalContext *goal.Context, _ []goal.V) goal.V {
 	names := goalContext.GlobalNames(nil)
 	goalContext.Keywords(names)
 	prims := make([]string, 0)
@@ -149,12 +120,16 @@ func VFRTNames(goalContext *goal.Context, args []goal.V) goal.V {
 		}
 		primsSeen[prim] = true
 	}
-	keys := make([]string, 0, len(GoalSyntax()))
-	for k := range GoalSyntax() {
-		keys = append(keys, k)
-	}
-	ks := goal.NewArray([]goal.V{goal.NewS("globals"), goal.NewS("keywords"), goal.NewS("verbs")})
-	vs := goal.NewArray([]goal.V{goal.NewAS(goalContext.GlobalNames(nil)), goal.NewAS(goalContext.Keywords(nil)), goal.NewAS(prims)})
+	ks := goal.NewArray([]goal.V{
+		goal.NewS("globals"),
+		goal.NewS("keywords"),
+		goal.NewS("verbs"),
+	})
+	vs := goal.NewArray([]goal.V{
+		goal.NewAS(goalContext.GlobalNames(nil)),
+		goal.NewAS(goalContext.Keywords(nil)),
+		goal.NewAS(prims),
+	})
 	return goal.NewDict(ks, vs)
 }
 
@@ -181,18 +156,6 @@ func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
 			"with string keys and string values, but received keys: %v", ka)
 	}
 	return m, nil
-}
-
-func stringMapToGoalDict(m map[string]string) goal.V {
-	keys := make([]string, 0, len(m))
-	values := make([]string, 0, len(m))
-	for k, v := range m {
-		keys = append(keys, k)
-		values = append(values, v)
-	}
-	ks := goal.NewAS(keys)
-	vs := goal.NewAS(values)
-	return goal.NewD(ks, vs)
 }
 
 func goalNewDictEmpty() *goal.D {
