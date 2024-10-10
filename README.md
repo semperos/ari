@@ -29,6 +29,7 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
     - Configure the output format with `--output-format` or using one of the `)output.` system commands at the REPL. Formats include CSV/TSV, JSON, Markdown, and LaTeX.
   - `ari.p` is bound to the previous result (value from last evaluation at the REPL)
   - Alternatively run `ari` with `--raw` for a simpler, raw REPL that lacks line editing, history, and auto-complete, but is better suited for interaction via an editor like (Neo)Vim, or if you prefer rlwrap or another line editor to the one that ships with ari.
+  - `help` based on Goal's, but allows adding help strings when used dyadically (e.g.,`"sql.q"help"Run SQL query"`)
 - New Goal functions:
   - `http.` functions for HTTP requests using [Resty]
   - `sql.` functions for SQL queries and commands
@@ -49,9 +50,9 @@ See [CHANGES.md](CHANGES.md) for recent changes.
 
 Non-exhaustive list:
 
-- TODO: Test coverage (Go reports 14% coverage, currently minimal Goal-level testing as well)
+- TODO: Test coverage
 - TODO: System functions to switch between rich and raw REPL `)repl.rich` and `)repl.raw`
-- TODO: System function for extensible `)help`
+- TODO: System function for cross-mode extensible `)help`
 - TODO: Consider which of ari's functions should be pervasive; review Goal's approach and implement
 - TODO: BUG When using `-l` flag, loaded files aren't completely evaluated. Evaluation stops partway through and it's not immediately clear why.
 - TODO: BUG `json.tbl` produces improper zero values when keys are missing. Where possible, column lists should be of uniform type and not generic if the data allows for it.
