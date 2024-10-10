@@ -4,9 +4,13 @@ import (
 	"os"
 
 	"codeberg.org/anaseto/goal"
+	"github.com/semperos/ari/vendored/help"
 )
 
-type Help map[string]map[string]string
+type Help struct {
+	Dictionary map[string]map[string]string
+	Func       func(string) string
+}
 
 type Context struct {
 	// GoalContext is needed to evaluate Goal programs and introspect the Goal execution environment.
@@ -43,20 +47,7 @@ func NewSQLDatabase(dataSourceName string) (*SQLDatabase, error) {
 
 func NewHelp() map[string]map[string]string {
 	defaultSQLHelp := "A SQL keyword"
-	// defaultGoalHelp := "A Goal keyword"
-	goalGlobalsHelp := GoalGlobalsHelp()
-	goalKeywordsHelp := GoalKeywordsHelp()
-	goalSyntaxHelp := GoalSyntaxHelp()
-	goalHelp := make(map[string]string, len(goalGlobalsHelp)+len(goalKeywordsHelp)+len(goalSyntaxHelp))
-	for k, v := range goalGlobalsHelp {
-		goalHelp[k] = v
-	}
-	for k, v := range goalKeywordsHelp {
-		goalHelp[k] = v
-	}
-	for k, v := range goalSyntaxHelp {
-		goalHelp[k] = v
-	}
+	goalHelp := GoalKeywordsHelp()
 	sqlKeywords := SQLKeywords()
 	sqlHelp := make(map[string]string, len(sqlKeywords))
 	for _, x := range sqlKeywords {
@@ -71,7 +62,20 @@ func NewHelp() map[string]map[string]string {
 // Initialize a new Context without connecting to the database.
 func NewContext(dataSourceName string) (*Context, error) {
 	ctx := Context{}
-	help := NewHelp()
+	helpDictionary := NewHelp()
+	ariHelpFunc := func(s string) string {
+		goalHelp, ok := helpDictionary["goal"]
+		if !ok {
+			panic(`Developer Error: Dictionary in Help must have a \"goal\" entry.`)
+		}
+		help, found := goalHelp[s]
+		if found {
+			return help
+		}
+		return ""
+	}
+	helpFunc := help.Wrap(ariHelpFunc, help.HelpFunc())
+	help := Help{Dictionary: helpDictionary, Func: helpFunc}
 	sqlDatabase, err := NewSQLDatabase(dataSourceName)
 	if err != nil {
 		return nil, err

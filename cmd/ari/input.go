@@ -20,10 +20,8 @@ import (
 type AutoCompleter struct {
 	ariContext         *ari.Context
 	sqlKeywords        []string
-	goalKeywordsHelp   map[string]string
 	goalKeywordsKeys   []string
 	goalSyntaxAliases  map[string]string
-	goalSyntaxHelp     map[string]string
 	goalSyntaxKeys     []string
 	systemCommandsHelp map[string]string
 	systemCommandsKeys []string
@@ -317,6 +315,7 @@ func (autoCompleter *AutoCompleter) goalAutoCompleteFn() func(v [][]rune, line, 
 }
 
 func autoCompleteGoalSyntax(autoCompleter *AutoCompleter, lword string, perCategory map[string][]acEntry) {
+	helpFunc := autoCompleter.ariContext.Help.Func
 	category := "Syntax"
 	syntaxSet := make(map[string]bool, 0)
 	for _, name := range autoCompleter.goalSyntaxKeys {
@@ -324,12 +323,7 @@ func autoCompleteGoalSyntax(autoCompleter *AutoCompleter, lword string, perCateg
 		if strings.HasPrefix(strings.ToLower(name), lword) {
 			if _, ok := syntaxSet[chstr]; !ok {
 				syntaxSet[chstr] = true
-				var help string
-				if val, ok := autoCompleter.goalSyntaxHelp[chstr]; ok {
-					help = val
-				} else {
-					help = "Goal syntax"
-				}
+				help := helpFunc(chstr)
 				perCategory[category] = append(perCategory[category], acEntry{chstr, help})
 			}
 		}
@@ -341,15 +335,11 @@ func autoCompleteGoalKeywords(autoCompleter *AutoCompleter, lword string, perCat
 	if autoCompleter.goalKeywordsKeys == nil {
 		autoCompleter.cacheGoalKeywords(autoCompleter.ariContext.GoalContext)
 	}
+	helpFunc := autoCompleter.ariContext.Help.Func
 	category := "Keyword"
 	for _, goalKeyword := range autoCompleter.goalKeywordsKeys {
 		if strings.HasPrefix(strings.ToLower(goalKeyword), lword) {
-			var help string
-			if val, ok := autoCompleter.goalKeywordsHelp[goalKeyword]; ok {
-				help = val
-			} else {
-				help = "A Goal keyword"
-			}
+			help := helpFunc(goalKeyword)
 			perCategory[category] = append(perCategory[category], acEntry{goalKeyword, help})
 		}
 	}
@@ -357,19 +347,14 @@ func autoCompleteGoalKeywords(autoCompleter *AutoCompleter, lword string, perCat
 
 func autoCompleteGoalGlobals(autoCompleter *AutoCompleter, lword string, perCategory map[string][]acEntry) {
 	goalContext := autoCompleter.ariContext.GoalContext
+	helpFunc := autoCompleter.ariContext.Help.Func
 	// Globals cannot be cached; this is what assignment in Goal creates.
 	goalGlobals := goalContext.GlobalNames(nil)
 	sort.Strings(goalGlobals)
-	goalHelp := autoCompleter.ariContext.Help["goal"]
 	category := "Global"
 	for _, goalGlobal := range goalGlobals {
 		if strings.HasPrefix(strings.ToLower(goalGlobal), lword) {
-			var help string
-			if val, ok := goalHelp[goalGlobal]; ok {
-				help = val
-			} else {
-				help = "A Goal global binding"
-			}
+			help := helpFunc(goalGlobal)
 			perCategory[category] = append(perCategory[category], acEntry{goalGlobal, help})
 		}
 	}
@@ -406,10 +391,8 @@ func (autoCompleter *AutoCompleter) sqlAutoCompleteFn() func(v [][]rune, line, c
 
 func (autoCompleter *AutoCompleter) cacheGoalKeywords(goalContext *goal.Context) {
 	goalKeywords := goalContext.Keywords(nil)
-	goalKeywordsHelp := ari.GoalKeywordsHelp()
 	sort.Strings(goalKeywords)
 	autoCompleter.goalKeywordsKeys = goalKeywords
-	autoCompleter.goalKeywordsHelp = goalKeywordsHelp
 }
 
 func (autoCompleter *AutoCompleter) cacheGoalSyntax() {
@@ -421,7 +404,6 @@ func (autoCompleter *AutoCompleter) cacheGoalSyntax() {
 	sort.Strings(keys)
 	autoCompleter.goalSyntaxKeys = keys
 	autoCompleter.goalSyntaxAliases = goalSyntax
-	autoCompleter.goalSyntaxHelp = ari.GoalSyntaxHelp()
 }
 
 func (autoCompleter *AutoCompleter) cacheSQL() {

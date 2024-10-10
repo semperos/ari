@@ -38,7 +38,7 @@ json.tbl:{ / table from parsing json array of like objects
     ?[istbl x;:x;:error"dict is not a table: $x"]
     [ks:!*x; vs:@[;ks]'x; ks!+vs]]}
 / Interactive Tools
-ac:{[s] gs:!rt.get"g"; r:rx s; ms:(..p.r@'p.gs)#gs; ms@<_ms } / auto-complete
+ac:{gs:,/rtnames"";ms:?["s"=@x;(..p.x%p.gs)#gs;[(..p.x@p.gs)#gs]]; ms@<_ms } / auto-complete
 / Test Framework
 tt.suite:"global"; tt.suitestate:..[es:();fs:();ps:();ss:()]; tt.state:..[global:tt.suitestate]
 tt.st:tt.state; tt.ffast:0; tt.clear:{tt.st::tt.state}
