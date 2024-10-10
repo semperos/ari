@@ -20,10 +20,8 @@ import (
 type AutoCompleter struct {
 	ariContext         *ari.Context
 	sqlKeywords        []string
-	goalKeywordsHelp   map[string]string
 	goalKeywordsKeys   []string
 	goalSyntaxAliases  map[string]string
-	goalSyntaxHelp     map[string]string
 	goalSyntaxKeys     []string
 	systemCommandsHelp map[string]string
 	systemCommandsKeys []string
@@ -393,10 +391,8 @@ func (autoCompleter *AutoCompleter) sqlAutoCompleteFn() func(v [][]rune, line, c
 
 func (autoCompleter *AutoCompleter) cacheGoalKeywords(goalContext *goal.Context) {
 	goalKeywords := goalContext.Keywords(nil)
-	goalKeywordsHelp := ari.GoalKeywordsHelp()
 	sort.Strings(goalKeywords)
 	autoCompleter.goalKeywordsKeys = goalKeywords
-	autoCompleter.goalKeywordsHelp = goalKeywordsHelp
 }
 
 func (autoCompleter *AutoCompleter) cacheGoalSyntax() {
@@ -408,7 +404,6 @@ func (autoCompleter *AutoCompleter) cacheGoalSyntax() {
 	sort.Strings(keys)
 	autoCompleter.goalSyntaxKeys = keys
 	autoCompleter.goalSyntaxAliases = goalSyntax
-	autoCompleter.goalSyntaxHelp = ari.GoalSyntaxHelp()
 }
 
 func (autoCompleter *AutoCompleter) cacheSQL() {
