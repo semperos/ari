@@ -1,11 +1,21 @@
-# v "next"
+# v0.1.2 2024-10-11
 
 - Removed Ari's `glob` and `abspath` now that Goal has them.
-- Replaced custom `help` with Goal's default `help`. Tabling a more extensible help offering for future development.
+- Made `help` use Goal's updated help, while also adding a dyadic arity that allows adding/overriding help entries in Goal code.
+- Added `rtnames` which is a dictionary, the values of which are all globals, keywords, and syntax characters defined in the Goal environment
+- Added `ac` function (mnemonic "auto-complete") which relies on `rtnames` to match names based on glob (if arg is string) or regex (if arg is regex).
 - `pp.tbl` and `pp.dict` which invoke `fmt.tbl` and `fmt.dict` with default values (all rows/columns; `"%.2f"` float format)
 - `time.utc` to set location of a time value to UTC
 - `time.format` to format a time with a given format. Format constants from Go's `time` package are already defined.
+- `time.date` to create a time object given the year, month, day, hour, minute, second, nanosecond, and location. Accepts 1 to 8 arguments, defaulting to 0 values and UTC for those omitted.
+- `time.*` functions to extract parts of a time object
+- `time.loadlocation` to create a location object given a canonical IANA name (and given the system has IANA data)
+- `time.fixedzone` to create an ad hoc location object given a name and offset-in-seconds-from-UTC
+- `time.locationstring` to get a string representation of a location object
+- `url.encode` monad to escape either a path (if arg is string) or query parameters (if arg is dictionary)
+- `http.serve` dyad to run an HTTP server. See implementation for details.
 - Bug Fix: Raw REPL would not properly ignore comment content. Fix ported from anaseto's fix in the Goal repo [here](https://codeberg.org/anaseto/goal/commit/ec3e8a97179fd6ff8bfe035504cf0a9b506312c).
+- Upgrades to go-resty and go-duckdb dependencies.
 
 # v0.1.1 2024-09-13
 
