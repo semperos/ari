@@ -189,7 +189,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterMonad("time.hour", VFTimeHour)
 	goalContext.RegisterMonad("time.loadlocation", VFTimeLoadLocation)
 	goalContext.RegisterMonad("time.location", VFTimeLocation)
-	goalContext.RegisterMonad("time.locationname", VFTimeLocationName)
+	goalContext.RegisterMonad("time.locationstring", VFTimeLocationString)
 	goalContext.RegisterMonad("time.microsecond", VFTimeMicrosecond)
 	goalContext.RegisterMonad("time.millisecond", VFTimeMillisecond)
 	goalContext.RegisterMonad("time.minute", VFTimeMinute)

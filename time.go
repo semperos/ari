@@ -581,19 +581,19 @@ func VFTimeLocation(_ *goal.Context, args []goal.V) goal.V {
 	}
 }
 
-// Implements time.locationname function.
-func VFTimeLocationName(_ *goal.Context, args []goal.V) goal.V {
+// Implements time.locationstring function.
+func VFTimeLocationString(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
 		lloc, ok := x.BV().(*Location)
 		if !ok {
-			return panicType("time.locationname location", "location", x)
+			return panicType("time.locationstring location", "location", x)
 		}
 		name := lloc.Location.String()
 		return goal.NewS(name)
 	default:
-		return goal.Panicf("time.locationname : too many arguments (%d), expects 1 argument", len(args))
+		return goal.Panicf("time.locationstring : too many arguments (%d), expects 1 argument", len(args))
 	}
 }
 
