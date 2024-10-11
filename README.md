@@ -51,8 +51,7 @@ See [CHANGES.md](CHANGES.md) for recent changes.
 Non-exhaustive list:
 
 - TODO: Test coverage
-- TODO: System functions to switch between rich and raw REPL `)repl.rich` and `)repl.raw`
-- TODO: System function for cross-mode extensible `)help`
+- TODO: Functions leveraging [time.Time](https://pkg.go.dev/time@go1.22.5)
 - TODO: Consider which of ari's functions should be pervasive; review Goal's approach and implement
 - TODO: BUG When using `-l` flag, loaded files aren't completely evaluated. Evaluation stops partway through and it's not immediately clear why.
 - TODO: BUG `json.tbl` produces improper zero values when keys are missing. Where possible, column lists should be of uniform type and not generic if the data allows for it.
@@ -66,8 +65,8 @@ I plan to support the above items. The following are stretch goals or nice-to-ha
 
 - TODO: Use custom table functions via replacement scan to query Goal tables from DuckDB.
 - TODO: Looser auto-complete, not just prefix-based
-- TODO: `)help`
-- TODO: Functions leveraging [time.Time](https://pkg.go.dev/time@go1.22.5)
+- TODO: `)help` for cross-mode help
+- TODO: System functions to switch between rich and raw REPL `)repl.rich` and `)repl.raw`
 - IN PROGRESS: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
 - TODO: Implement a subset of [q](https://code.kx.com/q/) functions to extend what Goal already has.
 - Specific user commands:
