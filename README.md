@@ -35,7 +35,7 @@ Then run `ari` for a REPL or `ari --help` to see CLI options.
   - `sql.` functions for SQL queries and commands
   - `tt.` test framework
   - `csv.tbl` and `json.tbl` to make Goal tables from the output of `csv` and `json` respectively
-  - _(WIP)_ `time.` functions for more extensive date/time handling
+  - `time.` functions for more extensive date/time handling
   - `tui.` functions for basic terminal UI styling (colors, padding/margin, borders)
 - Dedicated SQL mode
   - The ari CLI uses DuckDB, but the `github.com/semperos/ari` Go package doesn't directly depend on a specific SQL database driver, so you can BYODB.
@@ -51,7 +51,6 @@ See [CHANGES.md](CHANGES.md) for recent changes.
 Non-exhaustive list:
 
 - TODO: Test coverage
-- TODO: Functions leveraging [time.Time](https://pkg.go.dev/time@go1.22.5)
 - TODO: Consider which of ari's functions should be pervasive; review Goal's approach and implement
 - TODO: BUG When using `-l` flag, loaded files aren't completely evaluated. Evaluation stops partway through and it's not immediately clear why.
 - TODO: BUG `json.tbl` produces improper zero values when keys are missing. Where possible, column lists should be of uniform type and not generic if the data allows for it.
