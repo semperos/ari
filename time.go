@@ -87,11 +87,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 			month := time.January
 			day := 1
 			hour := 0
-			min := 0
+			minute := 0
 			sec := 0
 			nsec := 0
 			loc := time.UTC
-			t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+			t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 			return goal.NewV(&Time{Time: &t})
 		}
 		return panicType("time.date year", "year", yearV)
@@ -108,11 +108,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 		month := time.Month(monthV.I())
 		day := 1
 		hour := 0
-		min := 0
+		minute := 0
 		sec := 0
 		nsec := 0
 		loc := time.UTC
-		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 		return goal.NewV(&Time{Time: &t})
 	case triadic:
 		yearV := args[2]
@@ -131,11 +131,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 		month := time.Month(monthV.I())
 		day := int(dayV.I())
 		hour := 0
-		min := 0
+		minute := 0
 		sec := 0
 		nsec := 0
 		loc := time.UTC
-		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 		return goal.NewV(&Time{Time: &t})
 	case tesseradic:
 		yearV := args[3]
@@ -158,11 +158,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 		month := time.Month(monthV.I())
 		day := int(dayV.I())
 		hour := int(hourV.I())
-		min := 0
+		minute := 0
 		sec := 0
 		nsec := 0
 		loc := time.UTC
-		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 		return goal.NewV(&Time{Time: &t})
 	case pentadic:
 		yearV := args[4]
@@ -189,11 +189,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 		month := time.Month(monthV.I())
 		day := int(dayV.I())
 		hour := int(hourV.I())
-		min := int(minV.I())
+		minute := int(minV.I())
 		sec := 0
 		nsec := 0
 		loc := time.UTC
-		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 		return goal.NewV(&Time{Time: &t})
 	case hexadic:
 		yearV := args[5]
@@ -224,11 +224,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 		month := time.Month(monthV.I())
 		day := int(dayV.I())
 		hour := int(hourV.I())
-		min := int(minV.I())
+		minute := int(minV.I())
 		sec := int(secV.I())
 		nsec := 0
 		loc := time.UTC
-		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 		return goal.NewV(&Time{Time: &t})
 	case heptadic:
 		yearV := args[6]
@@ -263,11 +263,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 		month := time.Month(monthV.I())
 		day := int(dayV.I())
 		hour := int(hourV.I())
-		min := int(minV.I())
+		minute := int(minV.I())
 		sec := int(secV.I())
 		nsec := int(nsecV.I())
 		loc := time.UTC
-		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 		return goal.NewV(&Time{Time: &t})
 	case octadic:
 		yearV := args[7]
@@ -306,11 +306,11 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 		month := time.Month(monthV.I())
 		day := int(dayV.I())
 		hour := int(hourV.I())
-		min := int(minV.I())
+		minute := int(minV.I())
 		sec := int(secV.I())
 		nsec := int(nsecV.I())
 		loc := locV.Location
-		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		t := time.Date(year, month, day, hour, minute, sec, nsec, loc)
 		return goal.NewV(&Time{Time: &t})
 	default:
 		return goal.Panicf("time.date : too many arguments (%d), expects 1 to 8 arguments", len(args))
