@@ -20,17 +20,19 @@ func (time *Time) Append(_ *goal.Context, dst []byte, _ bool) []byte {
 
 // LessT implements goal.BV.
 func (time *Time) LessT(y goal.BV) bool {
-	// Goal falls back to ordering by type name,
-	// and there is no other reasonable way to order
-	// these structs.
-	return time.Type() < y.Type()
+	switch yv := y.(type) {
+	case *Time:
+		return time.Time.Before(*yv.Time)
+	default:
+		return time.Type() < y.Type()
+	}
 }
 
 // Matches implements goal.BV.
 func (time *Time) Matches(y goal.BV) bool {
 	switch yv := y.(type) {
 	case *Time:
-		return time == yv
+		return time.Time.Equal(*yv.Time)
 	default:
 		return false
 	}
@@ -41,11 +43,284 @@ func (time *Time) Type() string {
 	return "ari.Time"
 }
 
+type Location struct {
+	Location *time.Location
+}
+
+// Append implements goal.BV.
+func (location *Location) Append(_ *goal.Context, dst []byte, _ bool) []byte {
+	return append(dst, fmt.Sprintf("<%v %#v>", location.Type(), location.Location)...)
+}
+
+// LessT implements goal.BV.
+func (location *Location) LessT(y goal.BV) bool {
+	switch yv := y.(type) {
+	case *Location:
+		return location.Location.String() < yv.Location.String()
+	default:
+		return location.Type() < y.Type()
+	}
+}
+
+// Matches implements goal.BV.
+func (location *Location) Matches(_ goal.BV) bool {
+	// You can have two location objects with the same name but different offsets and the offset is not exposed publicly,
+	// so we don't support equality directly.
+	return false
+}
+
+// Type implements goal.BV.
+func (location *Location) Type() string {
+	return "ari.Location"
+}
+
+// Implements time.date function.
+//
+//nolint:cyclop,funlen,gocognit,gocyclo // the different arities are flat and similar, keeping them close is better
+func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
+	// year int, month Month, day, hour, min, sec, nsec int, loc *Location
+	switch len(args) {
+	case monadic:
+		yearV := args[0]
+		if yearV.IsI() {
+			year := int(yearV.I())
+			month := time.January
+			day := 1
+			hour := 0
+			min := 0
+			sec := 0
+			nsec := 0
+			loc := time.UTC
+			t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+			return goal.NewV(&Time{Time: &t})
+		}
+		return panicType("time.date year", "year", yearV)
+	case dyadic:
+		yearV := args[1]
+		monthV := args[0]
+		if !yearV.IsI() {
+			return panicType("time.date year month", "year", yearV)
+		}
+		if !monthV.IsI() {
+			return panicType("time.date year month", "month", monthV)
+		}
+		year := int(yearV.I())
+		month := time.Month(monthV.I())
+		day := 1
+		hour := 0
+		min := 0
+		sec := 0
+		nsec := 0
+		loc := time.UTC
+		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		return goal.NewV(&Time{Time: &t})
+	case triadic:
+		yearV := args[2]
+		monthV := args[1]
+		dayV := args[0]
+		if !yearV.IsI() {
+			return panicType("time.date year month day", "year", yearV)
+		}
+		if !monthV.IsI() {
+			return panicType("time.date year month day", "month", monthV)
+		}
+		if !dayV.IsI() {
+			return panicType("time.date year month day", "day", dayV)
+		}
+		year := int(yearV.I())
+		month := time.Month(monthV.I())
+		day := int(dayV.I())
+		hour := 0
+		min := 0
+		sec := 0
+		nsec := 0
+		loc := time.UTC
+		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		return goal.NewV(&Time{Time: &t})
+	case tesseradic:
+		yearV := args[3]
+		monthV := args[2]
+		dayV := args[1]
+		hourV := args[0]
+		if !yearV.IsI() {
+			return panicType("time.date year month day hour", "year", yearV)
+		}
+		if !monthV.IsI() {
+			return panicType("time.date year month day hour", "month", monthV)
+		}
+		if !dayV.IsI() {
+			return panicType("time.date year month day hour", "day", dayV)
+		}
+		if !hourV.IsI() {
+			return panicType("time.date year month day hour", "hour", hourV)
+		}
+		year := int(yearV.I())
+		month := time.Month(monthV.I())
+		day := int(dayV.I())
+		hour := int(hourV.I())
+		min := 0
+		sec := 0
+		nsec := 0
+		loc := time.UTC
+		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		return goal.NewV(&Time{Time: &t})
+	case pentadic:
+		yearV := args[4]
+		monthV := args[3]
+		dayV := args[2]
+		hourV := args[1]
+		minV := args[0]
+		if !yearV.IsI() {
+			return panicType("time.date year month day hour minute", "year", yearV)
+		}
+		if !monthV.IsI() {
+			return panicType("time.date year month day hour minute", "month", monthV)
+		}
+		if !dayV.IsI() {
+			return panicType("time.date year month day hour minute", "day", dayV)
+		}
+		if !hourV.IsI() {
+			return panicType("time.date year month day hour minute", "hour", hourV)
+		}
+		if !minV.IsI() {
+			return panicType("time.date year month day hour minute", "minute", minV)
+		}
+		year := int(yearV.I())
+		month := time.Month(monthV.I())
+		day := int(dayV.I())
+		hour := int(hourV.I())
+		min := int(minV.I())
+		sec := 0
+		nsec := 0
+		loc := time.UTC
+		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		return goal.NewV(&Time{Time: &t})
+	case hexadic:
+		yearV := args[5]
+		monthV := args[4]
+		dayV := args[3]
+		hourV := args[2]
+		minV := args[1]
+		secV := args[0]
+		if !yearV.IsI() {
+			return panicType("time.date year month day hour minute second", "year", yearV)
+		}
+		if !monthV.IsI() {
+			return panicType("time.date year month day hour minute second", "month", monthV)
+		}
+		if !dayV.IsI() {
+			return panicType("time.date year month day hour minute second", "day", dayV)
+		}
+		if !hourV.IsI() {
+			return panicType("time.date year month day hour minute second", "hour", hourV)
+		}
+		if !minV.IsI() {
+			return panicType("time.date year month day hour minute second", "minute", minV)
+		}
+		if !secV.IsI() {
+			return panicType("time.date year month day hour minute second", "second", secV)
+		}
+		year := int(yearV.I())
+		month := time.Month(monthV.I())
+		day := int(dayV.I())
+		hour := int(hourV.I())
+		min := int(minV.I())
+		sec := int(secV.I())
+		nsec := 0
+		loc := time.UTC
+		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		return goal.NewV(&Time{Time: &t})
+	case heptadic:
+		yearV := args[6]
+		monthV := args[5]
+		dayV := args[4]
+		hourV := args[3]
+		minV := args[2]
+		secV := args[1]
+		nsecV := args[0]
+		if !yearV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond", "year", yearV)
+		}
+		if !monthV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond", "month", monthV)
+		}
+		if !dayV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond", "day", dayV)
+		}
+		if !hourV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond", "hour", hourV)
+		}
+		if !minV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond", "minute", minV)
+		}
+		if !secV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond", "second", secV)
+		}
+		if !nsecV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond", "nanosecond", nsecV)
+		}
+		year := int(yearV.I())
+		month := time.Month(monthV.I())
+		day := int(dayV.I())
+		hour := int(hourV.I())
+		min := int(minV.I())
+		sec := int(secV.I())
+		nsec := int(nsecV.I())
+		loc := time.UTC
+		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		return goal.NewV(&Time{Time: &t})
+	case octadic:
+		yearV := args[7]
+		monthV := args[6]
+		dayV := args[5]
+		hourV := args[4]
+		minV := args[3]
+		secV := args[2]
+		nsecV := args[1]
+		locV, ok := args[0].BV().(*Location)
+		if !ok {
+			return panicType("time.date year month day hour minute second nanosecond location", "location", args[0])
+		}
+		if !yearV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond location", "year", yearV)
+		}
+		if !monthV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond location", "month", monthV)
+		}
+		if !dayV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond location", "day", dayV)
+		}
+		if !hourV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond location", "hour", hourV)
+		}
+		if !minV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond location", "minute", minV)
+		}
+		if !secV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond location", "second", secV)
+		}
+		if !nsecV.IsI() {
+			return panicType("time.date year month day hour minute second nanosecond location", "nanosecond", nsecV)
+		}
+		year := int(yearV.I())
+		month := time.Month(monthV.I())
+		day := int(dayV.I())
+		hour := int(hourV.I())
+		min := int(minV.I())
+		sec := int(secV.I())
+		nsec := int(nsecV.I())
+		loc := locV.Location
+		t := time.Date(year, month, day, hour, min, sec, nsec, loc)
+		return goal.NewV(&Time{Time: &t})
+	default:
+		return goal.Panicf("time.date : too many arguments (%d), expects 1 to 8 arguments", len(args))
+	}
+}
+
 // Implements time.now function.
 func VFTimeNow(_ *goal.Context, _ []goal.V) goal.V {
 	now := time.Now()
-	tt := Time{&now}
-	return goal.NewV(&tt)
+	return goal.NewV(&Time{&now})
 }
 
 // Implements time.unix function.
@@ -57,8 +332,7 @@ func VFTimeUnix(_ *goal.Context, args []goal.V) goal.V {
 		if !ok {
 			if x.IsI() {
 				t := time.Unix(x.I(), 0)
-				tt := Time{&t}
-				return goal.NewV(&tt)
+				return goal.NewV(&Time{&t})
 			}
 			return panicType("time.unix time-or-i", "time-or-i", x)
 		}
@@ -71,8 +345,7 @@ func VFTimeUnix(_ *goal.Context, args []goal.V) goal.V {
 				sec := x.I()
 				nsec := y.I()
 				t := time.Unix(sec, nsec)
-				tt := Time{&t}
-				return goal.NewV(&tt)
+				return goal.NewV(&Time{&t})
 			}
 			return panicType("isec time.unix insec", "insec", y)
 		}
@@ -292,6 +565,77 @@ func VFTimeZoneOffset(_ *goal.Context, args []goal.V) goal.V {
 	}
 }
 
+// Implements time.location function.
+func VFTimeLocation(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		tLocal, ok := x.BV().(*Time)
+		if !ok {
+			return panicType("time.location time", "time", x)
+		}
+		loc := tLocal.Time.Location()
+		return goal.NewV(&Location{Location: loc})
+	default:
+		return goal.Panicf("time.location : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.locationname function.
+func VFTimeLocationName(_ *goal.Context, args []goal.V) goal.V {
+	x := args[len(args)-1]
+	switch len(args) {
+	case monadic:
+		lloc, ok := x.BV().(*Location)
+		if !ok {
+			return panicType("time.locationname location", "location", x)
+		}
+		name := lloc.Location.String()
+		return goal.NewS(name)
+	default:
+		return goal.Panicf("time.locationname : too many arguments (%d), expects 1 argument", len(args))
+	}
+}
+
+// Implements time.fixedzone dyad.
+func VFTimeFixedZone(_ *goal.Context, args []goal.V) goal.V {
+	switch len(args) {
+	case dyadic:
+		x, ok := args[1].BV().(goal.S)
+		if !ok {
+			return panicType("time.fixedzone name offset-seconds-east-of-utc", "name", args[1])
+		}
+		y := args[0]
+		if !y.IsI() {
+			return panicType("time.fixedzone name offset-seconds-east-of-utc", "offset-seconds-east-of-utc", args[0])
+		}
+		loc := time.FixedZone(string(x), int(y.I()))
+		return goal.NewV(&Location{Location: loc})
+	default:
+		return goal.Panicf("time.fixedzone : wrong number of arguments (%d), expects 2 arguments", len(args))
+	}
+}
+
+// Implements time.loadlocation monad.
+func VFTimeLoadLocation(_ *goal.Context, args []goal.V) goal.V {
+	switch len(args) {
+	case monadic:
+		name, ok := args[0].BV().(goal.S)
+		if !ok {
+			return panicType("time.loadlocation name", "name", args[0])
+		}
+		loc, err := time.LoadLocation(string(name))
+		// Can fail to load the system's IANA database
+		if err != nil {
+			return goal.Errorf("%v", err)
+		}
+		return goal.NewV(&Location{Location: loc})
+	default:
+		return goal.Panicf("time.loadlocation : wrong number of arguments (%d), expects 1 argument", len(args))
+
+	}
+}
+
 // Implements time.unixmilli function.
 func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
@@ -301,8 +645,7 @@ func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 		if !ok {
 			if x.IsI() {
 				t := time.UnixMilli(x.I())
-				tt := Time{&t}
-				return goal.NewV(&tt)
+				return goal.NewV(&Time{&t})
 			}
 			return panicType("time.unixmilli time-or-i", "time-or-i", x)
 		}
@@ -322,8 +665,7 @@ func VFTimeUnixMicro(_ *goal.Context, args []goal.V) goal.V {
 		if !ok {
 			if x.IsI() {
 				t := time.UnixMicro(x.I())
-				tt := Time{&t}
-				return goal.NewV(&tt)
+				return goal.NewV(&Time{&t})
 			}
 			return panicType("time.unixmicro time-or-i", "time-or-i", x)
 		}
@@ -360,8 +702,7 @@ func VFTimeUTC(_ *goal.Context, args []goal.V) goal.V {
 	switch len(args) {
 	case monadic:
 		t := tLocal.Time.UTC()
-		tt := Time{&t}
-		return goal.NewV(&tt)
+		return goal.NewV(&Time{&t})
 	default:
 		return goal.Panicf("time.utc : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -385,8 +726,7 @@ func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
-		tt := Time{&t}
-		return goal.NewV(&tt)
+		return goal.NewV(&Time{&t})
 	default:
 		return goal.Panicf("time.parse : too many arguments (%d), expects 2 arguments", len(args))
 	}
@@ -445,8 +785,7 @@ func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
 					month := ai.At(monthPos).I()
 					day := ai.At(dayPos).I()
 					t := t1.Time.AddDate(int(year), int(month), int(day))
-					tt := Time{&t}
-					return goal.NewV(&tt)
+					return goal.NewV(&Time{&t})
 				case *goal.AI:
 					al := ai.Len()
 					if al != yearMonthDay {
@@ -456,8 +795,7 @@ func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
 					month := ai.At(monthPos).I()
 					day := ai.At(dayPos).I()
 					t := t1.Time.AddDate(int(year), int(month), int(day))
-					tt := Time{&t}
-					return goal.NewV(&tt)
+					return goal.NewV(&Time{&t})
 				default:
 					return panicType("time time.add I", "I", y)
 				}
@@ -465,8 +803,7 @@ func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
 			return panicType("time time.add i", "i", y)
 		}
 		t := t1.Time.Add(time.Duration(y.I()))
-		tt := Time{&t}
-		return goal.NewV(&tt)
+		return goal.NewV(&Time{&t})
 	default:
 		return goal.Panicf("time.add : too many arguments (%d), expects 2 arguments", len(args))
 	}
@@ -494,25 +831,32 @@ func VFTimeSub(_ *goal.Context, args []goal.V) goal.V {
 }
 
 func registerTimeGlobals(goalContext *goal.Context) {
-	goalContext.AssignGlobal("time.Layout", goal.NewS(time.Layout))
 	goalContext.AssignGlobal("time.ANSIC", goal.NewS(time.ANSIC))
-	goalContext.AssignGlobal("time.UnixDate", goal.NewS(time.UnixDate))
-	goalContext.AssignGlobal("time.RubyDate", goal.NewS(time.RubyDate))
-	goalContext.AssignGlobal("time.RFC822", goal.NewS(time.RFC822))
-	goalContext.AssignGlobal("time.RFC822Z", goal.NewS(time.RFC822Z))
-	goalContext.AssignGlobal("time.RFC850", goal.NewS(time.RFC850))
+	goalContext.AssignGlobal("time.DateOnly", goal.NewS(time.DateOnly))
+	goalContext.AssignGlobal("time.DateTime", goal.NewS(time.DateTime))
+	goalContext.AssignGlobal("time.Kitchen", goal.NewS(time.Kitchen))
+	goalContext.AssignGlobal("time.Layout", goal.NewS(time.Layout))
 	goalContext.AssignGlobal("time.RFC1123", goal.NewS(time.RFC1123))
 	goalContext.AssignGlobal("time.RFC1123Z", goal.NewS(time.RFC1123Z))
 	goalContext.AssignGlobal("time.RFC3339", goal.NewS(time.RFC3339))
 	goalContext.AssignGlobal("time.RFC3339Nano", goal.NewS(time.RFC3339Nano))
-	goalContext.AssignGlobal("time.Kitchen", goal.NewS(time.Kitchen))
+	goalContext.AssignGlobal("time.RFC822", goal.NewS(time.RFC822))
+	goalContext.AssignGlobal("time.RFC822Z", goal.NewS(time.RFC822Z))
+	goalContext.AssignGlobal("time.RFC850", goal.NewS(time.RFC850))
+	goalContext.AssignGlobal("time.RubyDate", goal.NewS(time.RubyDate))
 	goalContext.AssignGlobal("time.Stamp", goal.NewS(time.Stamp))
-	goalContext.AssignGlobal("time.StampMilli", goal.NewS(time.StampMilli))
 	goalContext.AssignGlobal("time.StampMicro", goal.NewS(time.StampMicro))
+	goalContext.AssignGlobal("time.StampMilli", goal.NewS(time.StampMilli))
 	goalContext.AssignGlobal("time.StampNano", goal.NewS(time.StampNano))
-	goalContext.AssignGlobal("time.DateTime", goal.NewS(time.DateTime))
-	goalContext.AssignGlobal("time.DateOnly", goal.NewS(time.DateOnly))
 	goalContext.AssignGlobal("time.TimeOnly", goal.NewS(time.TimeOnly))
+	goalContext.AssignGlobal("time.UnixDate", goal.NewS(time.UnixDate))
+
+	local := time.Local
+	locationLocal := Location{Location: local}
+	goalContext.AssignGlobal("time.Local", goal.NewV(&locationLocal))
+	utc := time.UTC
+	locationUTC := Location{Location: utc}
+	goalContext.AssignGlobal("time.UTC", goal.NewV(&locationUTC))
 
 	goalContext.AssignGlobal("time.Nanosecond", goal.NewI(int64(time.Nanosecond)))
 	goalContext.AssignGlobal("time.Microsecond", goal.NewI(int64(time.Microsecond)))

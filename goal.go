@@ -11,9 +11,15 @@ import (
 )
 
 const (
-	monadic = 1
-	dyadic  = 2
-	triadic = 3
+	monadic    = 1
+	dyadic     = 2
+	triadic    = 3
+	quadratic  = 4
+	tesseradic = 4
+	pentadic   = 5
+	hexadic    = 6
+	heptadic   = 7
+	octadic    = 8
 )
 
 // Goal Preamble in Goal
@@ -174,12 +180,16 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	// From Goal itself, os lib imported without prefix
 	gos.Import(goalContext, "")
 	// Ari
+	goalContext.RegisterExtension("ari", "v0.1.1")
 	// Monads
 	goalContext.RegisterMonad("rtnames", VFRTNames)
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.day", VFTimeDay)
 	goalContext.RegisterMonad("time.hour", VFTimeHour)
+	goalContext.RegisterMonad("time.loadlocation", VFTimeLoadLocation)
+	goalContext.RegisterMonad("time.location", VFTimeLocation)
+	goalContext.RegisterMonad("time.locationname", VFTimeLocationName)
 	goalContext.RegisterMonad("time.microsecond", VFTimeMicrosecond)
 	goalContext.RegisterMonad("time.millisecond", VFTimeMillisecond)
 	goalContext.RegisterMonad("time.minute", VFTimeMinute)
@@ -212,6 +222,8 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
 	goalContext.RegisterDyad("time.add", VFTimeAdd)
+	goalContext.RegisterDyad("time.date", VFTimeDate)
+	goalContext.RegisterDyad("time.fixedzone", VFTimeFixedZone)
 	goalContext.RegisterDyad("time.format", VFTimeFormat)
 	goalContext.RegisterDyad("time.parse", VFTimeParse)
 	goalContext.RegisterDyad("time.sub", VFTimeSub)
