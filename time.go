@@ -632,7 +632,6 @@ func VFTimeLoadLocation(_ *goal.Context, args []goal.V) goal.V {
 		return goal.NewV(&Location{Location: loc})
 	default:
 		return goal.Panicf("time.loadlocation : wrong number of arguments (%d), expects 1 argument", len(args))
-
 	}
 }
 
