@@ -1,3 +1,8 @@
+# v0.1.3 2024-10-11
+
+- Latest Goal version integrated, including latest `lib/*.goal` files and help content. I neglected to upgrade to the latest before cutting v0.1.2.
+- Removed `rtnames` because Goal's `rt.get` now has everything needed for `ac`. This change removed adding verbs to the auto-complete, because except for `::` they're all single characters and thus not something people would be trying to auto-complete on.
+
 # v0.1.2 2024-10-11
 
 - Removed Ari's `glob` and `abspath` now that Goal has them.
