@@ -127,31 +127,6 @@ func helpDyadic(help Help, args []goal.V) goal.V {
 	return goal.NewI(1)
 }
 
-// Implements rtnames monad.
-func VFRTNames(goalContext *goal.Context, _ []goal.V) goal.V {
-	names := goalContext.GlobalNames(nil)
-	goalContext.Keywords(names)
-	prims := make([]string, 0)
-	primsSeen := make(map[string]bool, 0)
-	for _, prim := range GoalSyntax() {
-		if _, ok := primsSeen[prim]; !ok {
-			prims = append(prims, prim)
-		}
-		primsSeen[prim] = true
-	}
-	ks := goal.NewArray([]goal.V{
-		goal.NewS("globals"),
-		goal.NewS("keywords"),
-		goal.NewS("verbs"),
-	})
-	vs := goal.NewArray([]goal.V{
-		goal.NewAS(goalContext.GlobalNames(nil)),
-		goal.NewAS(goalContext.Keywords(nil)),
-		goal.NewAS(prims),
-	})
-	return goal.NewDict(ks, vs)
-}
-
 // Go <> Goal helpers
 
 func stringMapFromGoalDict(d *goal.D) (map[string]string, error) {
@@ -194,7 +169,6 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	// Ari
 	goalContext.RegisterExtension("ari", "v0.1.2")
 	// Monads
-	goalContext.RegisterMonad("rtnames", VFRTNames)
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.day", VFTimeDay)
