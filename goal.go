@@ -28,11 +28,14 @@ const (
 // loading them into the Goal context.
 func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	additionalPackages := map[string]string{
+		"dict":  goalSourceDict,
 		"fmt":   goalSourceFmt,
+		"fs":    goalSourceFs,
 		"html":  goalSourceHTML,
 		"k":     goalSourceK,
 		"math":  goalSourceMath,
 		"mods":  goalSourceMods,
+		"os":    goalSourceOs,
 		"path":  goalSourcePath,
 		"table": goalSourceTable,
 	}
@@ -49,8 +52,14 @@ func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	return nil
 }
 
+//go:embed vendor-goal/dict.goal
+var goalSourceDict string
+
 //go:embed vendor-goal/fmt.goal
 var goalSourceFmt string
+
+//go:embed vendor-goal/fs.goal
+var goalSourceFs string
 
 //go:embed vendor-goal/html.goal
 var goalSourceHTML string
@@ -63,6 +72,9 @@ var goalSourceMath string
 
 //go:embed vendor-goal/mods.goal
 var goalSourceMods string
+
+//go:embed vendor-goal/os.goal
+var goalSourceOs string
 
 //go:embed vendor-goal/path.goal
 var goalSourcePath string
@@ -180,7 +192,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	// From Goal itself, os lib imported without prefix
 	gos.Import(goalContext, "")
 	// Ari
-	goalContext.RegisterExtension("ari", "v0.1.1")
+	goalContext.RegisterExtension("ari", "v0.1.2")
 	// Monads
 	goalContext.RegisterMonad("rtnames", VFRTNames)
 	goalContext.RegisterMonad("sql.close", VFSqlClose)

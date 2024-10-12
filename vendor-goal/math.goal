@@ -3,8 +3,6 @@ pi:π:atan[-1.0;0.0]
 gcd:{{?[0~y:x!y;x;o[y;x]]}[abs x;y]}
 / lcm[i;i] returns the lowest common multiple.
 lcm:{x*(-gcd[x;y])!y}
-/ pow[x;y] returns the base-x exponential of y.
-pow:{exp y*log x}
 / msum[i;N] returns the i-item moving sums (sums of the previous i items).
 msum:{s-(x#0)»s:+\y}
 / avg[N] returns the mean of a list.
@@ -13,4 +11,12 @@ avg:{(+/x)%#x}
 avgs:{(+\x)%1+!#x}
 / mavg[i;N] returns the simple moving average (avg of the previous i items).
 mavg:{msum[x;y]%(1+!x-1)»(#y)#x}
+/ var[N] returns the variance.
+var:{avg[x*x]-m*m:avg x}
+/ dev[N] returns the standard deviation.
+dev:{sqrt var x}
+/ cov[N;N] returns the covariance.
+cov:{avg[x*y]-avg[x]*avg y}
+/ cor[N;N] returns the correlation.
+cor:{cov[x;y]%dev[x]*dev y}
 1

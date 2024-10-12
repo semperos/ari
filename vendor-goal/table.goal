@@ -16,3 +16,7 @@ join:{[c;t1;t2],/(t1;t2)@'{(i;j):(0,#x)_%x,y; (&(=j)@i;,/(=(!#j)!j)@i)}[t1 c;t2 
 / priority for any other common columns. It uses zero-values, instead of
 / nulls/NaNs, for missing fields in t1.
 oj:{[c;t1;t2]i:(t1 c)?t2 c; (((c=!:)^t1)i),t2}
+/ flip[t] returns a transposed table where column names are given by the first
+/ column, or column "key" if it exists (inspired by Lil's flip primitive).
+flip:{[t]("key"¿1_!t)and t:t[;"key",("key"=)^!t]; ..[key:1_!t],{(*'x)!1_'x}@+.t}
+1

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+REPO="$(dirname $0)/.."
+GOAL="$REPO/../goal"
+GOALSHA="$(git -C $GOAL rev-parse HEAD)"
+
+mkdir -p "$REPO/vendor-goal"
+find "$GOAL/lib" -type f -name '*.goal' | xargs -I {} cp {} "$REPO/vendor-goal/"
+printf "# Vendored Goal Code from Goal Project\n\nPulled from Goal at Git commit: \`$GOALSHA\`\n" > "$REPO/vendor-goal/README.md"

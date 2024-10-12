@@ -1,0 +1,23 @@
+/ This file implements some extra os-related functionality.
+/ NOTE: While hopefully written in a portable way which should work on all
+/ Unix-like systems using slash-separated paths, and maybe even Windows, the
+/ functions are only officially tested on Void Linux and OpenBSD.
+
+/ GOALLIB is a file system value for env"GOALLIB" (at startup).
+GOALLIB:{?["e"~@x;x;dirfs x]}@env"GOALLIB"
+/ PS represents the path separator.
+PS:?["windows"~rt.get"os";"\\";"/"]
+/ volume[s] returns "" except on Windows, where it (hopefully) returns the
+/ leading volume name of a path.
+volume:?[PS~"/";:[;""];{rx`^[0-9a-zA-Z]:|^(?:\\\\|/)[^\\./][^\\/]*[\\/][^\\./][^\\/]*`[x;"s"]}]
+/ mkdirp[s] is like mkdir, but creates any parent directories if necessary. It
+/ does not error if the directory already exists.
+mkdirp:{[path]
+  (st:stat path)and:st..dir or error..[
+    msg:"$path is not a directory";op:"mkdir";path:path;err:"not a directory"]
+  ((&volume path)<&parent:getp path)and 'o parent
+  or[e:mkdir path;(st:stat path)and st..dir;e]}
+
+/ helpers below:
+getp:sub[?[PS~"/";rx`[^/]*/*$`;rx`[^\\/]*[\\/]*$`];""] / parent folder
+1

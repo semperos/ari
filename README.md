@@ -79,6 +79,18 @@ I began building Ari to replicate the experience described in the [Background](#
 
 I am also using Ari to build an API client environment for the [Shortcut](https://shortcut.com) [REST API](https://developer.shortcut.com/api/rest/v3). The under-major-construction code for that can be found [in this GitHub Gist](https://gist.github.com/semperos/daba47a3665c89794a3613cfdb0a2d6c).
 
+## Development
+
+Ari is implemented in Go and Goal. See the `script` folder for common development operations.
+
+To publish a new version of Ari:
+
+1. `go mod tidy`
+2. `./script/install`
+3. `git tag v0.1.x`
+4. `git push origin v0.1.x`
+5. `GOPROXY=proxy.golang.org go list -m github.com/semperos/ari@v0.1.x`
+
 ## Background
 
 I stumbled into a fairly flexible, powerful setup using Julia and DuckDB to do data analysis.

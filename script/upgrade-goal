@@ -9,3 +9,4 @@ go get "codeberg.org/anaseto/goal@$GOALSHA"
 go mod tidy
 
 ./script/vendor-help
+./script/vendor-lib

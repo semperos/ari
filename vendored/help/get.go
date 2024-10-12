@@ -71,13 +71,11 @@ func initHelp() map[string]string {
 		help[v] = getBuiltin(helpAdverbs, v, acols)
 	}
 	for _, v := range []string{"abs", "bytes", "uc", "error", "eval", "firsts", "json", "ocount", "panic",
-		"sign", "csv", "in", "mod", "nan", "rotate", "sub"} {
+		"sign", "csv", "in", "mod", "nan", "rotate", "sub", "utf8",
+		"atan", "cos", "exp", "log", "round", "sin", "sqrt"} {
 		help[v] = getBuiltin(helpNamedVerbs, v, nvcols)
 	}
 	help["¿"] = help["firsts"] + help["in"]
-	for _, v := range []string{"atan", "cos", "exp", "log", "round", "sin", "sqrt"} {
-		help[v] = getBuiltin(helpNamedVerbs, "MATH", 5)
-	}
 	for _, v := range []string{"rt.get", "rt.log", "rt.seed", "rt.time", "rt.try"} {
 		help[v] = getBuiltin(helpRuntime, v, nvcols)
 	}

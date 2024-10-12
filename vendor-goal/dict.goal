@@ -1,0 +1,5 @@
+/ sort[x] recursively sorts keys of any (possibly nested) dict in x.
+sort:{?["A"~t:@x;o'x;"d"~t;(!x)!o@.x:^x;x]}
+/ match[x;y] returns true if x~y once any dict keys are sorted.
+match:{sort[x]~sort[y]}
+1
