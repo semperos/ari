@@ -85,11 +85,9 @@ Ari is implemented in Go and Goal. See the `script` folder for common developmen
 
 To publish a new version of Ari:
 
-1. `go mod tidy`
-2. `./script/install`
-3. `git tag v0.1.x`
-4. `git push origin v0.1.x`
-5. `GOPROXY=proxy.golang.org go list -m github.com/semperos/ari@v0.1.x`
+```shell
+./script/release vx.y.z
+```
 
 ## Background
 
