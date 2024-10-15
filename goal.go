@@ -167,7 +167,7 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	// From Goal itself, os lib imported without prefix
 	gos.Import(goalContext, "")
 	// Ari
-	goalContext.RegisterExtension("ari", "v0.1.2")
+	goalContext.RegisterExtension("ari", AriVersion)
 	// Monads
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
