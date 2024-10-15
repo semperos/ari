@@ -1,5 +1,5 @@
-#!/usr/bin/env ari
-(2=#ARGS)or:error"Usage: ./script/release vx.y.z\n"; tag:ARGS[1]
+#!/usr/bin/env goal
+(2=#ARGS)or:error"Usage: ./script/release vx.y.z\n"; (FILE,tag):ARGS
 DEBUG:0; sh:{?[DEBUG;say "(D) $x";shell x]}
 (rx/v\d+\.\d+\.\d+/@tag)or:error"Version must be in format vx.y.z"
 vfile:(path.dir FILE) + "/../version.go"
