@@ -74,13 +74,7 @@ func (sqlDatabase *SQLDatabase) Close() error {
 
 //nolint:gocognit
 func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
-	var rows *sql.Rows
-	var err error
-	if len(args) > 0 {
-		rows, err = sqlDatabase.DB.QueryContext(context.Background(), sqlQuery, args...)
-	} else {
-		rows, err = sqlDatabase.DB.QueryContext(context.Background(), sqlQuery)
-	}
+	rows, err := sqlDatabase.DB.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
 		return goal.V{}, err
 	}
@@ -140,7 +134,7 @@ func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goa
 					// "DuckDB represents instants as the number of microseconds (µs) since 1970-01-01 00:00:00+00"
 					rowValues[i] = append(rowValues[i], goal.NewI(col.UnixMicro()))
 				default:
-					fmt.Fprintf(os.Stderr, "Go Type %v\n", reflect.TypeOf(col))
+					fmt.Fprintf(os.Stderr, "Unhandled Go Type %v\n", reflect.TypeOf(col))
 					rowValues[i] = append(rowValues[i], goal.NewS(fmt.Sprintf("%v", col)))
 				}
 			}
