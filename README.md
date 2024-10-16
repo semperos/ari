@@ -6,8 +6,6 @@ Ari is a set of extensions to the [Goal] programming language with an extensible
 
 ## Installation
 
-Clone this repository and then run the following:
-
 ```shell
 go install github.com/semperos/ari/cmd/ari@latest
 ```

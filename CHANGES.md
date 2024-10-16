@@ -1,3 +1,8 @@
+# v0.1.4 2024-10-14
+
+- Corrects the version of itself that Ari reports to Goal, surfaced via `rt.get"v"`
+- (Dev) Adds `./script/release` (written in Goal) to better automate releases of Ari
+
 # v0.1.3 2024-10-11
 
 - Latest Goal version integrated, including latest `lib/*.goal` files and help content. I neglected to upgrade to the latest before cutting v0.1.2.
