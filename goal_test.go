@@ -246,7 +246,7 @@ func TestEval(t *testing.T) {
 			if !vLeft.Matches(vRight) {
 				t.Log(ps)
 				t.Log(matchString)
-				if vLeft != (goal.V{}) {
+				if vLeft != (goal.NewGap()) {
 					//nolint:lll // upstream
 					t.Logf("results:\n   %s\nvs %s\n", vLeft.Sprint(ariContextLeft.GoalContext, true), vRight.Sprint(ariContextRight.GoalContext, true))
 				} else {

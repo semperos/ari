@@ -657,7 +657,7 @@ func (cliSystem *CliSystem) sqlQuery(sqlQuery string, args []any) (goal.V, error
 	sqlDatabase := cliSystem.ariContext.SQLDatabase
 	goalD, err := ari.SQLQueryContext(sqlDatabase, sqlQuery, args)
 	if err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
 	// Last result table as sql.p in Goal, to support switching eval modes:
 	cliSystem.ariContext.GoalContext.AssignGlobal("sql.p", goalD)
@@ -668,7 +668,7 @@ func (cliSystem *CliSystem) sqlExec(sqlQuery string, args []any) (goal.V, error)
 	sqlDatabase := cliSystem.ariContext.SQLDatabase
 	goalD, err := ari.SQLExec(sqlDatabase, sqlQuery, args)
 	if err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
 	cliSystem.ariContext.GoalContext.AssignGlobal("sql.p", goalD)
 	return goalD, nil

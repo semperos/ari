@@ -76,12 +76,12 @@ func (sqlDatabase *SQLDatabase) Close() error {
 func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
 	rows, err := sqlDatabase.DB.QueryContext(context.Background(), sqlQuery, args...)
 	if err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
-	// defer rows.Close()
+	defer rows.Close()
 	colNames, err := rows.Columns()
 	if err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
 	// NB: For future type introspection, see below.
 	// colTypes, err := rows.ColumnTypes()
@@ -97,7 +97,7 @@ func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goa
 	for rows.Next() {
 		err = rows.Scan(colPtrs...)
 		if err != nil {
-			return goal.V{}, err
+			return goal.NewGap(), err
 		}
 		for i, col := range cols {
 			// fmt.Printf("SQL %v // Go %v\n", colTypes[i].DatabaseTypeName(), reflect.TypeOf(col))
@@ -140,11 +140,8 @@ func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goa
 			}
 		}
 	}
-	if err = rows.Close(); err != nil {
-		return goal.V{}, err
-	}
 	if err = rows.Err(); err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
 	// NB: For future type introspection, see above.
 	// fmt.Printf("COLS %v\n", colNames)
@@ -161,15 +158,15 @@ func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goa
 func SQLExec(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
 	result, err := sqlDatabase.DB.Exec(sqlQuery, args...)
 	if err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
 	lastInsertID, err := result.LastInsertId()
 	if err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return goal.V{}, err
+		return goal.NewGap(), err
 	}
 	// Consider: Formatting this as a table for consistency with )sql, but it's really a simpler dict
 	ks := goal.NewAS([]string{"lastInsertId", "rowsAffected"})
