@@ -410,12 +410,23 @@ func VFTimeDay(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(int64(xv.Time.Day()))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = int64(t.Time.Day())
+				} else {
+					return goal.Panicf("time.day time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
 			return panicType("time.day time", "time", x)
 		}
-		day := tLocal.Time.Day()
-		return goal.NewI(int64(day))
 	default:
 		return goal.Panicf("time.day : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -426,12 +437,23 @@ func VFTimeWeekDay(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(int64(xv.Time.Weekday()))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = int64(t.Time.Weekday())
+				} else {
+					return goal.Panicf("time.weekday time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
 			return panicType("time.weekday time", "time", x)
 		}
-		weekday := tLocal.Time.Weekday()
-		return goal.NewI(int64(weekday))
 	default:
 		return goal.Panicf("time.weekday : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -442,12 +464,23 @@ func VFTimeHour(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(int64(xv.Time.Hour()))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = int64(t.Time.Hour())
+				} else {
+					return goal.Panicf("time.hour time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
 			return panicType("time.hour time", "time", x)
 		}
-		hour := tLocal.Time.Hour()
-		return goal.NewI(int64(hour))
 	default:
 		return goal.Panicf("time.hour : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -458,12 +491,23 @@ func VFTimeMinute(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(int64(xv.Time.Minute()))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = int64(t.Time.Minute())
+				} else {
+					return goal.Panicf("time.minute time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
 			return panicType("time.minute time", "time", x)
 		}
-		minute := tLocal.Time.Minute()
-		return goal.NewI(int64(minute))
 	default:
 		return goal.Panicf("time.minute : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -474,12 +518,23 @@ func VFTimeSecond(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(int64(xv.Time.Second()))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = int64(t.Time.Second())
+				} else {
+					return goal.Panicf("time.second time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
 			return panicType("time.second time", "time", x)
 		}
-		second := tLocal.Time.Second()
-		return goal.NewI(int64(second))
 	default:
 		return goal.Panicf("time.second : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -487,33 +542,38 @@ func VFTimeSecond(_ *goal.Context, args []goal.V) goal.V {
 
 // Implements time.millisecond function.
 func VFTimeMillisecond(_ *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
-	switch len(args) {
-	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
-			return panicType("time.millisecond time", "time", x)
-		}
-		millisecond := tLocal.Time.Nanosecond() / int(time.Millisecond)
-		return goal.NewI(int64(millisecond))
-	default:
-		return goal.Panicf("time.millisecond : too many arguments (%d), expects 1 argument", len(args))
-	}
+	return vfTimeMilliMicro("time.millisecond", time.Millisecond, args)
 }
 
 // Implements time.microsecond function.
 func VFTimeMicrosecond(_ *goal.Context, args []goal.V) goal.V {
+	return vfTimeMilliMicro("time.microsecond", time.Microsecond, args)
+}
+
+// Helper function for near-duplicate time.millisecond and time.microsecond implementations.
+func vfTimeMilliMicro(goalName string, unit time.Duration, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
-			return panicType("time.microsecond time", "time", x)
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(int64(xv.Time.Nanosecond() / int(unit)))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = int64(t.Time.Nanosecond() / int(unit))
+				} else {
+					return goal.Panicf("%v time : expected array of times, "+
+						"but array has a %q value: %v", goalName, xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
+			return panicType(fmt.Sprintf("%v time", goalName), "time", x)
 		}
-		microsecond := tLocal.Time.Nanosecond() / int(time.Microsecond)
-		return goal.NewI(int64(microsecond))
 	default:
-		return goal.Panicf("time.microsecond : too many arguments (%d), expects 1 argument", len(args))
+		return goal.Panicf("%v : too many arguments (%d), expects 1 argument", goalName, len(args))
 	}
 }
 
@@ -522,12 +582,23 @@ func VFTimeNanosecond(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(int64(xv.Time.Nanosecond()))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = int64(t.Time.Nanosecond())
+				} else {
+					return goal.Panicf("time.nanosecond time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
 			return panicType("time.nanosecond time", "time", x)
 		}
-		nanosecond := tLocal.Time.Nanosecond()
-		return goal.NewI(int64(nanosecond))
 	default:
 		return goal.Panicf("time.nanosecond : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -538,12 +609,26 @@ func VFTimeZoneName(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
-			return panicType("time.zonename time", "time", x)
+		switch xv := x.BV().(type) {
+		case *Time:
+			name, _ := xv.Time.Zone()
+			return goal.NewS(name)
+		case *goal.AV:
+			r := make([]string, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					name, _ := t.Time.Zone()
+					r[i] = name
+				} else {
+					return goal.Panicf("time.zonename time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAS(r)
+		default:
+			return goal.Panicf("time.zonename time : expected time or array of times, "+
+				"but received a %q: %v", xv.Type(), xv)
 		}
-		name, _ := tLocal.Time.Zone()
-		return goal.NewS(name)
 	default:
 		return goal.Panicf("time.zonename : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -554,12 +639,26 @@ func VFTimeZoneOffset(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
-			return panicType("time.zoneoffset time", "time", x)
+		switch xv := x.BV().(type) {
+		case *Time:
+			_, offset := xv.Time.Zone()
+			return goal.NewI(int64(offset))
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					_, offset := t.Time.Zone()
+					r[i] = int64(offset)
+				} else {
+					return goal.Panicf("time.zoneoffset time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
+			return goal.Panicf("time.zoneoffset time : expected time or array of times, "+
+				"but received a %q: %v", xv.Type(), xv)
 		}
-		_, offset := tLocal.Time.Zone()
-		return goal.NewI(int64(offset))
 	default:
 		return goal.Panicf("time.zoneoffset : too many arguments (%d), expects 1 argument", len(args))
 	}
