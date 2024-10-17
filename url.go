@@ -1,7 +1,6 @@
 package ari
 
 import (
-	"fmt"
 	"net/url"
 
 	"codeberg.org/anaseto/goal"
@@ -22,13 +21,13 @@ func VFUrlEncode(_ *goal.Context, args []goal.V) goal.V {
 			kS, ok := k.BV().(goal.S)
 			if !ok {
 				//nolint:lll // Error message is descriptive.
-				return goal.NewPanic(fmt.Sprintf("url.encode expects a dictionary with string keys, but received a dict with a %q key: %v", k.Type(), k))
+				return goal.Panicf("url.encode expects a dictionary with string keys, but received a dict with a %q key: %v", k.Type(), k)
 			}
 			v := vs.At(i)
 			vS, ok := v.BV().(goal.S)
 			if !ok {
 				//nolint:lll // Error message is descriptive.
-				return goal.NewPanic(fmt.Sprintf("url.encode expects a dictionary with string values, but received a dict with a %q value: %v", v.Type(), v))
+				return goal.Panicf("url.encode expects a dictionary with string values, but received a dict with a %q value: %v", v.Type(), v)
 			}
 			urlValues.Add(string(kS), string(vS))
 		}

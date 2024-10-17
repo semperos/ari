@@ -120,8 +120,8 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 					default:
 						s, ok := value.BV().(goal.S)
 						if !ok {
-							return goal.NewPanicError(fmt.Errorf(`field Align supports either floats or one of "t", "r", "b", "l", or "c", `+
-								"but received a %v: %v", value.Type(), value))
+							return goal.Panicf(`field Align supports either floats or one of "t", "r", "b", "l", or "c", `+
+								"but received a %v: %v", value.Type(), value)
 						}
 						switch string(s) {
 						case "t":
@@ -135,15 +135,15 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 						case "c":
 							style = style.Align(lipgloss.Center)
 						default:
-							return goal.NewPanicError(fmt.Errorf(`field Align supports either floats or one of "t", "r", "b", "l", or "c", `+
-								"but received: %v", s))
+							return goal.Panicf(`field Align supports either floats or one of "t", "r", "b", "l", or "c", `+
+								"but received: %v", s)
 						}
 					}
 				case "Background":
 					tuiColor, ok := value.BV().(*TuiColor)
 					if !ok {
-						return goal.NewPanicError(fmt.Errorf("field Background must be a tui.color value, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field Background must be a tui.color value, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 					style = style.Background(tuiColor.color)
 				case "Blink":
@@ -173,40 +173,40 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 							case "thick":
 								style = style.Border(lipgloss.ThickBorder())
 							default:
-								return goal.NewPanicError(fmt.Errorf("field Border supports one of "+
+								return goal.Panicf("field Border supports one of "+
 									`"double", "hidden", "normal", "rounded", or "thick" border names, but `+
-									"received %v", v))
+									"received %v", v)
 							}
 						case (*goal.AV):
 							//nolint: mnd // Argument is a 5-element list of: border-type, top, right, bottom, left
 							if v.Len() != 5 {
-								return goal.NewPanicError(fmt.Errorf("field Border expects either a 0 or 1, or "+
+								return goal.Panicf("field Border expects either a 0 or 1, or "+
 									`a list of where the first item is one of "double", "hidden", "normal", "rounded", or "thick" `+
 									"and the remainder are 0 or 1 for top, right, bottom, and left borders. "+
-									"Received a list with %d items: %v", v.Len(), v))
+									"Received a list with %d items: %v", v.Len(), v)
 							}
 							borderS := v.Slice[0]
 							s, ok := borderS.BV().(goal.S)
 							if !ok {
-								return goal.NewPanicError(fmt.Errorf("field Border expects either a 0 or 1, or "+
+								return goal.Panicf("field Border expects either a 0 or 1, or "+
 									`a list of where the first item is one of "double", "hidden", "normal", "rounded", or "thick" `+
 									"and the remainder are 0 or 1 for top, right, bottom, and left borders. "+
-									"Instead of s, received a %v: %v", borderS.Type(), borderS))
+									"Instead of s, received a %v: %v", borderS.Type(), borderS)
 							}
 							borderSidesAB := v.Slice[1:]
-							bools := make([]bool, 0, v.Len()-1)
+							bools := make([]bool, v.Len()-1)
 							for i, v := range borderSidesAB {
 								if v.IsI() {
 									if v.I() == 0 {
-										bools = append(bools, false)
+										bools[i] = false
 									} else {
-										bools = append(bools, true)
+										bools[i] = true
 									}
 								} else {
-									return goal.NewPanicError(fmt.Errorf("field Border expects either a 0 or 1, or "+
+									return goal.Panicf("field Border expects either a 0 or 1, or "+
 										`a list of where the first item is one of "double", "hidden", "normal", "rounded", or "thick" `+
 										"and the remainder are 0 or 1 for top, right, bottom, and left borders. "+
-										"For the number in position %d, received a %v: %v", i, v.Type(), v))
+										"For the number in position %d, received a %v: %v", i, v.Type(), v)
 								}
 							}
 							switch s {
@@ -221,29 +221,29 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 							case "thick":
 								style = style.Border(lipgloss.ThickBorder(), bools...)
 							default:
-								return goal.NewPanicError(fmt.Errorf("field Border supports one of "+
+								return goal.Panicf("field Border supports one of "+
 									`"double", "hidden", "normal", "rounded", or "thick" border names, but `+
-									"received %v", s))
+									"received %v", s)
 							}
 						default:
-							return goal.NewPanicError(fmt.Errorf("field Border expects either a 0 or 1, or "+
+							return goal.Panicf("field Border expects either a 0 or 1, or "+
 								`a list of where the first item is one of "double", "hidden", "normal", "rounded", or "thick" `+
 								"and the remainder are 0 or 1 for top, right, bottom, and left borders. "+
-								"Received a %v: %v", value.Type(), value))
+								"Received a %v: %v", value.Type(), value)
 						}
 					}
 				case "BorderBackground":
 					tuiColor, ok := value.BV().(*TuiColor)
 					if !ok {
-						return goal.NewPanicError(fmt.Errorf("field BorderBackground must be a tui.color value, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field BorderBackground must be a tui.color value, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 					style = style.BorderBackground(tuiColor.color)
 				case "BorderForeground":
 					tuiColor, ok := value.BV().(*TuiColor)
 					if !ok {
-						return goal.NewPanicError(fmt.Errorf("field BorderForeground must be a tui.color value, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field BorderForeground must be a tui.color value, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 					style = style.BorderForeground(tuiColor.color)
 
@@ -254,8 +254,8 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 				case "Foreground":
 					tuiColor, ok := value.BV().(*TuiColor)
 					if !ok {
-						return goal.NewPanicError(fmt.Errorf("field Foreground must be a tui.color value, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field Foreground must be a tui.color value, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 					style = style.Foreground(tuiColor.color)
 				case "Height":
@@ -263,59 +263,59 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 					case value.IsI():
 						style = style.Height(int(value.I()))
 					default:
-						return goal.NewPanicError(fmt.Errorf("field Height expects an integer, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field Height expects an integer, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 				case "Italic":
 					if value.IsTrue() {
 						style = style.Italic(true)
 					}
 				case "Margin":
-					marginArgs := make([]int, 0, quadrilateral)
+					marginArgs := make([]int, quadrilateral)
 					switch v := value.BV().(type) {
 					case *goal.AB:
 						if v.Len() > quadrilateral {
-							return goal.NewPanicError(fmt.Errorf("field Margin must be an array of 4 integers, "+
-								"but received %v: %v", v.Len(), value))
+							return goal.Panicf("field Margin must be an array of 4 integers, "+
+								"but received %v: %v", v.Len(), value)
 						}
-						for _, x := range v.Slice {
-							marginArgs = append(marginArgs, int(x))
+						for i, x := range v.Slice {
+							marginArgs[i] = int(x)
 						}
 					case *goal.AI:
 						if v.Len() > quadrilateral {
-							return goal.NewPanicError(fmt.Errorf("field Margin must be an array of 4 integers, "+
-								"but received %v: %v", v.Len(), value))
+							return goal.Panicf("field Margin must be an array of 4 integers, "+
+								"but received %v: %v", v.Len(), value)
 						}
-						for _, x := range v.Slice {
-							marginArgs = append(marginArgs, int(x))
+						for i, x := range v.Slice {
+							marginArgs[i] = int(x)
 						}
 					default:
-						return goal.NewPanicError(fmt.Errorf("field Margin must be an array of 4 numbers, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field Margin must be an array of 4 numbers, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 					style = style.Margin(marginArgs...)
 				case "Padding":
-					paddingArgs := make([]int, 0, quadrilateral)
+					paddingArgs := make([]int, quadrilateral)
 					switch v := value.BV().(type) {
 					case *goal.AB:
 						if v.Len() > quadrilateral {
-							return goal.NewPanicError(fmt.Errorf("field Padding must be an array of 4 integers, "+
-								"but received %v: %v", v.Len(), value))
+							return goal.Panicf("field Padding must be an array of 4 integers, "+
+								"but received %v: %v", v.Len(), value)
 						}
-						for _, x := range v.Slice {
-							paddingArgs = append(paddingArgs, int(x))
+						for i, x := range v.Slice {
+							paddingArgs[i] = int(x)
 						}
 					case *goal.AI:
 						if v.Len() > quadrilateral {
-							return goal.NewPanicError(fmt.Errorf("field Padding must be an array of 4 integers, "+
-								"but received %v: %v", v.Len(), value))
+							return goal.Panicf("field Padding must be an array of 4 integers, "+
+								"but received %v: %v", v.Len(), value)
 						}
-						for _, x := range v.Slice {
-							paddingArgs = append(paddingArgs, int(x))
+						for i, x := range v.Slice {
+							paddingArgs[i] = int(x)
 						}
 					default:
-						return goal.NewPanicError(fmt.Errorf("field Padding must be an array of 4 numbers, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field Padding must be an array of 4 numbers, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 					style = style.Padding(paddingArgs...)
 				case "Reverse":
@@ -335,15 +335,15 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 					case value.IsI():
 						style = style.Width(int(value.I()))
 					default:
-						return goal.NewPanicError(fmt.Errorf("field Width expects an integer, "+
-							"but received a %v: %v", value.Type(), value))
+						return goal.Panicf("field Width expects an integer, "+
+							"but received a %v: %v", value.Type(), value)
 					}
 				}
 			}
 		default:
-			return goal.NewPanicError(fmt.Errorf("tui.style expects a Goal dictionary with string keys, but received a %v: %v",
+			return goal.Panicf("tui.style expects a Goal dictionary with string keys, but received a %v: %v",
 				kas.Type(),
-				kas))
+				kas)
 		}
 		tuiStyle := TuiStyle{style}
 		return goal.NewV(&tuiStyle)

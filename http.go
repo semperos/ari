@@ -332,7 +332,7 @@ func VFHTTPClientFn() func(goalContext *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
 		clientOptions, ok := x.BV().(*goal.D)
 		switch len(args) {
-		case 1:
+		case monadic:
 			if !ok {
 				return panicType("http.client d", "d", x)
 			}
@@ -342,7 +342,7 @@ func VFHTTPClientFn() func(goalContext *goal.Context, args []goal.V) goal.V {
 			}
 			return goal.NewV(hc)
 		default:
-			return goal.NewPanic("http.client : too many arguments")
+			return goal.Panicf("http.client : too many arguments (%d), expects 1 argument", len(args))
 		}
 	}
 }
@@ -400,12 +400,11 @@ func httpMakerDyadic(x goal.V, args []goal.V, methodLower string, methodUpper st
 			return goal.NewPanicError(err)
 		}
 	default:
-		errMsg := fmt.Sprintf("client http.%s url : client must be a dict or ari.HTTPClient instance, "+
+		return goal.Panicf("client http.%s url : client must be a dict or ari.HTTPClient instance, "+
 			"but received a %v: %v",
 			methodLower,
 			reflect.TypeOf(clientOpts),
 			clientOpts)
-		return goal.NewPanic(errMsg)
 	}
 	y := args[0]
 	urlS, ok := y.BV().(goal.S)
@@ -432,12 +431,11 @@ func httpMakerTriadic(x goal.V, args []goal.V, methodLower string, methodUpper s
 			return goal.NewPanicError(err)
 		}
 	default:
-		errMsg := fmt.Sprintf("client http.%s url optionsDict : client must be a dict or ari.HTTPClient instance, "+
+		return goal.Panicf("client http.%s url optionsDict : client must be a dict or ari.HTTPClient instance, "+
 			"but received a %v: %v",
 			methodLower,
 			reflect.TypeOf(clientOpts),
 			clientOpts)
-		return goal.NewPanic(errMsg)
 	}
 	y := args[1]
 	urlS, ok := y.BV().(goal.S)
