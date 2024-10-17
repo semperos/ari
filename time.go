@@ -714,18 +714,34 @@ func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
 	if !ok {
 		return panicType("slayout time.parse svalue", "sformat", x)
 	}
+	layout := string(layoutS)
 	switch len(args) {
 	case dyadic:
 		y := args[0]
-		valueS, ok := y.BV().(goal.S)
-		if !ok {
-			return panicType("slayout time.parse svalue", "svalue", y)
+		switch yv := y.BV().(type) {
+		case goal.S:
+			if !ok {
+				return panicType("slayout time.parse svalue", "svalue", y)
+			}
+			t, err := time.Parse(layout, string(yv))
+			if err != nil {
+				return goal.NewPanicError(err)
+			}
+			return goal.NewV(&Time{&t})
+		case *goal.AS:
+			r := make([]goal.V, yv.Len())
+			for i, yi := range yv.Slice {
+				t, err := time.Parse(layout, yi)
+				if err != nil {
+					return goal.NewPanicError(err)
+				}
+				r[i] = goal.NewV(&Time{&t})
+			}
+			return goal.NewAV(r)
+		default:
+			return goal.Panicf("slayout time.parse svalue : svalue must be a string or array of strings, "+
+				"but received a %q: %v", yv.Type(), yv)
 		}
-		t, err := time.Parse(string(layoutS), string(valueS))
-		if err != nil {
-			return goal.NewPanicError(err)
-		}
-		return goal.NewV(&Time{&t})
 	default:
 		return goal.Panicf("time.parse : too many arguments (%d), expects 2 arguments", len(args))
 	}
@@ -734,19 +750,33 @@ func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
 // Implements time.format function.
 func VFTimeFormat(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
-	t, ok := x.BV().(*Time)
+	formatS, ok := x.BV().(goal.S)
 	if !ok {
-		return panicType("time time.format sformat", "time", x)
+		return panicType("sformat time.format time", "sformat", x)
 	}
+	format := string(formatS)
 	switch len(args) {
 	case dyadic:
 		y := args[0]
-		formatS, ok := y.BV().(goal.S)
-		if !ok {
-			return panicType("time time.format sformat", "sformat", y)
+		switch yv := y.BV().(type) {
+		case *Time:
+			s := yv.Time.Format(format)
+			return goal.NewS(s)
+		case *goal.AV:
+			r := make([]string, yv.Len())
+			for i, yi := range yv.Slice {
+				if t, ok := yi.BV().(*Time); ok {
+					r[i] = t.Time.Format(format)
+				} else {
+					return goal.Panicf("sformat time.format time : expected array of times, "+
+						"but array has a %q value: %v", yi.Type(), yi)
+				}
+			}
+			return goal.NewAS(r)
+		default:
+			return goal.Panicf("sformat time.format time : expected time or array of times, "+
+				"but received a %q: %v", yv.Type(), yv)
 		}
-		s := t.Time.Format(string(formatS))
-		return goal.NewS(s)
 	default:
 		return goal.Panicf("time.format : too many arguments (%d), expects 2 arguments", len(args))
 	}
