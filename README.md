@@ -48,17 +48,16 @@ See [CHANGES.md](CHANGES.md) for recent changes.
 
 Non-exhaustive list:
 
-- TODO: Test coverage
-- TODO: Consider which of ari's functions should be pervasive; review Goal's approach and implement
+- IN PROGRESS: Test coverage
+- IN PROGRESS: Consider which of ari's functions should be pervasive; review Goal's approach and implement
 - TODO: BUG When using `-l` flag, loaded files aren't completely evaluated. Evaluation stops partway through and it's not immediately clear why.
 - TODO: BUG `json.tbl` produces improper zero values when keys are missing. Where possible, column lists should be of uniform type and not generic if the data allows for it.
 - TODO: Make version of `fmt.tbl` that allows setting maximum column width.
-- TODO: Validate correct usage of `goal.NewError` vs. `goal.NewPanicError`
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
 
-I plan to support the above items. The following are stretch goals or nice-to-have's:
+I plan to support the above items. The following are stretch goals, nice-to-have's, or thoughts for further consideration:
 
 - TODO: Use custom table functions via replacement scan to query Goal tables from DuckDB.
 - TODO: Looser auto-complete, not just prefix-based
@@ -67,7 +66,7 @@ I plan to support the above items. The following are stretch goals or nice-to-ha
 - IN PROGRESS: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
 - TODO: Implement a subset of [q](https://code.kx.com/q/) functions to extend what Goal already has.
 - Specific user commands:
-  - TODO: Toggle pretty-printing
+  - TODO: Toggle pretty-printing (TBD what this means; can use JSON output at this point for possibly more familiar output)
   - TODO: Toggle paging at the REPL (as found in [PicoLisp](https://picolisp.com/wiki/?home))
   - TODO: Toggle colored output
 
