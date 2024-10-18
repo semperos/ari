@@ -1,6 +1,5 @@
 / Shape
 istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]} / is x a dictionary-as-table
-reshape:{((*/x)#y){(-y)$x}/|1_x} / Implementation by anaseto, shared on Matrix
 shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
 depths:{[ind;l]?[(@l)~"A";,/o[ind+1]'l; (@l)¿"NSI";(#l)#ind; ind-1]} / list depths
 zero:..[i:0;n:0.0;s:"";r:rx//;d:()!();f:(:);A:()] / handle, error don't fill

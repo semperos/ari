@@ -458,3 +458,19 @@ func helpForHTTPFn(s string) string {
 		"                          - RawPathParams",
 	}, "\n")
 }
+
+// panicType produces an bad type panic.
+//
+// Copied from Goal's implementation.
+func panicType(op, sym string, x goal.V) goal.V {
+	return goal.Panicf("%s : bad type %q in %s", op, x.Type(), sym)
+}
+
+// panicLength produces an length mismatch panic.
+//
+// Copied from Goal's implementation.
+//
+//nolint:unused // Going to use in subsequent commits
+func panicLength(op string, n1, n2 int) goal.V {
+	return goal.Panicf("%s : length mismatch: %d vs %d", op, n1, n2)
+}

@@ -175,11 +175,6 @@ func SQLExec(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, err
 	return goal.NewD(ks, vs), nil
 }
 
-// Copied from Goal's implementation, a panic value for type mismatches.
-func panicType(op, sym string, x goal.V) goal.V {
-	return goal.Panicf("%s : bad type %q in %s", op, x.Type(), sym)
-}
-
 // Implements sql.open to open a SQL database.
 func VFSqlOpen(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
