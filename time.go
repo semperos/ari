@@ -1013,45 +1013,158 @@ const (
 )
 
 // Implements time.add function.
+//
+// Accepts one time argument and one integer argument, returning a new time which is addition
+// of the integer argument as nanoseconds to the time. Pervasive.
 func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
-	t1, ok := x.BV().(*Time)
-	if !ok {
-		return panicType("time time.add i-or-I", "time", x)
-	}
-	switch len(args) {
-	case dyadic:
-		y := args[0]
-		if y.IsI() {
-			t := t1.Time.Add(time.Duration(y.I()))
-			return goal.NewV(&Time{&t})
-		}
-		switch yv := y.BV().(type) {
-		case *goal.AB:
-			al := yv.Len()
-			if al != yearMonthDay {
-				return goal.Panicf("time.add : I arg must have 3 items, had %d", al)
-			}
-			year := yv.At(yearPos).I()
-			month := yv.At(monthPos).I()
-			day := yv.At(dayPos).I()
-			t := t1.Time.AddDate(int(year), int(month), int(day))
-			return goal.NewV(&Time{&t})
-		case *goal.AI:
-			al := yv.Len()
-			if al != yearMonthDay {
-				return goal.Panicf("time.add : I arg must have 3 items, had %d", al)
-			}
-			year := yv.At(yearPos).I()
-			month := yv.At(monthPos).I()
-			day := yv.At(dayPos).I()
-			t := t1.Time.AddDate(int(year), int(month), int(day))
-			return goal.NewV(&Time{&t})
-		default:
-			return panicType("time time.add i-or-I", "i-or-I", y)
-		}
-	default:
+	if len(args) > dyadic {
 		return goal.Panicf("time.add : too many arguments (%d), expects 2 arguments", len(args))
+	}
+	x, y := args[1], args[0]
+	if x.IsI() {
+		return addIV(x.I(), y)
+	}
+	switch xv := x.BV().(type) {
+	case *Time:
+		return addTimeV(xv, y)
+	case *goal.AB:
+		// return timeAddABV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AI:
+		// return timeAddAIV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AV:
+		// Check length of both args
+		// if yv.Len() != xv.Len() {
+		// return panicLength("X+Y", xv.Len(), yv.Len())
+		// }
+		// return timeAddAVV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.D:
+		// return timeAddDV(xv, y)
+		return goal.Panicf("not yet implemented")
+	default:
+		return panicType("time-or-i1 time.add time-or-i2", "time-or-i1", x)
+	}
+}
+
+func addIV(x int64, y goal.V) goal.V {
+	switch yv := y.BV().(type) {
+	case *Time:
+		t := yv.Time.Add(time.Duration(x))
+		return goal.NewV(&Time{&t})
+	case *goal.AV:
+		dur := time.Duration(x)
+		r := make([]goal.V, yv.Len())
+		for i, yi := range yv.Slice {
+			if t, ok := yi.BV().(*Time); ok {
+				t := t.Time.Add(dur)
+				r[i] = goal.NewV(&Time{&t})
+			}
+		}
+		return goal.NewAV(r)
+	default:
+		return panicType("time-or-i1 time.add time-or-i2", "time-or-i2", y)
+	}
+}
+
+func addTimeV(x *Time, y goal.V) goal.V {
+	if y.IsI() {
+		t := x.Time.Add(time.Duration(y.I()))
+		return goal.NewV(&Time{&t})
+	}
+	switch yv := y.BV().(type) {
+	case *goal.AB:
+		r := make([]goal.V, yv.Len())
+		for i, yi := range yv.Slice {
+			t := x.Time.Add(time.Duration(yi))
+			r[i] = goal.NewV(&Time{&t})
+		}
+		return goal.NewAV(r)
+	case *goal.AI:
+		r := make([]goal.V, yv.Len())
+		for i, yi := range yv.Slice {
+			t := x.Time.Add(time.Duration(yi))
+			r[i] = goal.NewV(&Time{&t})
+		}
+		return goal.NewAV(r)
+	default:
+		return panicType("time-or-i1 time.add time-or-i2", "time-or-i2", y)
+	}
+}
+
+// Implements time.addDate function.
+func VFTimeAddDate(_ *goal.Context, args []goal.V) goal.V {
+	if len(args) > dyadic {
+		return goal.Panicf("time.addDate : too many arguments (%d), expects 2 arguments", len(args))
+	}
+	x, y := args[1], args[0]
+	switch xv := x.BV().(type) {
+	case *Time:
+		return adddateTimeV(xv, y)
+	case *goal.AB:
+		// return adddateABV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AI:
+		// return adddateAIV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AV:
+		// return adddateAVV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.D:
+		// return adddateDV(xv, y)
+		return goal.Panicf("not yet implemented")
+	default:
+		return panicType("time-or-I1 time.addDate time-or-I2", "time-or-I1", x)
+	}
+}
+
+func adddateTimeV(x *Time, y goal.V) goal.V {
+	switch yv := y.BV().(type) {
+	case *goal.AB:
+		if yv.Len() != yearMonthDay {
+			return goal.Panicf("time.addDate : I arg must have 3 items, had %d", yv.Len())
+		}
+		year := yv.At(yearPos).I()
+		month := yv.At(monthPos).I()
+		day := yv.At(dayPos).I()
+		t := x.Time.AddDate(int(year), int(month), int(day))
+		return goal.NewV(&Time{&t})
+	case *goal.AI:
+		if yv.Len() != yearMonthDay {
+			return goal.Panicf("time.addDate : I arg must have 3 items, had %d", yv.Len())
+		}
+		year := yv.At(yearPos).I()
+		month := yv.At(monthPos).I()
+		day := yv.At(dayPos).I()
+		t := x.Time.AddDate(int(year), int(month), int(day))
+		return goal.NewV(&Time{&t})
+	case *goal.AV:
+		r := make([]goal.V, yv.Len())
+		for j, yi := range yv.Slice {
+			if yi.Len() != yearMonthDay {
+				return goal.Panicf("time.addDate : each array must have 3 items, one had %d", yi.Len())
+			}
+			switch yiv := yi.BV().(type) {
+			case *goal.AB:
+				year := yiv.At(yearPos).I()
+				month := yiv.At(monthPos).I()
+				day := yiv.At(dayPos).I()
+				t := x.Time.AddDate(int(year), int(month), int(day))
+				r[j] = goal.NewV(&Time{&t})
+			case *goal.AI:
+				year := yiv.At(yearPos).I()
+				month := yiv.At(monthPos).I()
+				day := yiv.At(dayPos).I()
+				t := x.Time.AddDate(int(year), int(month), int(day))
+				r[j] = goal.NewV(&Time{&t})
+			default:
+				return goal.Panicf("time.addDate : each array must be numeric, one is %q: %v", yi.Type(), yi)
+			}
+		}
+		return goal.NewAV(r)
+	default:
+		return panicType("time-or-i1 time.addDate time-or-i2", "time-or-i2", y)
 	}
 }
 
