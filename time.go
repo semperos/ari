@@ -669,12 +669,25 @@ func VFTimeLocation(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
+		switch xv := x.BV().(type) {
+		case *Time:
+			loc := xv.Time.Location()
+			return goal.NewV(&Location{Location: loc})
+		case *goal.AV:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					loc := t.Time.Location()
+					r[i] = goal.NewV(&Location{Location: loc})
+				} else {
+					return goal.Panicf("time.location time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAV(r)
+		default:
 			return panicType("time.location time", "time", x)
 		}
-		loc := tLocal.Time.Location()
-		return goal.NewV(&Location{Location: loc})
 	default:
 		return goal.Panicf("time.location : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -685,12 +698,24 @@ func VFTimeLocationString(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		lloc, ok := x.BV().(*Location)
-		if !ok {
-			return panicType("time.locationstring location", "location", x)
+		switch xv := x.BV().(type) {
+		case *Location:
+			return goal.NewS(xv.Location.String())
+		case *goal.AV:
+			r := make([]string, xv.Len())
+			for i, xi := range xv.Slice {
+				if l, ok := xi.BV().(*Location); ok {
+					r[i] = l.Location.String()
+				} else {
+					return goal.Panicf("time.locationstring time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAS(r)
+		default:
+			return goal.Panicf("time.locationstring time : expected time or array of times, "+
+				"but received a %q: %v", xv.Type(), xv)
 		}
-		name := lloc.Location.String()
-		return goal.NewS(name)
 	default:
 		return goal.Panicf("time.locationstring : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -735,72 +760,171 @@ func VFTimeLoadLocation(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.unixmilli function.
+//
+// Given numbers, produces times; given times, produces numbers.
+//
+//nolint:dupl // yes, but not interested in further conditional logic here.
 func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
-			if x.IsI() {
-				t := time.UnixMilli(x.I())
-				return goal.NewV(&Time{&t})
-			}
-			return panicType("time.unixmilli time-or-i", "time-or-i", x)
+		if x.IsI() {
+			t := time.UnixMilli(x.I())
+			return goal.NewV(&Time{&t})
 		}
-		ts := tLocal.Time.UnixMilli()
-		return goal.NewI(ts)
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(xv.Time.UnixMilli())
+		case *goal.AB:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				t := time.UnixMilli(int64(xi))
+				r[i] = goal.NewV(&Time{&t})
+			}
+			return goal.NewAV(r)
+		case *goal.AI:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				t := time.UnixMilli(xi)
+				r[i] = goal.NewV(&Time{&t})
+			}
+			return goal.NewAV(r)
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = t.Time.UnixMilli()
+				} else {
+					return goal.Panicf("time.unixmilli time-or-i : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
+			return panicType("time.unixmilli time-or-i", "time", x)
+		}
 	default:
 		return goal.Panicf("time.unixmilli : too many arguments (%d), expects 1 argument", len(args))
 	}
 }
 
 // Implements time.unixmicro function.
+//
+// Given numbers, produces times; given times, produces numbers.
+//
+//nolint:dupl // yes, but not interested in further conditional logic here.
 func VFTimeUnixMicro(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
-		tLocal, ok := x.BV().(*Time)
-		if !ok {
-			if x.IsI() {
-				t := time.UnixMicro(x.I())
-				return goal.NewV(&Time{&t})
-			}
-			return panicType("time.unixmicro time-or-i", "time-or-i", x)
+		if x.IsI() {
+			t := time.UnixMicro(x.I())
+			return goal.NewV(&Time{&t})
 		}
-		ts := tLocal.Time.UnixMicro()
-		return goal.NewI(ts)
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(xv.Time.UnixMicro())
+		case *goal.AB:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				t := time.UnixMicro(int64(xi))
+				r[i] = goal.NewV(&Time{&t})
+			}
+			return goal.NewAV(r)
+		case *goal.AI:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				t := time.UnixMicro(xi)
+				r[i] = goal.NewV(&Time{&t})
+			}
+			return goal.NewAV(r)
+		case *goal.AV:
+			r := make([]int64, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					r[i] = t.Time.UnixMicro()
+				} else {
+					return goal.Panicf("time.unixmicro time-or-i : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAI(r)
+		default:
+			return panicType("time.unixmicro time-or-i", "time", x)
+		}
 	default:
 		return goal.Panicf("time.unixmicro : too many arguments (%d), expects 1 argument", len(args))
 	}
 }
 
 // Implements time.unixnano function.
+//
+// Providing a time returns a number; providing a number returns a time.
+// Given how Go's time API is designed, the latter case is handled by dividing
+// the given number by time.Second so that the time.Unix(sec int64, nsec int64)
+// function can be used to construct the appropriate time struct.
 func VFTimeUnixNano(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
-	tLocal, ok := x.BV().(*Time)
-	if !ok {
-		return panicType("time.unixnano time", "time", x)
-	}
 	switch len(args) {
 	case monadic:
-		ts := tLocal.Time.UnixNano()
-		return goal.NewI(ts)
+		if x.IsI() {
+			return goal.NewV(&Time{unixNano(x.I())})
+		}
+		switch xv := x.BV().(type) {
+		case *Time:
+			return goal.NewI(xv.Time.UnixNano())
+		case *goal.AB:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				r[i] = goal.NewV(&Time{unixNano(int64(xi))})
+			}
+			return goal.NewAV(r)
+		case *goal.AI:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				r[i] = goal.NewV(&Time{unixNano(xi)})
+			}
+			return goal.NewAV(r)
+		default:
+			return panicType("time.unixnano time-or-i", "time-or-i", x)
+		}
 	default:
 		return goal.Panicf("time.unixnano : too many arguments (%d), expects 1 argument", len(args))
 	}
 }
 
+// Given nanoseconds from the Unix epoch, return a time.Time struct for that instant in time.
+func unixNano(nanos int64) *time.Time {
+	num, denom := nanos, int64(time.Second)
+	secs, nsecs := num/denom, num%denom
+	t := time.Unix(secs, nsecs)
+	return &t
+}
+
 // Implements time.utc function.
 func VFTimeUTC(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
-	tLocal, ok := x.BV().(*Time)
-	if !ok {
-		return panicType("time.utc time", "time", x)
-	}
 	switch len(args) {
 	case monadic:
-		t := tLocal.Time.UTC()
-		return goal.NewV(&Time{&t})
+		switch xv := x.BV().(type) {
+		case *Time:
+			t := xv.Time.UTC()
+			return goal.NewV(&Time{&t})
+		case *goal.AV:
+			r := make([]goal.V, xv.Len())
+			for i, xi := range xv.Slice {
+				if t, ok := xi.BV().(*Time); ok {
+					t := t.Time.UTC()
+					r[i] = goal.NewV(&Time{&t})
+				} else {
+					return goal.Panicf("time.utc time : expected array of times, "+
+						"but array has a %q value: %v", xi.Type(), xi)
+				}
+			}
+			return goal.NewAV(r)
+		default:
+			return panicType("time.utc time", "time", x)
+		}
 	default:
 		return goal.Panicf("time.utc : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -890,50 +1014,157 @@ const (
 
 // Implements time.add function.
 //
-//nolint:gocognit // I disagree
+// Accepts one time argument and one integer argument, returning a new time which is addition
+// of the integer argument as nanoseconds to the time. Pervasive.
 func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
-	x := args[len(args)-1]
-	t1, ok := x.BV().(*Time)
-	if !ok {
-		return panicType("time time.add i", "time", x)
-	}
-	switch len(args) {
-	case dyadic:
-		y := args[0]
-		//nolint:nestif // I disagree
-		if !y.IsI() {
-			if y.IsBV() {
-				switch ai := y.BV().(type) {
-				case *goal.AB:
-					al := ai.Len()
-					if al != yearMonthDay {
-						return goal.Panicf("time.add : I arg must have 3 items, had %d", al)
-					}
-					year := ai.At(yearPos).I()
-					month := ai.At(monthPos).I()
-					day := ai.At(dayPos).I()
-					t := t1.Time.AddDate(int(year), int(month), int(day))
-					return goal.NewV(&Time{&t})
-				case *goal.AI:
-					al := ai.Len()
-					if al != yearMonthDay {
-						return goal.Panicf("time.add : I arg must have 3 items, had %d", al)
-					}
-					year := ai.At(yearPos).I()
-					month := ai.At(monthPos).I()
-					day := ai.At(dayPos).I()
-					t := t1.Time.AddDate(int(year), int(month), int(day))
-					return goal.NewV(&Time{&t})
-				default:
-					return panicType("time time.add I", "I", y)
-				}
-			}
-			return panicType("time time.add i", "i", y)
-		}
-		t := t1.Time.Add(time.Duration(y.I()))
-		return goal.NewV(&Time{&t})
-	default:
+	if len(args) > dyadic {
 		return goal.Panicf("time.add : too many arguments (%d), expects 2 arguments", len(args))
+	}
+	x, y := args[1], args[0]
+	if x.IsI() {
+		return addIV(x.I(), y)
+	}
+	switch xv := x.BV().(type) {
+	case *Time:
+		return addTimeV(xv, y)
+	case *goal.AB:
+		// return timeAddABV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AI:
+		// return timeAddAIV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AV:
+		// Check length of both args
+		// if yv.Len() != xv.Len() {
+		// return panicLength("X+Y", xv.Len(), yv.Len())
+		// }
+		// return timeAddAVV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.D:
+		// return timeAddDV(xv, y)
+		return goal.Panicf("not yet implemented")
+	default:
+		return panicType("time-or-i1 time.add time-or-i2", "time-or-i1", x)
+	}
+}
+
+func addIV(x int64, y goal.V) goal.V {
+	switch yv := y.BV().(type) {
+	case *Time:
+		t := yv.Time.Add(time.Duration(x))
+		return goal.NewV(&Time{&t})
+	case *goal.AV:
+		dur := time.Duration(x)
+		r := make([]goal.V, yv.Len())
+		for i, yi := range yv.Slice {
+			if t, ok := yi.BV().(*Time); ok {
+				t := t.Time.Add(dur)
+				r[i] = goal.NewV(&Time{&t})
+			}
+		}
+		return goal.NewAV(r)
+	default:
+		return panicType("time-or-i1 time.add time-or-i2", "time-or-i2", y)
+	}
+}
+
+func addTimeV(x *Time, y goal.V) goal.V {
+	if y.IsI() {
+		t := x.Time.Add(time.Duration(y.I()))
+		return goal.NewV(&Time{&t})
+	}
+	switch yv := y.BV().(type) {
+	case *goal.AB:
+		r := make([]goal.V, yv.Len())
+		for i, yi := range yv.Slice {
+			t := x.Time.Add(time.Duration(yi))
+			r[i] = goal.NewV(&Time{&t})
+		}
+		return goal.NewAV(r)
+	case *goal.AI:
+		r := make([]goal.V, yv.Len())
+		for i, yi := range yv.Slice {
+			t := x.Time.Add(time.Duration(yi))
+			r[i] = goal.NewV(&Time{&t})
+		}
+		return goal.NewAV(r)
+	default:
+		return panicType("time-or-i1 time.add time-or-i2", "time-or-i2", y)
+	}
+}
+
+// Implements time.addDate function.
+func VFTimeAddDate(_ *goal.Context, args []goal.V) goal.V {
+	if len(args) > dyadic {
+		return goal.Panicf("time.addDate : too many arguments (%d), expects 2 arguments", len(args))
+	}
+	x, y := args[1], args[0]
+	switch xv := x.BV().(type) {
+	case *Time:
+		return adddateTimeV(xv, y)
+	case *goal.AB:
+		// return adddateABV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AI:
+		// return adddateAIV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.AV:
+		// return adddateAVV(xv, y)
+		return goal.Panicf("not yet implemented")
+	case *goal.D:
+		// return adddateDV(xv, y)
+		return goal.Panicf("not yet implemented")
+	default:
+		return panicType("time-or-I1 time.addDate time-or-I2", "time-or-I1", x)
+	}
+}
+
+func adddateTimeV(x *Time, y goal.V) goal.V {
+	switch yv := y.BV().(type) {
+	case *goal.AB:
+		if yv.Len() != yearMonthDay {
+			return goal.Panicf("time.addDate : I arg must have 3 items, had %d", yv.Len())
+		}
+		year := yv.At(yearPos).I()
+		month := yv.At(monthPos).I()
+		day := yv.At(dayPos).I()
+		t := x.Time.AddDate(int(year), int(month), int(day))
+		return goal.NewV(&Time{&t})
+	case *goal.AI:
+		if yv.Len() != yearMonthDay {
+			return goal.Panicf("time.addDate : I arg must have 3 items, had %d", yv.Len())
+		}
+		year := yv.At(yearPos).I()
+		month := yv.At(monthPos).I()
+		day := yv.At(dayPos).I()
+		t := x.Time.AddDate(int(year), int(month), int(day))
+		return goal.NewV(&Time{&t})
+	case *goal.AV:
+		r := make([]goal.V, yv.Len())
+		for j, yi := range yv.Slice {
+			if yi.Len() != yearMonthDay {
+				return goal.Panicf("time.addDate : each array must have 3 items, one had %d", yi.Len())
+			}
+			switch yiv := yi.BV().(type) {
+			case *goal.AB:
+				year := yiv.At(yearPos).I()
+				month := yiv.At(monthPos).I()
+				day := yiv.At(dayPos).I()
+				t := x.Time.AddDate(int(year), int(month), int(day))
+				r[j] = goal.NewV(&Time{&t})
+			case *goal.AI:
+				year := yiv.At(yearPos).I()
+				month := yiv.At(monthPos).I()
+				day := yiv.At(dayPos).I()
+				t := x.Time.AddDate(int(year), int(month), int(day))
+				r[j] = goal.NewV(&Time{&t})
+			default:
+				return goal.Panicf("time.addDate : each array must be numeric, one is %q: %v", yi.Type(), yi)
+			}
+		}
+		return goal.NewAV(r)
+	default:
+		return panicType("time-or-i1 time.addDate time-or-i2", "time-or-i2", y)
 	}
 }
 

@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.22.0
 
 require (
-	codeberg.org/anaseto/goal v0.44.1-0.20241011162947-26150a9b2b97
+	codeberg.org/anaseto/goal v0.44.1-0.20241018155253-99ede8744fba
 	github.com/charmbracelet/lipgloss v0.13.0
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/jarcoal/httpmock v1.3.1
