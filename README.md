@@ -55,7 +55,6 @@ Non-exhaustive list:
 - TODO: BUG `json.tbl` produces improper zero values when keys are missing. Where possible, column lists should be of uniform type and not generic if the data allows for it.
 - TODO: Make version of `fmt.tbl` that allows setting maximum column width.
 - TODO: Functions to conveniently populate SQL tables with Goal values.
-- TODO: Support plots/charts (consider https://github.com/wcharczuk/go-chart)
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
 
 I plan to support the above items. The following are stretch goals, nice-to-have's, or thoughts for further consideration:
