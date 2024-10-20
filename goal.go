@@ -122,7 +122,6 @@ func helpDyadic(help Help, args []goal.V) goal.V {
 	if !ok {
 		return panicType("s1 help s2", "s2", y)
 	}
-	fmt.Fprintf(os.Stdout, "ADding to help dict %v %v", helpKeyword, helpString)
 	help.Dictionary["goal"][string(helpKeyword)] = string(helpString)
 	return goal.NewI(1)
 }
