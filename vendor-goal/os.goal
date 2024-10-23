@@ -7,14 +7,12 @@
 GOALLIB:{?["e"~@x;x;dirfs x]}@env"GOALLIB"
 / PS represents the path separator.
 PS:?["windows"~rt.get"os";"\\";"/"]
-/ We define some common errno messages as globals for convenience. We assume
-/ them to be consistent in Go accross platforms (which seems be the case AFAIK,
-/ but I haven't seen it explicitly documented).
-EACCESS:"permission denied"
-EEXISTS:"file exists"
-EINVAL:"invalid argument"
-ENOENT:"no such file or directory"
-ENOTEMPTY:"directory not empty"
+/ We define some common portable error messages as globals for convenience.
+ErrInvalid:"invalid argument" / EINVAL
+ErrPermission:"permission denied" / EACCESS | EPERM
+ErrExist:"file already exists" / EEXIST | ENOTEMPTY
+ErrNotExist:"file does not exist" / ENOENT
+ErrClosed:"file already closed"
 / volume[s] returns "" except on Windows, where it (hopefully) returns the
 / leading volume name of a path.
 volume:?[PS~"/";:[;""];{rx`^[0-9a-zA-Z]:|^(?:\\\\|/)[^\\./][^\\/]*[\\/][^\\./][^\\/]*`[x;"s"]}]
@@ -25,18 +23,17 @@ mkdirp:{[path]
     msg:"$path is not a directory";op:"mkdir";path:path;err:"not a directory"]
   ((&volume path)<&parent:getp path)and 'o parent
   or[e:mkdir path;(st:stat path)and st..dir;e]}
-/ rmf[s] is like remove s but ignores ENOENT errors.
-rmf:{and["e"~@r:remove x;"d"~@d:.r;ENOENT~_d..err]or r}
 / rmtree[s] removes path and any children it contains. USE WITH CAUTION.
 rmtree:{[path]
-  (path¿"/"".""..""")and:error..[
-    msg:"%s: %q"$(EINVAL;path);op:"rmtree";path:path;err:EINVAL]
+  (rx#^[.\\/]*$#path)and:error..[
+    msg:"%s: %q"$(ErrInvalid;path);op:"rmtree";path:path;err:ErrInvalid]
   {[x;path]
-    or[~"e"~@r:rmf path;~"d"~@d:.r;~ENOTEMPTY~_d..err]and:r
+    or[~"e"~@r:rmf path;~"d"~@d:.r;~ErrExist~d..err]and:r
     files:abspath'path,'('read path)..name
-    (PS~"/")or("e"¿@'files)and:files..*&x!"e"=@'x / abspath could fail on windows (maybe)
+    and[PS~"\\";"e"¿@'files;:files..*&x!"e"=@'x] / abspath could fail on windows (maybe)
     'o/[~"e"~@:;x;files]; rmf path}[1;'abspath path]}
 
-/ helpers below:
+/ helpers below (not a part of stable API)
 getp:sub[?[PS~"/";rx`[^/]*/*$`;rx`[^\\/]*[\\/]*$`];""] / parent folder
+rmf:{and["e"~@r:remove x;"d"~@d:.r;ErrNotExist~d..err]or r} / remove but ignore ENOENT
 1

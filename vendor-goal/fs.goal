@@ -1,3 +1,9 @@
+/ We define some common portable error messages as globals for convenience.
+ErrInvalid:"invalid argument" / EINVAL
+ErrPermission:"permission denied" / EACCESS | EPERM
+ErrExist:"file already exists" / EEXIST | ENOTEMPTY
+ErrNotExist:"file does not exist" / ENOENT
+ErrClosed:"file already closed"
 / join[dir;file] is a faster simplified path.join combining a dir path (assumed
 / to be clean) with the base name of a file.
 join:{?[x~".";y;"$x/$y"]}
