@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+cd cmd/wasm
+GOOS=js GOARCH=wasm go build -o goal.wasm
+cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" .

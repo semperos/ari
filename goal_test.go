@@ -70,6 +70,60 @@ func TestGoalOk(t *testing.T) {
 	}
 }
 
+func TestUniversalGoalOk(t *testing.T) {
+	tests := map[string]struct {
+		input  string
+		result string
+	}{
+		"simple goal expression": {
+			input:  "+/!10",
+			result: "45",
+		},
+		"multiline goal expression": {
+			input: `(1 2
+			3 4)`,
+			result: strings.TrimSpace(`
+(1 2
+ 3 4)`),
+		},
+		"goal json, marshal": {
+			input:  `""json -0w`,
+			result: `"false"`,
+		},
+		"goal json, unmarshal": {
+			input:  `json "false"`,
+			result: `-0w`,
+		},
+		"goal os.env": {
+			input:  `k:"ARI_TEST";k env $1234;env k`,
+			result: `"1234"`,
+		},
+		"ari keyword is defined": {
+			input:  "time.Hour",
+			result: "3600000000000",
+		},
+	}
+
+	for name, test := range tests {
+		test := test
+		ctx, err := ari.NewUniversalContext()
+		goalCtx := ctx.GoalContext
+		if err != nil {
+			t.Fatalf("error creating ari Context: %v", err)
+		}
+		t.Run(name, func(t *testing.T) {
+			goalV, err := goalCtx.Eval(test.input)
+			if err != nil {
+				t.Fatalf("Context.GoalContext.Eval(%q) returned an error: %v", test.input, err)
+			}
+			goalVString := goalV.Sprint(goalCtx, false)
+			if got, expected := goalVString, test.result; got != expected {
+				t.Fatalf("Context.GoalContext.Eval(%q) returned %q; expected %q", test.input, got, expected)
+			}
+		})
+	}
+}
+
 func TestGoalError(t *testing.T) {
 	// t.Parallel() // go test reports data race
 	tests := map[string]struct {

@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+
+<head>
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=1">
+	<title>Try Goal in the Browser</title>
+	<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+
+<body>
+	<script src="wasm_exec.js"></script>
+	<div class="menu">
+		<!-- <a class="back" title="back to main page" href="../index.html">Back</a> -->
+		<button id="eval" title="run Goal code (shortcut: ctrl-enter)">eval</button>
+		<button id="link" title="copy link to clipboard">link</button>
+		<button id="help" title="display help (shortcut: F1)">help</button>
+		<div class="goalVersion">
+			<label><strong>Version</strong></label>
+			<input type="text" disabled="disabled" id="goalVersionInput" />
+		</div>
+	</div>
+	<div class="fl fr">
+		<textarea id="in" class="fl" autofocus="" spellcheck="false"></textarea>
+		<textarea id="out" class="fl" readonly="" placeholder="output (ctrl-enter to eval)"
+			spellcheck="false"></textarea>
+	</div>
+	<script>
+		if (!WebAssembly.instantiateStreaming) { // polyfill
+			WebAssembly.instantiateStreaming = async (resp, importObject) => {
+				const source = await (await resp).arrayBuffer();
+				return await WebAssembly.instantiate(source, importObject);
+			};
+		}
+		const go = new Go();
+		let mod, inst;
+		WebAssembly.instantiateStreaming(fetch("goal.wasm"), go.importObject).then((result) => {
+			mod = result.module;
+			inst = result.instance;
+			go.run(inst);
+		}).catch((err) => {
+			console.error(err);
+		});
+	</script>
+</body>
+
+</html>

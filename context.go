@@ -91,6 +91,18 @@ func NewGoalContext(ariContext *Context, help Help, sqlDatabase *SQLDatabase) (*
 	return goalContext, nil
 }
 
+// Initialize a Goal language context with Ari's extensions.
+func NewUniversalGoalContext(help Help) (*goal.Context, error) {
+	goalContext := goal.NewContext()
+	goalContext.Log = os.Stderr
+	goalRegisterUniversalVariadics(goalContext, help)
+	err := goalLoadExtendedPreamble(goalContext)
+	if err != nil {
+		return nil, err
+	}
+	return goalContext, nil
+}
+
 // Initialize SQL struct, but don't open the DB yet.
 //
 // Call SQLDatabase.open to open the database.
@@ -139,6 +151,32 @@ func NewContext(dataSourceName string) (*Context, error) {
 	}
 	ctx.GoalContext = goalContext
 	ctx.SQLDatabase = sqlDatabase
+	ctx.Help = help
+	return &ctx, nil
+}
+
+// Initialize a new Context that can be used across platforms, including WASM.
+func NewUniversalContext() (*Context, error) {
+	ctx := Context{}
+	helpDictionary := NewHelp()
+	ariHelpFunc := func(s string) string {
+		goalHelp, ok := helpDictionary["goal"]
+		if !ok {
+			panic(`Developer Error: Dictionary in Help must have a \"goal\" entry.`)
+		}
+		help, found := goalHelp[s]
+		if found {
+			return help
+		}
+		return ""
+	}
+	helpFunc := help.Wrap(ariHelpFunc, help.HelpFunc())
+	help := Help{Dictionary: helpDictionary, Func: helpFunc}
+	goalContext, err := NewUniversalGoalContext(help)
+	if err != nil {
+		return nil, err
+	}
+	ctx.GoalContext = goalContext
 	ctx.Help = help
 	return &ctx, nil
 }

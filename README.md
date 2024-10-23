@@ -86,6 +86,16 @@ To publish a new version of Ari:
 ./script/release vx.y.z
 ```
 
+### WASM
+
+Use the `./script/build-wasm` script to generate a `./cmd/wasm/goal.wasm` file from the `./cmd/wasm/main.go` entry-point.
+
+You then need to locate the `wasm_exec.js` file for your specific Go version and copy that to the `./cmd/wasm` folder. Depending on your system installation, you might find it there under a `lib` or `misc` folder. If not, you can download a source tarball for your specific Go version from the Go downloads which includes this file.
+
+JavaScript that controls the user interface in `./cmd/wasm/index.html` is written in Go in the `./cmd/wasm/main.go` file.
+
+See [Go Wiki: WebAssembly](https://go.dev/wiki/WebAssembly) for more information.
+
 ## Background
 
 I stumbled into a fairly flexible, powerful setup using Julia and DuckDB to do data analysis.

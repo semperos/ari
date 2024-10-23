@@ -162,14 +162,11 @@ func goalNewDictEmpty() *goal.D {
 
 // Integration with other parts of Ari
 
-func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
-	// From Goal itself, os lib imported without prefix
+func goalRegisterUniversalVariadics(goalContext *goal.Context, help Help) {
+	// From Goal itself, os lib imported without prefix. Includes 'say' verb, which works even in WASM.
 	gos.Import(goalContext, "")
-	// Ari
 	goalContext.RegisterExtension("ari", AriVersion)
 	// Monads
-	goalContext.RegisterMonad("sql.close", VFSqlClose)
-	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	goalContext.RegisterMonad("time.day", VFTimeDay)
 	goalContext.RegisterMonad("time.hour", VFTimeHour)
 	goalContext.RegisterMonad("time.loadlocation", VFTimeLoadLocation)
@@ -195,6 +192,22 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterMonad("url.encode", VFUrlEncode)
 	// Dyads
 	goalContext.RegisterDyad("help", VFGoalHelp(help))
+	goalContext.RegisterDyad("time.add", VFTimeAdd)
+	goalContext.RegisterDyad("time.date", VFTimeDate)
+	goalContext.RegisterDyad("time.fixedzone", VFTimeFixedZone)
+	goalContext.RegisterDyad("time.format", VFTimeFormat)
+	goalContext.RegisterDyad("time.parse", VFTimeParse)
+	goalContext.RegisterDyad("time.sub", VFTimeSub)
+	// Globals
+	registerTimeGlobals(goalContext)
+}
+
+func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
+	goalRegisterUniversalVariadics(goalContext, help)
+	// Monads
+	goalContext.RegisterMonad("sql.close", VFSqlClose)
+	goalContext.RegisterMonad("sql.open", VFSqlOpen)
+	// Dyads
 	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
 	goalContext.RegisterDyad("http.delete", VFHTTPMaker(ariContext, "DELETE"))
 	goalContext.RegisterDyad("http.get", VFHTTPMaker(ariContext, "GET"))
@@ -206,14 +219,6 @@ func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help 
 	goalContext.RegisterDyad("http.serve", VFServe)
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
-	goalContext.RegisterDyad("time.add", VFTimeAdd)
-	goalContext.RegisterDyad("time.date", VFTimeDate)
-	goalContext.RegisterDyad("time.fixedzone", VFTimeFixedZone)
-	goalContext.RegisterDyad("time.format", VFTimeFormat)
-	goalContext.RegisterDyad("time.parse", VFTimeParse)
-	goalContext.RegisterDyad("time.sub", VFTimeSub)
-	// Globals
-	registerTimeGlobals(goalContext)
 }
 
 //nolint:funlen
