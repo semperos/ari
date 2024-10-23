@@ -17,6 +17,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+      - name: build-wasm
+        run: |
+          ./script/build-wasm
       - name: test
         run: |
           ./script/test

@@ -2,4 +2,4 @@
 
 set -e
 
-./script/test && ./script/lint && go install ./cmd/ari && echo "INSTALLED"
+./script/test && ./script/lint && ./script/build-wasm && go install ./cmd/ari && echo "INSTALLED"
