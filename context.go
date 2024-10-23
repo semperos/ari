@@ -92,10 +92,10 @@ func NewGoalContext(ariContext *Context, help Help, sqlDatabase *SQLDatabase) (*
 }
 
 // Initialize a Goal language context with Ari's extensions.
-func NewUniversalGoalContext(help Help) (*goal.Context, error) {
+func NewUniversalGoalContext(ariContext *Context, help Help) (*goal.Context, error) {
 	goalContext := goal.NewContext()
 	goalContext.Log = os.Stderr
-	goalRegisterUniversalVariadics(goalContext, help)
+	goalRegisterUniversalVariadics(ariContext, goalContext, help)
 	err := goalLoadExtendedPreamble(goalContext)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func NewUniversalContext() (*Context, error) {
 	}
 	helpFunc := help.Wrap(ariHelpFunc, help.HelpFunc())
 	help := Help{Dictionary: helpDictionary, Func: helpFunc}
-	goalContext, err := NewUniversalGoalContext(help)
+	goalContext, err := NewUniversalGoalContext(&ctx, help)
 	if err != nil {
 		return nil, err
 	}

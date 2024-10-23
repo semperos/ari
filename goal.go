@@ -162,7 +162,7 @@ func goalNewDictEmpty() *goal.D {
 
 // Integration with other parts of Ari
 
-func goalRegisterUniversalVariadics(goalContext *goal.Context, help Help) {
+func goalRegisterUniversalVariadics(ariContext *Context, goalContext *goal.Context, help Help) {
 	// From Goal itself, os lib imported without prefix. Includes 'say' verb, which works even in WASM.
 	gos.Import(goalContext, "")
 	goalContext.RegisterExtension("ari", AriVersion)
@@ -192,6 +192,14 @@ func goalRegisterUniversalVariadics(goalContext *goal.Context, help Help) {
 	goalContext.RegisterMonad("url.encode", VFUrlEncode)
 	// Dyads
 	goalContext.RegisterDyad("help", VFGoalHelp(help))
+	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
+	goalContext.RegisterDyad("http.delete", VFHTTPMaker(ariContext, "DELETE"))
+	goalContext.RegisterDyad("http.get", VFHTTPMaker(ariContext, "GET"))
+	goalContext.RegisterDyad("http.head", VFHTTPMaker(ariContext, "HEAD"))
+	goalContext.RegisterDyad("http.options", VFHTTPMaker(ariContext, "OPTIONS"))
+	goalContext.RegisterDyad("http.patch", VFHTTPMaker(ariContext, "PATCH"))
+	goalContext.RegisterDyad("http.post", VFHTTPMaker(ariContext, "POST"))
+	goalContext.RegisterDyad("http.put", VFHTTPMaker(ariContext, "PUT"))
 	goalContext.RegisterDyad("time.add", VFTimeAdd)
 	goalContext.RegisterDyad("time.date", VFTimeDate)
 	goalContext.RegisterDyad("time.fixedzone", VFTimeFixedZone)
@@ -203,19 +211,11 @@ func goalRegisterUniversalVariadics(goalContext *goal.Context, help Help) {
 }
 
 func goalRegisterVariadics(ariContext *Context, goalContext *goal.Context, help Help, sqlDatabase *SQLDatabase) {
-	goalRegisterUniversalVariadics(goalContext, help)
+	goalRegisterUniversalVariadics(ariContext, goalContext, help)
 	// Monads
 	goalContext.RegisterMonad("sql.close", VFSqlClose)
 	goalContext.RegisterMonad("sql.open", VFSqlOpen)
 	// Dyads
-	goalContext.RegisterDyad("http.client", VFHTTPClientFn())
-	goalContext.RegisterDyad("http.delete", VFHTTPMaker(ariContext, "DELETE"))
-	goalContext.RegisterDyad("http.get", VFHTTPMaker(ariContext, "GET"))
-	goalContext.RegisterDyad("http.head", VFHTTPMaker(ariContext, "HEAD"))
-	goalContext.RegisterDyad("http.options", VFHTTPMaker(ariContext, "OPTIONS"))
-	goalContext.RegisterDyad("http.patch", VFHTTPMaker(ariContext, "PATCH"))
-	goalContext.RegisterDyad("http.post", VFHTTPMaker(ariContext, "POST"))
-	goalContext.RegisterDyad("http.put", VFHTTPMaker(ariContext, "PUT"))
 	goalContext.RegisterDyad("http.serve", VFServe)
 	goalContext.RegisterDyad("sql.q", VFSqlQFn(sqlDatabase))
 	goalContext.RegisterDyad("sql.exec", VFSqlExecFn(sqlDatabase))
