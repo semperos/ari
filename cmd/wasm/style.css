@@ -1,14 +1,12 @@
 /* Colors from https://github.com/jan-warchol/selenized/blob/master/the-values.md */
 @viewport { zoom: 1.0; width: device-width; }
-html { background-color: #ece3cc; color: #53676d; }
-body { min-height: 100vh; display: flex; flex-direction: column; }
-div.menu { padding: 4px; display: flex; align-items: flex-start; }
-div.menu .goalVersion { margin-left: auto; }
-.goalVersion input { border: none; border-color: transparent; outline: none; }
+html { background-color: #ece3cc; color: #53676d; height: 100vh; margin: 0;}
+body { height: 100vh; display: flex; flex-direction: column; margin: 0;}
+div.menu { padding: 4px; }
 button { margin-right: 4px; cursor: pointer; background-color: #fbf3db; color: #53676d; }
 textarea { font-family: monospace; resize: none; background-color: #fbf3db; color: #53676d; margin: 0 2px; border: 0; }
 textarea::placeholder { color: #909995; }
 .fl { display: flex; flex: 1 }
 .fr { display: flex; flex-direction: row }
-a.back { margin-right: 4px; color: #0072d4; }
-#out { color: forestgreen; }
+a.home { margin-right: 4px; color: #0072d4; }
+span.loading { color:#009c8f; }

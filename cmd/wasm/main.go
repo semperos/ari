@@ -33,7 +33,7 @@ func evalTextArea() {
 	out := getEltById("out")
 	ariCtx, err := ari.NewUniversalContext()
 	if err != nil {
-		out.Set("value", err.Error())
+		log.Printf(err.Error())
 	}
 	ctx := ariCtx.GoalContext
 	var sb strings.Builder
@@ -76,43 +76,27 @@ func updateTextArea() {
 	zr, err := zlib.NewReader(r)
 	if err != nil {
 		log.Printf("zlib reader: %v", err)
-		log.Printf("hash: %s", hash)
+		log.Printf("hash: %q", hash)
 		return
 	}
+	defer func() {
+		if err := zr.Close(); err != nil {
+			log.Printf("zlib reader: close: %v", err)
+		}
+	}()
 	var sb strings.Builder
 	_, err = io.Copy(&sb, zr)
 	if err != nil {
 		log.Printf("decoding hash: %v", err)
-		log.Printf("hash: %s", hash)
+		log.Printf("hash: %q", hash)
 		return
 	}
-	zr.Close()
 	log.Print(sb.String())
 	in.Set("value", sb.String())
 }
 
 func main() {
 	updateTextArea()
-
-	goalVersion := getEltById("goalVersionInput")
-	ariCtx, err := ari.NewUniversalContext()
-	if err != nil {
-		goalVersion.Set("value", err.Error())
-	}
-	ctx := ariCtx.GoalContext
-	var sb strings.Builder
-	ctx.Log = &sb
-	x, err := ctx.Eval(`rt.get"v"`)
-	if err != nil {
-		if e, ok := err.(*goal.Panic); ok {
-			log.Printf(sb.String() + e.ErrorStack())
-		} else {
-			log.Printf(sb.String() + e.Error())
-		}
-	} else {
-		goalVersion.Set("value", sb.String()+x.Sprint(ctx, false))
-	}
-
 	eval := getEltById("eval")
 	evalFunc := js.FuncOf(func(this js.Value, args []js.Value) any {
 		evalTextArea()
@@ -153,6 +137,13 @@ func main() {
 		return nil
 	})
 	js.Global().Get("window").Call("addEventListener", "hashchange", hashFunc)
+	ariCtx, err := ari.NewUniversalContext()
+	if err != nil {
+		log.Printf(err.Error())
+	}
+	ctx := ariCtx.GoalContext
+	version := getEltById("goalVersion")
+	version.Set("textContent", fmt.Sprintf("goal %s (wasm version)", ctx.Version()))
 	wait := make(chan bool)
 	<-wait
 }

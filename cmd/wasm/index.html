@@ -11,14 +11,12 @@
 <body>
 	<script src="wasm_exec.js"></script>
 	<div class="menu">
-		<!-- <a class="back" title="back to main page" href="../index.html">Back</a> -->
+		<a class="home" title="back to main page" href="/">Back</a>
 		<button id="eval" title="run Goal code (shortcut: ctrl-enter)">eval</button>
 		<button id="link" title="copy link to clipboard">link</button>
 		<button id="help" title="display help (shortcut: F1)">help</button>
-		<div class="goalVersion">
-			<label><strong>Version</strong></label>
-			<input type="text" disabled="disabled" id="goalVersionInput" />
-		</div>
+		<span id="goalVersion"><span />
+			<span class="loading" id="loading">Loading...<span />
 	</div>
 	<div class="fl fr">
 		<textarea id="in" class="fl" autofocus="" spellcheck="false"></textarea>
@@ -35,6 +33,8 @@
 		const go = new Go();
 		let mod, inst;
 		WebAssembly.instantiateStreaming(fetch("goal.wasm"), go.importObject).then((result) => {
+			var loading = document.getElementById("loading");
+			loading.textContent = "";
 			mod = result.module;
 			inst = result.instance;
 			go.run(inst);
