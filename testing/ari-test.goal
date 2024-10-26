@@ -1,1 +1,3 @@
 tt.t{1<#glob"*.md"}
+tt.t{ari.c=0}
+tt.t{42=ari.c::42}
