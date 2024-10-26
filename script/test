@@ -3,5 +3,4 @@
 set -e
 
 go test -v -failfast -race -coverpkg=./... -covermode=atomic -coverprofile=coverage.txt ./...
-go install ./cmd/ari
 ./script/ari-test
