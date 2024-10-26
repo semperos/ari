@@ -418,7 +418,8 @@ func (autoCompleter *AutoCompleter) cacheSystemCommands() {
 
 func systemCommands() (map[string]string, []string) {
 	m := map[string]string{
-		")goal": "Goal array language mode",
+		")goal":        "Goal array language mode",
+		")goal.invoke": "Goal array language mode, auto-invocation of functions",
 		// TODO Output formats: https://duckdb.org/docs/api/cli/output_formats.html
 		// In particular csv, json, markdown, latex, and one of the boxed ones
 		")output.csv":         "Print results as CSV",

@@ -166,6 +166,7 @@ func goalRegisterUniversalVariadics(ariContext *Context, goalContext *goal.Conte
 	// From Goal itself, os lib imported without prefix. Includes 'say' verb, which works even in WASM.
 	gos.Import(goalContext, "")
 	goalContext.RegisterExtension("ari", AriVersion)
+	goalContext.AssignGlobal("ari.c", goal.NewI(0))
 	// Monads
 	goalContext.RegisterMonad("time.day", VFTimeDay)
 	goalContext.RegisterMonad("time.hour", VFTimeHour)

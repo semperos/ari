@@ -30,6 +30,7 @@ type cliMode int
 
 const (
 	cliModeGoal cliMode = iota
+	cliModeGoalInvoke
 	cliModeSQLReadOnly
 	cliModeSQLReadWrite
 )
@@ -71,6 +72,13 @@ func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
 	switch cliMode {
 	case cliModeGoal:
 		return cliSystem.switchModeToGoal()
+	case cliModeGoalInvoke:
+		err := cliSystem.switchModeToGoal()
+		if err != nil {
+			return err
+		}
+		cliSystem.cliMode = cliModeGoalInvoke
+		return nil
 	case cliModeSQLReadOnly:
 		return cliSystem.switchModeToSQLReadOnly(args)
 	case cliModeSQLReadWrite:
@@ -158,6 +166,8 @@ func cliModeFromString(s string) (cliMode, error) {
 	switch s {
 	case "goal":
 		return cliModeGoal, nil
+	case "goal.invoke":
+		return cliModeGoalInvoke, nil
 	case "sql":
 		return cliModeSQLReadOnly, nil
 	case "sql!":
@@ -365,14 +375,7 @@ func rawREPL(cliSystem *CliSystem) {
 			continue
 		}
 
-		switch cliSystem.cliMode {
-		case cliModeGoal:
-			cliSystem.replEvalGoal(line)
-		case cliModeSQLReadOnly:
-			cliSystem.replEvalSQLReadOnly(line)
-		case cliModeSQLReadWrite:
-			cliSystem.replEvalSQLReadWrite(line)
-		}
+		replHandleLine(cliSystem, line)
 	}
 }
 
@@ -410,18 +413,24 @@ func editorREPL(cliSystem *CliSystem) {
 			continue
 		}
 
-		switch cliSystem.cliMode {
-		case cliModeGoal:
-			cliSystem.replEvalGoal(line)
-		case cliModeSQLReadOnly:
-			cliSystem.replEvalSQLReadOnly(line)
-		case cliModeSQLReadWrite:
-			cliSystem.replEvalSQLReadWrite(line)
-		}
+		replHandleLine(cliSystem, line)
 	}
 }
 
-func (cliSystem *CliSystem) replEvalGoal(line string) {
+func replHandleLine(cliSystem *CliSystem, line string) {
+	switch cliSystem.cliMode {
+	case cliModeGoal:
+		cliSystem.replEvalGoal(line, false)
+	case cliModeGoalInvoke:
+		cliSystem.replEvalGoal(line, true)
+	case cliModeSQLReadOnly:
+		cliSystem.replEvalSQLReadOnly(line)
+	case cliModeSQLReadWrite:
+		cliSystem.replEvalSQLReadWrite(line)
+	}
+}
+
+func (cliSystem *CliSystem) replEvalGoal(line string, autoInvoke bool) {
 	goalContext := cliSystem.ariContext.GoalContext
 	value, err := goalContext.Eval(line)
 	// NB: Goal errors built with the Goal `error` function are goal.V values,
@@ -437,6 +446,18 @@ func (cliSystem *CliSystem) replEvalGoal(line string) {
 	if value.IsError() {
 		formatREPLError(newExitError(goalContext, value.Error()))
 		return
+	}
+
+	if autoInvoke && value.IsFunction() {
+		this, found := goalContext.GetGlobal("ari.c")
+		if !found {
+			panic("developer error: The ari.c global should be assigned during global and function registration")
+		}
+		value = value.Apply(goalContext, []goal.V{this})
+		if value.IsError() {
+			formatREPLError(newExitError(goalContext, value.Error()))
+			return
+		}
 	}
 
 	if !goalContext.AssignedLast() {
@@ -629,6 +650,8 @@ func (cliSystem *CliSystem) replEvalSystemCommand(line string) error {
 	switch systemCommand {
 	case ")goal":
 		return cliSystem.switchMode(cliModeGoal, nil)
+	case ")goal.invoke":
+		return cliSystem.switchMode(cliModeGoalInvoke, nil)
 	case ")output.goal":
 		cliSystem.outputFormat = outputFormatGoal
 	case ")output.csv":
