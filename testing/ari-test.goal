@@ -1,3 +1,10 @@
 tt.t{1<#glob"*.md"}
 tt.t{ari.c=0}
 tt.t{42=ari.c::42}
+tt.t{"wow"~munge"wow"}
+tt.t{"wow"~munge"9wow"}
+tt.t{"wow9"~munge"9wow9"}
+tt.t{"wow9"~munge"9wow9!@"}
+tt.t{"wow9"~munge"9w#o#w9!@"}
+tt.t{"wow98"~munge"9w#o#w9!@8"}
+tt.t{"WoW98"~munge"9W#o#W9!@8"}
