@@ -6,7 +6,7 @@ toolchain go1.22.0
 
 require (
 	codeberg.org/anaseto/goal v0.44.1-0.20241023153331-ed11e6819757
-	github.com/charmbracelet/lipgloss v0.13.0
+	github.com/charmbracelet/lipgloss v0.13.1
 	github.com/go-resty/resty/v2 v2.15.3
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
@@ -21,7 +21,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
 	github.com/charmbracelet/bubbletea v0.23.1 // indirect
-	github.com/charmbracelet/x/ansi v0.1.4 // indirect
+	github.com/charmbracelet/x/ansi v0.3.2 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
