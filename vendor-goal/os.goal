@@ -4,7 +4,7 @@
 / functions are only officially tested on Void Linux and OpenBSD.
 
 / GOALLIB is a file system value for env"GOALLIB" (at startup).
-GOALLIB:{?["e"~@x;x;dirfs x]}@env"GOALLIB"
+GOALLIB:{dirfs 'x}@env"GOALLIB"
 / PS represents the path separator.
 PS:?["windows"~rt.get"os";"\\";"/"]
 / We define some common portable error messages as globals for convenience.
