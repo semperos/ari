@@ -56,11 +56,11 @@ Non-exhaustive list:
 - TODO: Make version of `fmt.tbl` that allows setting maximum column width.
 - TODO: Functions to conveniently populate SQL tables with Goal values.
 - TODO: User commands (as found in [APL](https://aplwiki.com/wiki/User_command)), executable from Goal or SQL modes
+- TODO: Integrate rate limiting/shaping (perhaps via uber-go/ratelimit)
 
 I plan to support the above items. The following are stretch goals, nice-to-have's, or thoughts for further consideration:
 
 - TODO: Use custom table functions via replacement scan to query Goal tables from DuckDB.
-- TODO: Looser auto-complete, not just prefix-based
 - TODO: `)help` for cross-mode help
 - TODO: System functions to switch between rich and raw REPL `)repl.rich` and `)repl.raw`
 - IN PROGRESS: `tui.` functions in CLI mode using https://github.com/charmbracelet/lipgloss (already a transitive dependency) for colored output, etc.
