@@ -1,5 +1,6 @@
 / Shape
 istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]} / is x a dictionary-as-table
+mktbl:{ks:!*x; vs:@[;ks]'x; ks!+vs} / given list of dicts, create dictionary-as-table
 shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
 depths:{[ind;l]?[(@l)~"A";,/o[ind+1]'l; (@l)¿"NSI";(#l)#ind; ind-1]} / list depths
 zero:..[i:0;n:0.0;s:"";r:rx//;d:()!();f:(:);A:()] / handle, error don't fill
@@ -37,7 +38,7 @@ csv.tbl:{(*'x)!(1_'x)} / table from csv parsing, assumes header
 json.tbl:{ / table from parsing json array of like objects
   ?["d"~@x
     ?[istbl x;:x;:error"dict is not a table: $x"]
-    [ks:!*x; vs:@[;ks]'x; ks!+vs]]}
+    mktbl@x]}
 / Interactive Tools
 ac:{gs:,/rt.get'!"! kw";ms:?["s"=@x;(..p.x%p.gs)#gs;[(..p.x@p.gs)#gs]]; ms@<_ms } / auto-complete
 / Test Framework
