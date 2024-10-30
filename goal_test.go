@@ -50,7 +50,6 @@ func TestGoalOk(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		test := test
 		ctx, err := ari.NewContext("")
 		goalCtx := ctx.GoalContext
 		if err != nil {
@@ -105,7 +104,6 @@ func TestUniversalGoalOk(t *testing.T) {
 	}
 
 	for name, test := range tests {
-		test := test
 		ctx, err := ari.NewUniversalContext()
 		goalCtx := ctx.GoalContext
 		if err != nil {
@@ -136,7 +134,6 @@ func TestGoalError(t *testing.T) {
 		},
 	}
 	for name, test := range tests {
-		test := test
 		ctx, err := ari.NewContext("")
 		goalCtx := ctx.GoalContext
 		if err != nil {
@@ -254,7 +251,6 @@ func TestEval(t *testing.T) {
 		if mt.Fname == "errors.goal" {
 			continue
 		}
-		mt := mt
 		name := fmt.Sprintf("%s:%d", mt.Fname, mt.Line)
 		matchString := fmt.Sprintf("(%s) ~ (%s)", mt.Left, mt.Right)
 		t.Run(name, func(t *testing.T) {
@@ -341,7 +337,6 @@ func TestErrors(t *testing.T) {
 		t.Fatalf("getScriptMatchTests: %v", err)
 	}
 	for _, mt := range append(mts, smts...) {
-		mt := mt
 		name := fmt.Sprintf("%s:%d", mt.Fname, mt.Line)
 		matchString := mt.Left
 		t.Run(name, func(t *testing.T) {
