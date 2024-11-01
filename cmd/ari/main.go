@@ -453,7 +453,7 @@ func (cliSystem *CliSystem) replEvalGoal(line string, autoInvoke bool) {
 		if !found {
 			panic("developer error: The ari.c global should be assigned during global and function registration")
 		}
-		value = value.Apply(goalContext, []goal.V{this})
+		value = value.Apply(goalContext, this)
 		if value.IsError() {
 			formatREPLError(newExitError(goalContext, value.Error()))
 			return
