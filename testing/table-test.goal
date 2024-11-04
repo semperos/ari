@@ -14,3 +14,6 @@ tt.t{t~..[a:("one" "" "hundred");b:("two" "twenty" "two hundred")]}
 t:json.tbl@json rq/[{"a":"one","b":"two","c":0},{"b":"twenty"},{"a":"hundred","b":"two hundred"}]/
 tt.t{t~..[a:("one" "" "hundred");b:("two" "twenty" "two hundred");c:(0.0;"";"")]}
 tt.t{..[a:1 2 3;b:10 20 30;c:100 200 300]~json rq/{"a":[1,2,3],"b":[10,20,30],"c":[100,200,300]}/}
+/ Parquet via DuckDB
+f:(path.dir abspath FILE)+"/data/iris.parquet"; t:duckdb.read f
+tt.t{1.9=|/@[;"petal.length"](1;..variety="Setosa")#t}
