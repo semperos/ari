@@ -176,7 +176,7 @@ func SQLExec(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, err
 }
 
 // Implements sql.open to open a SQL database.
-func VFSqlOpen(_ *goal.Context, args []goal.V) goal.V {
+func vfSQLOpen(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	dataSourceName, ok := x.BV().(goal.S)
 	switch len(args) {
@@ -185,11 +185,8 @@ func VFSqlOpen(_ *goal.Context, args []goal.V) goal.V {
 			return panicType("sql.open s", "s", x)
 		}
 		dsn := string(dataSourceName)
-		sqlDatabase, err := NewSQLDatabase(dsn)
-		if err != nil {
-			return goal.NewPanicError(err)
-		}
-		err = sqlDatabase.Open()
+		sqlDatabase := newSQLDatabase(dsn)
+		err := sqlDatabase.Open()
 		if err != nil {
 			return goal.NewPanicError(err)
 		}
@@ -200,7 +197,7 @@ func VFSqlOpen(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements sql.close to close the SQL database.
-func VFSqlClose(_ *goal.Context, args []goal.V) goal.V {
+func vfSQLClose(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	sqlDatabase, ok := x.BV().(*SQLDatabase)
 	switch len(args) {
@@ -219,7 +216,7 @@ func VFSqlClose(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements sql.q for SQL querying.
-func VFSqlQFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
+func vfSQLQFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
 	return func(goalContext *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
 		switch len(args) {
@@ -272,7 +269,7 @@ func sqlQDyadic(x goal.V, args []goal.V) goal.V {
 }
 
 // Implements sql.exec for executing SQL statements.
-func VFSqlExecFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
+func vfSQLExecFn(sqlDatabase *SQLDatabase) func(goalContext *goal.Context, args []goal.V) goal.V {
 	return func(goalContext *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
 		switch len(args) {

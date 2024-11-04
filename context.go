@@ -80,7 +80,7 @@ type Context struct {
 }
 
 // Initialize a Goal language context with Ari's extensions.
-func NewGoalContext(ariContext *Context, help Help, sqlDatabase *SQLDatabase) (*goal.Context, error) {
+func newGoalContext(ariContext *Context, help Help, sqlDatabase *SQLDatabase) (*goal.Context, error) {
 	goalContext := goal.NewContext()
 	goalContext.Log = os.Stderr
 	goalRegisterVariadics(ariContext, goalContext, help, sqlDatabase)
@@ -92,7 +92,7 @@ func NewGoalContext(ariContext *Context, help Help, sqlDatabase *SQLDatabase) (*
 }
 
 // Initialize a Goal language context with Ari's extensions.
-func NewUniversalGoalContext(ariContext *Context, help Help) (*goal.Context, error) {
+func newUniversalGoalContext(ariContext *Context, help Help) (*goal.Context, error) {
 	goalContext := goal.NewContext()
 	goalContext.Log = os.Stderr
 	goalRegisterUniversalVariadics(ariContext, goalContext, help)
@@ -106,11 +106,11 @@ func NewUniversalGoalContext(ariContext *Context, help Help) (*goal.Context, err
 // Initialize SQL struct, but don't open the DB yet.
 //
 // Call SQLDatabase.open to open the database.
-func NewSQLDatabase(dataSourceName string) (*SQLDatabase, error) {
-	return &SQLDatabase{DataSource: dataSourceName, DB: nil, IsOpen: false}, nil
+func newSQLDatabase(dataSourceName string) *SQLDatabase {
+	return &SQLDatabase{DataSource: dataSourceName, DB: nil, IsOpen: false}
 }
 
-func NewHelp() map[string]map[string]string {
+func newHelp() map[string]map[string]string {
 	defaultSQLHelp := "A SQL keyword"
 	goalHelp := GoalKeywordsHelp()
 	sqlKeywords := SQLKeywords()
@@ -127,7 +127,7 @@ func NewHelp() map[string]map[string]string {
 // Initialize a new Context without connecting to the database.
 func NewContext(dataSourceName string) (*Context, error) {
 	ctx := Context{}
-	helpDictionary := NewHelp()
+	helpDictionary := newHelp()
 	ariHelpFunc := func(s string) string {
 		goalHelp, ok := helpDictionary["goal"]
 		if !ok {
@@ -141,11 +141,8 @@ func NewContext(dataSourceName string) (*Context, error) {
 	}
 	helpFunc := help.Wrap(ariHelpFunc, help.HelpFunc())
 	help := Help{Dictionary: helpDictionary, Func: helpFunc}
-	sqlDatabase, err := NewSQLDatabase(dataSourceName)
-	if err != nil {
-		return nil, err
-	}
-	goalContext, err := NewGoalContext(&ctx, help, sqlDatabase)
+	sqlDatabase := newSQLDatabase(dataSourceName)
+	goalContext, err := newGoalContext(&ctx, help, sqlDatabase)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +155,7 @@ func NewContext(dataSourceName string) (*Context, error) {
 // Initialize a new Context that can be used across platforms, including WASM.
 func NewUniversalContext() (*Context, error) {
 	ctx := Context{}
-	helpDictionary := NewHelp()
+	helpDictionary := newHelp()
 	ariHelpFunc := func(s string) string {
 		goalHelp, ok := helpDictionary["goal"]
 		if !ok {
@@ -172,7 +169,7 @@ func NewUniversalContext() (*Context, error) {
 	}
 	helpFunc := help.Wrap(ariHelpFunc, help.HelpFunc())
 	help := Help{Dictionary: helpDictionary, Func: helpFunc}
-	goalContext, err := NewUniversalGoalContext(&ctx, help)
+	goalContext, err := newUniversalGoalContext(&ctx, help)
 	if err != nil {
 		return nil, err
 	}

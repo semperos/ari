@@ -77,7 +77,7 @@ func (location *Location) Type() string {
 // Implements time.date function.
 //
 //nolint:cyclop,funlen,gocognit,gocyclo // the different arities are flat and similar, keeping them close is better
-func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeDate(_ *goal.Context, args []goal.V) goal.V {
 	// year int, month Month, day, hour, min, sec, nsec int, loc *Location
 	switch len(args) {
 	case monadic:
@@ -318,13 +318,13 @@ func VFTimeDate(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.now function.
-func VFTimeNow(_ *goal.Context, _ []goal.V) goal.V {
+func vfTimeNow(_ *goal.Context, _ []goal.V) goal.V {
 	now := time.Now()
 	return goal.NewV(&Time{&now})
 }
 
 // Implements time.unix function.
-func VFTimeUnix(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeUnix(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -356,7 +356,7 @@ func VFTimeUnix(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.year function.
-func VFTimeYear(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeYear(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -372,7 +372,7 @@ func VFTimeYear(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.yearday function.
-func VFTimeYearDay(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeYearDay(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -388,7 +388,7 @@ func VFTimeYearDay(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.month function (January = 1).
-func VFTimeMonth(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeMonth(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -406,7 +406,7 @@ func VFTimeMonth(_ *goal.Context, args []goal.V) goal.V {
 // CONSIDER: ISOWeek which is a tuple of year, week
 
 // Implements time.day function, for day of month.
-func VFTimeDay(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeDay(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -433,7 +433,7 @@ func VFTimeDay(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.weekday function, for day of week (Sunday = 0).
-func VFTimeWeekDay(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeWeekDay(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -460,7 +460,7 @@ func VFTimeWeekDay(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.hour function.
-func VFTimeHour(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeHour(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -487,7 +487,7 @@ func VFTimeHour(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.minute function.
-func VFTimeMinute(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeMinute(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -514,7 +514,7 @@ func VFTimeMinute(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.second function.
-func VFTimeSecond(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeSecond(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -541,12 +541,12 @@ func VFTimeSecond(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.millisecond function.
-func VFTimeMillisecond(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeMillisecond(_ *goal.Context, args []goal.V) goal.V {
 	return vfTimeMilliMicro("time.millisecond", time.Millisecond, args)
 }
 
 // Implements time.microsecond function.
-func VFTimeMicrosecond(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeMicrosecond(_ *goal.Context, args []goal.V) goal.V {
 	return vfTimeMilliMicro("time.microsecond", time.Microsecond, args)
 }
 
@@ -578,7 +578,7 @@ func vfTimeMilliMicro(goalName string, unit time.Duration, args []goal.V) goal.V
 }
 
 // Implements time.nanosecond function.
-func VFTimeNanosecond(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeNanosecond(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -605,7 +605,7 @@ func VFTimeNanosecond(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.zonename function.
-func VFTimeZoneName(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeZoneName(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -635,7 +635,7 @@ func VFTimeZoneName(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.zoneoffset function.
-func VFTimeZoneOffset(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeZoneOffset(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -665,7 +665,7 @@ func VFTimeZoneOffset(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.location function.
-func VFTimeLocation(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeLocation(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -694,7 +694,7 @@ func VFTimeLocation(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.locationstring function.
-func VFTimeLocationString(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeLocationString(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -721,27 +721,27 @@ func VFTimeLocationString(_ *goal.Context, args []goal.V) goal.V {
 	}
 }
 
-// Implements time.fixedzone dyad.
-func VFTimeFixedZone(_ *goal.Context, args []goal.V) goal.V {
+// Implements time.fixedZone dyad.
+func vfTimeFixedZone(_ *goal.Context, args []goal.V) goal.V {
 	switch len(args) {
 	case dyadic:
 		x, ok := args[1].BV().(goal.S)
 		if !ok {
-			return panicType("time.fixedzone name offset-seconds-east-of-utc", "name", args[1])
+			return panicType("time.fixedZone name offset-seconds-east-of-utc", "name", args[1])
 		}
 		y := args[0]
 		if !y.IsI() {
-			return panicType("time.fixedzone name offset-seconds-east-of-utc", "offset-seconds-east-of-utc", args[0])
+			return panicType("time.fixedZone name offset-seconds-east-of-utc", "offset-seconds-east-of-utc", args[0])
 		}
 		loc := time.FixedZone(string(x), int(y.I()))
 		return goal.NewV(&Location{Location: loc})
 	default:
-		return goal.Panicf("time.fixedzone : wrong number of arguments (%d), expects 2 arguments", len(args))
+		return goal.Panicf("time.fixedZone : wrong number of arguments (%d), expects 2 arguments", len(args))
 	}
 }
 
 // Implements time.loadlocation monad.
-func VFTimeLoadLocation(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeLoadLocation(_ *goal.Context, args []goal.V) goal.V {
 	switch len(args) {
 	case monadic:
 		name, ok := args[0].BV().(goal.S)
@@ -764,7 +764,7 @@ func VFTimeLoadLocation(_ *goal.Context, args []goal.V) goal.V {
 // Given numbers, produces times; given times, produces numbers.
 //
 //nolint:dupl // yes, but not interested in further conditional logic here.
-func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -813,7 +813,7 @@ func VFTimeUnixMilli(_ *goal.Context, args []goal.V) goal.V {
 // Given numbers, produces times; given times, produces numbers.
 //
 //nolint:dupl // yes, but not interested in further conditional logic here.
-func VFTimeUnixMicro(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeUnixMicro(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -863,7 +863,7 @@ func VFTimeUnixMicro(_ *goal.Context, args []goal.V) goal.V {
 // Given how Go's time API is designed, the latter case is handled by dividing
 // the given number by time.Second so that the time.Unix(sec int64, nsec int64)
 // function can be used to construct the appropriate time struct.
-func VFTimeUnixNano(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeUnixNano(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -902,7 +902,7 @@ func unixNano(nanos int64) *time.Time {
 }
 
 // Implements time.utc function.
-func VFTimeUTC(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeUTC(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch len(args) {
 	case monadic:
@@ -931,7 +931,7 @@ func VFTimeUTC(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.parse function.
-func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeParse(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	layoutS, ok := x.BV().(goal.S)
 	if !ok {
@@ -971,7 +971,7 @@ func VFTimeParse(_ *goal.Context, args []goal.V) goal.V {
 }
 
 // Implements time.format function.
-func VFTimeFormat(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeFormat(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	formatS, ok := x.BV().(goal.S)
 	if !ok {
@@ -1016,7 +1016,7 @@ const (
 //
 // Accepts one time argument and one integer argument, returning a new time which is addition
 // of the integer argument as nanoseconds to the time. Pervasive.
-func VFTimeAdd(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeAdd(_ *goal.Context, args []goal.V) goal.V {
 	if len(args) > dyadic {
 		return goal.Panicf("time.add : too many arguments (%d), expects 2 arguments", len(args))
 	}
@@ -1094,7 +1094,7 @@ func addTimeV(x *Time, y goal.V) goal.V {
 }
 
 // Implements time.addDate function.
-func VFTimeAddDate(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeAddDate(_ *goal.Context, args []goal.V) goal.V {
 	if len(args) > dyadic {
 		return goal.Panicf("time.addDate : too many arguments (%d), expects 2 arguments", len(args))
 	}
@@ -1169,7 +1169,7 @@ func adddateTimeV(x *Time, y goal.V) goal.V {
 }
 
 // Implements time.sub function.
-func VFTimeSub(_ *goal.Context, args []goal.V) goal.V {
+func vfTimeSub(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	t1, ok := x.BV().(*Time)
 	if !ok {

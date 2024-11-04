@@ -7,7 +7,7 @@ import (
 )
 
 // Implements url.encode.
-func VFUrlEncode(_ *goal.Context, args []goal.V) goal.V {
+func vfURLEncode(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	switch arg := x.BV().(type) {
 	case goal.S:

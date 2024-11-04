@@ -31,7 +31,7 @@ func (rateLimiter *RateLimiter) Type() string {
 	return "ari.RateLimiter"
 }
 
-func VFRateLimitNew(_ *goal.Context, args []goal.V) goal.V {
+func vfRateLimitNew(_ *goal.Context, args []goal.V) goal.V {
 	if len(args) > 1 {
 		return goal.Panicf("ratelimit.new : too many arguments (%d), expects 1 argument", len(args))
 	}
@@ -43,7 +43,7 @@ func VFRateLimitNew(_ *goal.Context, args []goal.V) goal.V {
 	return panicType("ratelimit.new i", "i", x)
 }
 
-func VFRateLimitTake(_ *goal.Context, args []goal.V) goal.V {
+func vfRateLimitTake(_ *goal.Context, args []goal.V) goal.V {
 	if len(args) > 1 {
 		return goal.Panicf("ratelimit.take : too many arguments (%d), expects 1 argument", len(args))
 	}

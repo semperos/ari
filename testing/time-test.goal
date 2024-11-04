@@ -35,7 +35,7 @@ tt.t{pt["2019-02-03T04:00:00.000000000Z"]~time.date[2019;2;3;4]}
 tt.t{pt["2019-02-03T04:05:00.000000000Z"]~time.date[2019;2;3;4;5]}
 tt.t{pt["2019-02-03T04:05:06.000000000Z"]~time.date[2019;2;3;4;5;6]}
 tt.t{pt["2019-02-03T04:05:06.789000000Z"]~time.date[2019;2;3;4;5;6;789000000]}
-utc8:time.fixedzone["UTC-8";*/-8 60 60]
+utc8:time.fixedZone["UTC-8";*/-8 60 60]
 tt.t{time.parse[time.RFC822Z;"03 Feb 19 04:05 -0800"]~time.date[2019;2;3;4;5;0;0;utc8]}
 tt.t{"UTC-8"~time.locationstring utc8}
 tt.t{time.date[2020;1;1]~t2}

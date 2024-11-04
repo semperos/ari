@@ -73,7 +73,7 @@ const (
 	triadic = 3
 )
 
-func VFTuiColor(_ *goal.Context, args []goal.V) goal.V {
+func vfTuiColor(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	colorS, ok := x.BV().(goal.S)
 	switch len(args) {
@@ -94,7 +94,7 @@ const quadrilateral = 4
 // Implements tui.style monad.
 //
 //nolint:cyclop,funlen,gocognit,gocyclo // These dictionary translators are best kept together
-func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
+func vfTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	styleD, okD := x.BV().(*goal.D)
 	switch len(args) {
@@ -352,7 +352,7 @@ func VFTuiStyle(_ *goal.Context, args []goal.V) goal.V {
 	}
 }
 
-func VFTuiRender(_ *goal.Context, args []goal.V) goal.V {
+func vfTuiRender(_ *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	tuiStyle, ok := x.BV().(*TuiStyle)
 	switch len(args) {
