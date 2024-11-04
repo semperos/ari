@@ -1,0 +1,4 @@
+rl:ratelimit.new 1 / one per second
+ts:ratelimit.take'(rl;rl)
+tt.t{(!"ari.Time ari.Time")~@'ts}
+tt.t{ts~^ts}

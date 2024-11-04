@@ -13,12 +13,14 @@ require (
 	github.com/marcboeker/go-duckdb v1.8.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.18.2
+	go.uber.org/ratelimit v0.3.1
 )
 
 require (
 	github.com/apache/arrow/go/v17 v17.0.0 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/charmbracelet/bubbles v0.15.1-0.20230123181021-a6a12c4a31eb // indirect
 	github.com/charmbracelet/bubbletea v0.23.1 // indirect
 	github.com/charmbracelet/x/ansi v0.3.2 // indirect

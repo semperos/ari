@@ -168,6 +168,8 @@ func goalRegisterUniversalVariadics(ariContext *Context, goalContext *goal.Conte
 	goalContext.RegisterExtension("ari", AriVersion)
 	goalContext.AssignGlobal("ari.c", goal.NewI(0))
 	// Monads
+	goalContext.RegisterMonad("ratelimit.new", VFRateLimitNew)
+	goalContext.RegisterMonad("ratelimit.take", VFRateLimitTake)
 	goalContext.RegisterMonad("time.day", VFTimeDay)
 	goalContext.RegisterMonad("time.hour", VFTimeHour)
 	goalContext.RegisterMonad("time.loadlocation", VFTimeLoadLocation)
