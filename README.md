@@ -68,11 +68,40 @@ Flags:
   - Help entries for SQL keywords (shown during auto-complete, still WIP)
   - Results of the last-run query/command set to the `sql.p` Goal global (for "SQL previous" and mirroring `ari.p`), so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
 
-## Examples
+## Projects Using Ari
+
+- [Shortcut API Client](https://github.com/semperos/sc-client-goal)
 
 I began building Ari to replicate the experience described in the [Background](#background) section of this README. That code is not publicly available at this time.
 
-I am also using Ari to build an API client environment for the [Shortcut](https://shortcut.com) [REST API](https://developer.shortcut.com/api/rest/v3). The under-major-construction code for that can be found [in this GitHub Gist](https://gist.github.com/semperos/daba47a3665c89794a3613cfdb0a2d6c).
+## Examples
+
+### Slack API
+
+Use Slack's API to get all messages in a channel for last 30 days. The first five lines set up the HTTP client specifically for Slack; the second block shows a code comment which can be evaluated to see a list of channels from which to pick the ID you need; the third block of code sets up the starting and ending timestamps with which to call the Slack API and a recursive function to fetch messages; the final line defines an `allmsgs` global with all messages from the given channel for the given time range, and then returns `"ok"` when it completes.
+
+```
+url:"https://slack.com/api/"; aj:"application/json"; tk: 'env"SLACK_USER_TOKEN"
+hd:..[Accept:aj;"Content-Type":aj;"Authorization":"Bearer $tk"]; hc:http.client[..[Header:hd]]
+hp:{[f]{[httpf;path]r: 'httpf[hc;url+path]; 'json r"bodystring"}[f]}
+hpp:{[f]{[httpf;path;reqopts]r: 'httpf[hc;url+path;reqopts]; 'json r"bodystring"}[f]}
+get:hp[http.get]; getq:hpp[http.get]; post:hpp[http.post]
+
+/ convos:get"conversations.list"; chans:convos"channels"; ^(..name,id)'chans
+channel:"<ID HERE>"
+
+day:time.Hour * 24; unow:time.utc time.now@0
+oldest:time.unix[time.add[unow;-30 * day]]
+latest:time.unix[unow]
+msgs:{[acc;channel;oldest;latest] \latest
+  hist:post["conversations.history";..[Body:""json..[channel;oldest;latest]]]
+  ms:hist"messages"; newlatest:(..ts)@*|ms; acc,:ms
+  ?[hist"has_more"
+    o[acc;channel;oldest;newlatest]
+    acc]}
+
+allmsgs:msgs[();channel;oldest;latest]; "ok"
+```
 
 ## Development
 
