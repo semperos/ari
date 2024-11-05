@@ -46,7 +46,7 @@ func (httpClient *HTTPClient) Append(_ *goal.Context, dst []byte, _ bool) []byte
 	return append(dst, fmt.Sprintf("<%v %#v>", httpClient.Type(), httpClient.Client)...)
 }
 
-//nolint:cyclop,funlen,gocognit,gocyclo // No code shared, ball of wax stays together.
+//nolint:cyclop,funlen,gocognit,gocyclo // No code shared, ball of wax stays together. Public for tests.
 func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 	// Not currently implemented:
 	// Cookies               []*http.Cookie // Medium-sized struct
@@ -327,7 +327,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 	return &httpClient, nil
 }
 
-func VFHTTPClientFn() func(goalContext *goal.Context, args []goal.V) goal.V {
+func vfHTTPClientFn() func(goalContext *goal.Context, args []goal.V) goal.V {
 	return func(_ *goal.Context, args []goal.V) goal.V {
 		x := args[len(args)-1]
 		clientOptions, ok := x.BV().(*goal.D)
@@ -347,7 +347,7 @@ func VFHTTPClientFn() func(goalContext *goal.Context, args []goal.V) goal.V {
 	}
 }
 
-func VFHTTPMaker(ariContext *Context, method string) func(goalContext *goal.Context, args []goal.V) goal.V {
+func vfHTTPMaker(ariContext *Context, method string) func(goalContext *goal.Context, args []goal.V) goal.V {
 	methodLower := strings.ToLower(method) // Used for function name
 	methodUpper := strings.ToUpper(method) // Used by go-resty for HTTP method
 	return func(_ *goal.Context, args []goal.V) goal.V {
@@ -707,7 +707,7 @@ const (
 )
 
 // Implements http.serve dyad.
-func VFServe(goalContext *goal.Context, args []goal.V) goal.V {
+func vfServe(goalContext *goal.Context, args []goal.V) goal.V {
 	x := args[len(args)-1]
 	hostAndPort, ok := x.BV().(goal.S)
 	if !ok {

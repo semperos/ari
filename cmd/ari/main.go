@@ -353,9 +353,9 @@ func ariMain(cmd *cobra.Command, args []string) int {
 
 func registerCliGoalBindings(ariContext *ari.Context) {
 	goalContext := ariContext.GoalContext
-	goalContext.RegisterMonad("tui.color", VFTuiColor)
-	goalContext.RegisterMonad("tui.style", VFTuiStyle)
-	goalContext.RegisterDyad("tui.render", VFTuiRender)
+	goalContext.RegisterMonad("tui.color", vfTuiColor)
+	goalContext.RegisterMonad("tui.style", vfTuiStyle)
+	goalContext.RegisterDyad("tui.render", vfTuiRender)
 }
 
 func rawREPL(cliSystem *CliSystem) {
