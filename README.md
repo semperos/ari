@@ -55,9 +55,10 @@ Flags:
   - `help` based on Goal's, but allows adding help strings when used dyadically (e.g.,`"sql.q"help"Run SQL query"`)
 - New Goal functions:
   - `http.` functions for HTTP requests using [Resty]
+  - `ratelimit.new` and `ratelimit.take` for rate limiting (leaky bucket algorithm) using [uber-go/ratelimit]
   - `sql.` functions for SQL queries and commands
+  - Table-related `csv.tbl` and `json.tbl` to make Goal tables from the output of `csv` and `json` respectively
   - `tt.` test framework
-  - `csv.tbl` and `json.tbl` to make Goal tables from the output of `csv` and `json` respectively
   - `time.` functions for more extensive date/time handling
   - `tui.` functions for basic terminal UI styling (colors, padding/margin, borders)
 - Dedicated SQL mode
@@ -194,3 +195,4 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 [Goal]: https://codeberg.org/anaseto/goal
 [Resty]: https://github.com/go-resty/resty
+[uber-go/ratelimit]: https://github.com/uber-go/ratelimit
