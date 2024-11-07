@@ -82,4 +82,6 @@ tt.repsut:{[suite]
 tt.report:{
   tt.repsut'!tt.st; (tes;tfs;tps;tss):+/#''. .'tt.st; say "Total $tss succeeded, $tfs failed, $tes errored, $tps panicked"
   and[|//@[;!"es fs ps"]'#''tt.st;error["Tests failed."]]}
+/ Documentation
+"http.serve"help"hostAndPort http.serve handlerFn"
 1

@@ -76,6 +76,12 @@ I began building Ari to replicate the experience described in the [Background](#
 
 ## Examples
 
+### Minimal HTTP Server
+
+```
+"localhost:1234"http.serve{say x; ..[status:200;bodystring:"OK"]}
+```
+
 ### Slack API
 
 Use Slack's API to get all messages in a channel for last 30 days. The first five lines set up the HTTP client specifically for Slack; the second block shows a code comment which can be evaluated to see a list of channels from which to pick the ID you need; the third block of code sets up the starting and ending timestamps with which to call the Slack API and a recursive function to fetch messages; the final line defines an `allmsgs` global with all messages from the given channel for the given time range, and then returns `"ok"` when it completes.
