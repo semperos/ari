@@ -262,9 +262,10 @@ func ariMain(cmd *cobra.Command, args []string) int {
 			fmt.Fprintf(os.Stderr, "File to load %s is not recognized as a path on your system: %v", f, err)
 		}
 		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
-		_, err = runScript(&mainCliSystem, f)
+		var v goal.V
+		v, err = runScript(&mainCliSystem, f)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to load file %q with error: %v", f, err)
+			fmt.Fprintf(os.Stderr, "Failed to load file %q with value %v and error: %v", f, v, err)
 			return 1
 		}
 	}
