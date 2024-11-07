@@ -1,4 +1,5 @@
 / Shape
+islst:{(@x)¿"ANSI"}
 istbl:{and["d"=@x;&/"s"=@'!x;&/{(@'x)¿"ANSI"}x;&/(*ls)=ls:#'x]} / is x a dictionary-as-table
 mktbl:{ks:!*x; vs:@[;ks]'x; ks!+vs} / given list of dicts, create dictionary-as-table
 shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
