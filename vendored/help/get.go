@@ -63,24 +63,30 @@ func initHelp() map[string]string {
 	help["rshift"] = help["»"]
 	help["«"] = getBuiltin(helpVerbs, "«", vcols)
 	help["shift"] = help["«"]
-	for _, v := range []string{"+", "-", "*", "%", "!", "&", "|", "<", ">", "=", "~", ",", "^",
-		"#", "_", "$", "?", "@", "."} {
+	for _, v := range []string{
+		"+", "-", "*", "%", "!", "&", "|", "<", ">", "=", "~", ",", "^",
+		"#", "_", "$", "?", "@", ".",
+	} {
 		help[v] = getBuiltin(helpVerbs, v, vcols)
 	}
 	for _, v := range []string{"'", "/", "\\"} {
 		help[v] = getBuiltin(helpAdverbs, v, acols)
 	}
-	for _, v := range []string{"abs", "bytes", "uc", "error", "eval", "firsts", "json", "ocount", "panic",
+	for _, v := range []string{
+		"abs", "bytes", "uc", "error", "eval", "firsts", "json", "ocount", "panic",
 		"sign", "csv", "in", "mod", "nan", "rotate", "sub", "utf8",
-		"atan", "cos", "exp", "log", "round", "sin", "sqrt"} {
+		"atan", "cos", "exp", "log", "round", "sin", "sqrt",
+	} {
 		help[v] = getBuiltin(helpNamedVerbs, v, nvcols)
 	}
 	help["¿"] = help["firsts"] + help["in"]
 	for _, v := range []string{"rt.get", "rt.log", "rt.seed", "rt.time", "rt.try"} {
 		help[v] = getBuiltin(helpRuntime, v, nvcols)
 	}
-	for _, v := range []string{"abspath", "chdir", "close", "dirfs", "env", "flush", "glob", "import", "mkdir", "open", "print",
-		"read", "remove", "rename", "run", "say", "shell", "stat", "ARGS", "STDIN", "STDOUT", "STDERR"} {
+	for _, v := range []string{
+		"abspath", "chdir", "close", "dirfs", "env", "flush", "glob", "import", "mkdir", "open", "print",
+		"read", "remove", "rename", "run", "say", "shell", "stat", "ARGS", "STDIN", "STDOUT", "STDERR",
+	} {
 		help[v] = getBuiltin(helpIO, v, nvcols)
 	}
 	help["subfs"] = help["dirfs"]
@@ -111,4 +117,8 @@ func getBuiltin(s string, v string, n int) string {
 		match = false
 	}
 	return sb.String()
+}
+
+func Map() map[string]string {
+	return initHelp()
 }

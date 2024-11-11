@@ -1,17 +1,18 @@
-/ dict[d;f] outputs dict d, assuming string keys and atom or flat array values,
-/ using format string f for floating point numbers.
+/ dict[d;f] outputs dict d using format string f for floating point numbers.
 dict:{[d;f]
   nk:#d; say"=== Dict ($nk keys) ==="
-  k:(|/-1+""#k)!k:!d; v:" "/(..?[(@x)¿"nN";p.f$x;$'x])'.d
-  say"\n"/k{"$x| $y"}'v
-}
-/ tbl[t;r;c;f] outputs dict t as table, assuming string keys and flat columns,
-/ and outputs at most r rows and c columns, using format string f for floating
-/ point numbers. Example: tbl[t;5;8;"%.1f"].
+  k:(|/-1+""#k)!k:keys@!d; v:val[f]'.d
+  say"\n"/k{"$x| $y"}'v}
+/ tbl[t;r;c;f] outputs dict t as table using at most r rows and c columns, and
+/ format string f for floating point numbers.
+/ Example: tbl[t;5;8;"%.1f"].
 tbl:{[t;r;c;f]
   (nr;nc):(#*t;#t); say"=== Table ${nr}x$nc ==="
-  t:t[!r&nr;(c&nc)@!t] / keep up to r rows and c columns
-  k:!t; v:(..?[(@x)¿"nN";p.f$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
-  (k;v):(-w)!'´(k;v); say"\n"/,/" "/(k;"-"*w;+v)
-}
+  m:{?[x<0;x|-y;x&y]}; t:t[!m[r;nr];m[c;nc]@!t:![keys@!t;{1}#'.t]]
+  k:!t; v:(..?[(@x)¿"nN";p.f$x;"A"~@x;q.val[p.f]'x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
+  (k;v):(-w)!'´(k;v); say"\n"/,/" "/(k;"-"*w;+v)}
+/ val[f;x] formats value x using f$x for floats and $x otherwise.
+val:{[f;x]?[(@x)¿"nN";(" "/f$x)or"?0";"A"~@x;[x:";"/o[f]'x;"($x)"];$x]}
+/ keys formats list into a list of string keys (if not already one).
+keys:{?[(@x)¿"S";x;$'x]}
 1

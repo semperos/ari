@@ -6,4 +6,5 @@ GOALSHA="$(git -C $GOAL rev-parse HEAD)"
 
 mkdir -p "$REPO/vendored"
 cp -R "$GOAL/help" "$REPO/vendored/"
+printf "\nfunc Map() map[string]string {\n	return initHelp()\n}\n" >> "$REPO/vendored/help/get.go"
 printf "# Vendored Go Code from Goal Project\n\nPulled from Goal at Git commit: \`$GOALSHA\`\n" > "$REPO/vendored/README.md"
