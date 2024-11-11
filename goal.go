@@ -115,13 +115,12 @@ func helpMonadic(help Help, args []goal.V) goal.V {
 			panic(`Developer Error: Help dictionary should have a "goal" entry.`)
 		}
 		for binding, helpString := range goalHelpMap {
-			if (regex.MatchString(binding) || regex.MatchString(helpString)) && !isGeneralHelpEntry(binding) {
+			if !isGeneralHelpEntry(binding) && (regex.MatchString(binding) || regex.MatchString(helpString)) {
 				fmt.Fprintln(os.Stdout, strings.TrimSpace(help.Func(binding)))
 			}
 		}
-		// TODO Search by regular expression
 	default:
-		return goal.Panicf("help x : x not a string (%s)", x.Type())
+		return goal.Panicf("help x : x must be a string or regex, received a %q: %v", x.Type(), x)
 	}
 	return goal.NewI(1)
 }
@@ -141,14 +140,11 @@ func helpDyadic(help Help, args []goal.V) goal.V {
 	return goal.NewI(1)
 }
 
-// These are Goal's help entries that cover topic areas. We do not want to match on these for regex help matching,
-// as it makes the output too noisy.
-var generalHelpEntries = []string{
-	"s", "t", "v", "nv", "a", "tm", "rt", "io",
-}
-
+// We do not want to match on these help topics for regex help matching, as it makes the output too noisy.
 func isGeneralHelpEntry(entry string) bool {
-	return slices.Contains(generalHelpEntries, entry)
+	return slices.Contains([]string{
+		"s", "t", "v", "nv", "a", "tm", "rt", "io",
+	}, entry)
 }
 
 // Go <> Goal helpers
