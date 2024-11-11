@@ -1,17 +1,51 @@
-/ dict[d;f] outputs dict d, assuming string keys and atom or flat array values,
-/ using format string f for floating point numbers.
+/ dict[d;f] outputs dict d using format string f for floating point numbers.
 dict:{[d;f]
   nk:#d; say"=== Dict ($nk keys) ==="
-  k:(|/-1+""#k)!k:!d; v:" "/(..?[(@x)¿"nN";p.f$x;$'x])'.d
-  say"\n"/k{"$x| $y"}'v
-}
-/ tbl[t;r;c;f] outputs dict t as table, assuming string keys and flat columns,
-/ and outputs at most r rows and c columns, using format string f for floating
-/ point numbers. Example: tbl[t;5;8;"%.1f"].
+  k:(|/-1+""#k)!k:keys@!d; v:item[f$]'.d
+  say"\n"/k{"$x| $y"}'v}
+/ tbl[t;r;c;f] outputs dict t as table using at most r rows and c columns, and
+/ format string f for floating point numbers.
+/ Example: tbl[t;5;8;"%.1f"].
 tbl:{[t;r;c;f]
   (nr;nc):(#*t;#t); say"=== Table ${nr}x$nc ==="
-  t:t[!r&nr;(c&nc)@!t] / keep up to r rows and c columns
-  k:!t; v:(..?[(@x)¿"nN";p.f$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
-  (k;v):(-w)!'´(k;v); say"\n"/,/" "/(k;"-"*w;+v)
-}
+  m:{?[x<0;x|-y;x&y]}; t:t[!m[r;nr];m[c;nc]@!t:![keys@!t;{1}#'.t]]
+  k:!t; v:(..?[(@x)¿"nN";p.f$x;"A"~@x;q.item[p.f$]'x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
+  (k;v):(-w)!'´(k;v); say"\n"/,/" "/(k;"-"*w;+v)}
+/ pp[x] pretty-prints x. NOTE: it relies on tput to estimate available
+/ lines/cols, so it may not be portable on all systems.
+pp:{(r;c):5 15|-4 0+"i"$! '"lines\ncols\n"run"tput""-S"
+    print pps[r;c;x]}
+/ pps[r;c;x] formats x for pretty-printing using at most r lines and c
+/ char-columns of space.
+pps:{[r;c;x] r|:1; c|:2
+  cut:{[c;s]?[c>-1+""#s;s;("c"$(c-1)#"c"$s)+"…"]}; it:item[nums]
+  sw:"sw"open 0; (nr;n):(#*x;#x)
+  ("A"~@x)and: [sw say+/("(";"\n "/(r&n)@cut[c-2]'it'x;?[r<n;"\n …)";")"]); sw..s]
+  and[x;"d"~@x]or: [sw say cut[c]it x; sw..s]
+  r:1|r-1
+  and[&/(@'.x)¿"INSA";&/nr=#'.x]or: [
+    sw say cut[c]"=== Dict ($n keys) ==="
+    k:(|/-1+""#k)!k:keys@!x:(r&n)#x; v:it'.x
+    sw say"\n"/cut[c]'k{"$x| $y"}'v; (r<n)and sw say"…"; sw..s]
+  sw say cut[c]"=== Table ${nr}x$n ==="
+  x:![k:keys@!x;.x][!r&nr]; k or:sw..s
+  v:cut[-4!c]''(..?[(@x)~"N";q.nums x;"A"~@x;p.it'x;$'x])'.x; w:(-1+""#k)|(|/-1+""#)'v
+  (k;v;w):?[c>+/1+w;n;*&c<+\1+w]#'(k;v;w)
+  (k;v):(-w)!'´(k;v);sw say"\n"/,/" "/(k;"-"*w;+v); (r<nr)and sw say"…"; sw..s}
+/ nums[N] formats numbers using a suitable common precision.
+nums:{
+  avg:{(+/x)%#x}
+  p:0w nan 10 log sqrt(avg[a*a]-m*m:avg a)*n%-1+n:#a:(nan)^x:"n"$x
+  s:10 log^abs a; (pm;pmi;pma):0w nan((+/s[0 1+-2!n])%2;s[-5!n];s[(-1+n)--5!n])
+  ?[and[6>abs p;pma<5;pmi>-5]
+    [p:1|"i"$(uc-pmi)|(uc-p); "%.${p}f"$x]
+    [p:"i"$6&2|1+abs uc p-pm; "%.${p}g"$x]]}
+/ keys formats a list into a list of string keys (if not already one).
+keys:{?[(@x)¿"S";x;$'x]}
+/ item formats x on one-line using function f for formatting floats.
+item:{[f;x]
+  ?[(@x)¿"nN"; (" "/f x)or"?0"
+    "A"~@x;    [x:";"/o[f]'x; "($x)"]
+    "d"~@x;    [k:o[f]@!x;v:o[f]@.x; "![$k;$v]"]
+    $x]}
 1

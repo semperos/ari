@@ -4,10 +4,12 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"codeberg.org/anaseto/goal"
 	gos "codeberg.org/anaseto/goal/os"
+	"github.com/semperos/ari/vendored/help"
 )
 
 const (
@@ -103,11 +105,23 @@ func vfGoalHelp(help Help) func(_ *goal.Context, args []goal.V) goal.V {
 
 func helpMonadic(help Help, args []goal.V) goal.V {
 	x := args[0]
-	arg, ok := x.BV().(goal.S)
-	if !ok {
-		return goal.Panicf("help x : x not a string (%s)", x.Type())
+	switch xv := x.BV().(type) {
+	case goal.S:
+		fmt.Fprintln(os.Stdout, strings.TrimSpace(help.Func(string(xv))))
+	case *goal.R:
+		regex := xv.Regexp()
+		goalHelpMap, ok := help.Dictionary["goal"]
+		if !ok {
+			panic(`Developer Error: Help dictionary should have a "goal" entry.`)
+		}
+		for binding, helpString := range goalHelpMap {
+			if !isGeneralHelpEntry(binding) && (regex.MatchString(binding) || regex.MatchString(helpString)) {
+				fmt.Fprintln(os.Stdout, strings.TrimSpace(help.Func(binding)))
+			}
+		}
+	default:
+		return goal.Panicf("help x : x must be a string or regex, received a %q: %v", x.Type(), x)
 	}
-	fmt.Fprintln(os.Stdout, strings.TrimSpace(help.Func(string(arg))))
 	return goal.NewI(1)
 }
 
@@ -124,6 +138,13 @@ func helpDyadic(help Help, args []goal.V) goal.V {
 	}
 	help.Dictionary["goal"][string(helpKeyword)] = string(helpString)
 	return goal.NewI(1)
+}
+
+// We do not want to match on these help topics for regex help matching, as it makes the output too noisy.
+func isGeneralHelpEntry(entry string) bool {
+	return slices.Contains([]string{
+		"s", "t", "v", "nv", "a", "tm", "rt", "io",
+	}, entry)
 }
 
 // Go <> Goal helpers
@@ -429,7 +450,8 @@ func GoalKeywordsHelp() map[string]string {
 								- Underline (bool)
 								- Width (int)`,
 	}, "\n")
-	return map[string]string{
+	vendoredGoalHelp := help.Map()
+	ariGoalHelp := map[string]string{
 		"http.client":  httpclient,
 		"http.delete":  helpForHTTPFn("delete"),
 		"http.get":     helpForHTTPFn("get"),
@@ -444,6 +466,10 @@ func GoalKeywordsHelp() map[string]string {
 		"tui.render":   tuiRender,
 		"tui.style":    tuiStyle,
 	}
+	for k, v := range ariGoalHelp {
+		vendoredGoalHelp[k] = v
+	}
+	return vendoredGoalHelp
 }
 
 func helpForHTTPFn(s string) string {

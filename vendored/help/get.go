@@ -112,3 +112,7 @@ func getBuiltin(s string, v string, n int) string {
 	}
 	return sb.String()
 }
+
+func Map() map[string]string {
+	return initHelp()
+}
