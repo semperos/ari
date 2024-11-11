@@ -1,3 +1,3 @@
 # Vendored Go Code from Goal Project
 
-Pulled from Goal at Git commit: `ee95ff40957e5d75a474458fd5c8418ce2ccac16`
+Pulled from Goal at Git commit: `bf100e1f63d558a88a4cacf93aafe8b996cd49f7`
