@@ -30,7 +30,6 @@ rmtree:{[path]
   {[x;path]
     or[~"e"~@r:rmf path;~"d"~@d:.r;~ErrExist~d..err]and:r
     files:abspath'path,'('read path)..name
-    and[PS~"\\";"e"¿@'files;:files..*&x!"e"=@'x] / abspath could fail on windows (maybe)
     'o/[~"e"~@:;x;files]; rmf path}[1;'abspath path]}
 
 / helpers below (not a part of stable API)
