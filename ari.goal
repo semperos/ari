@@ -10,6 +10,12 @@ munge:{[s]sub[rx/^[0-9]|[^a-zA-Z0-9]/;""]s}
 / DuckDB
 duckdb.read:{db:sql.open""; r:db sql.q "select * from '$x';"; sql.close db; r}
 / Output formats
+clip:{os:rt.get"os"
+ cmd:?[os~"linux";"xclip -selection clipboard -i"
+       os~"darwin";"pbcopy"
+       os~"windows";"clip"
+       error"Unsupported OS. Submit a PR to https://github.com/semperos/ari"]
+ x run cmd}
 pp.tbl:fmt.tbl[;0i-1;0i-1;"%.2f"]; pp.dict:fmt.dict[;"%.2f"]
 md.tbl:{[t;fmt] / helper
   k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
