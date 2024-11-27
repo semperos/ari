@@ -91,4 +91,5 @@ tt.report:{
   and[|//@[;!"es fs ps"]'#''tt.st;error["Tests failed."]]}
 / Documentation
 "http.serve"help"hostAndPort http.serve handlerFn"
+"time.sub"help"ari.Time1 time.sub ari.Time2 - Returns duration between two arguments in nanoseconds."
 1
