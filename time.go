@@ -939,6 +939,8 @@ func vfTimeParse(_ *goal.Context, args []goal.V) goal.V {
 	}
 	layout := string(layoutS)
 	switch len(args) {
+	case monadic:
+		return goal.Panicf("time.parse : too few arguments (%d), expects 2 arguments", len(args))
 	case dyadic:
 		y := args[0]
 		switch yv := y.BV().(type) {
