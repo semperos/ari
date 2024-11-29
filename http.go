@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
@@ -91,7 +90,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"AuthScheme\" "+
 						"to be a string, but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "BaseURL":
@@ -102,7 +101,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"BaseURL\" "+
 						"to be a string, but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "Debug":
@@ -115,7 +114,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"Debug\" to be 0 or 1, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "DisableWarn":
@@ -128,7 +127,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"DisableWarn\" "+
 						"to be 0 or 1 (falsey/truthy), but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "FormData":
@@ -143,7 +142,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"FormData\" to be a dictionary, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "Header":
@@ -158,7 +157,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"Header\" to be a dictionary, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "HeaderAuthorizationKey":
@@ -169,7 +168,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"HeaderAuthorizationKey\" to be a string, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "PathParams":
@@ -184,7 +183,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"PathParams\" to be a string, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "QueryParam":
@@ -199,7 +198,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"QueryParam\" to be a dictionary, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "RawPathParams":
@@ -214,7 +213,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"RawPathParams\" to be a string, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "RetryCount":
@@ -224,7 +223,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"RetryCount\" to be an integer, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "RetryMaxWaitTimeMilli":
@@ -234,7 +233,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"RetryMaxWaitTimeMilli\" to be an integer, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "RetryResetReaders":
@@ -247,7 +246,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"RetryResetReaders\" to be 0 or 1 (falsey/truthy), "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "RetryWaitTimeMilli":
@@ -258,7 +257,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 					return nil, fmt.Errorf("%v expects \"RetryWaitTimeMilli\" to be an integer, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "Token":
@@ -268,7 +267,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 				default:
 					return nil, fmt.Errorf("%v expects \"Token\" to be a string, but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "UserInfo":
@@ -296,21 +295,21 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 							return nil, fmt.Errorf("%v expects \"UserInfo\" to be a dictionary "+
 								"with string values, but received a %v: %v",
 								goalFnName,
-								reflect.TypeOf(uivs),
+								userInfoValues.Type(),
 								uivs)
 						}
 					default:
 						return nil, fmt.Errorf("%v expects \"UserInfo\" to be a dictionary "+
 							"with string keys, but received a %v: %v",
 							goalFnName,
-							reflect.TypeOf(uiks),
-							uiks)
+							userInfoKeys.Type(),
+							userInfoKeys)
 					}
 				default:
 					return nil, fmt.Errorf("%v expects \"UserInfo\" to be a dictionary, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			default:
@@ -321,7 +320,7 @@ func NewHTTPClient(optionsD *goal.D) (*HTTPClient, error) {
 		return nil, fmt.Errorf("%v expects a Goal dictionary with string keys, "+
 			"but received a %v: %v",
 			goalFnName,
-			reflect.TypeOf(va),
+			va.Type(),
 			va)
 	}
 	return &httpClient, nil
@@ -403,8 +402,8 @@ func httpMakerDyadic(x goal.V, args []goal.V, methodLower string, methodUpper st
 		return goal.Panicf("client http.%s url : client must be a dict or ari.HTTPClient instance, "+
 			"but received a %v: %v",
 			methodLower,
-			reflect.TypeOf(clientOpts),
-			clientOpts)
+			x.Type(),
+			x)
 	}
 	y := args[0]
 	urlS, ok := y.BV().(goal.S)
@@ -434,8 +433,8 @@ func httpMakerTriadic(x goal.V, args []goal.V, methodLower string, methodUpper s
 		return goal.Panicf("client http.%s url optionsDict : client must be a dict or ari.HTTPClient instance, "+
 			"but received a %v: %v",
 			methodLower,
-			reflect.TypeOf(clientOpts),
-			clientOpts)
+			x.Type(),
+			x)
 	}
 	y := args[1]
 	urlS, ok := y.BV().(goal.S)
@@ -510,7 +509,7 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 				default:
 					return nil, fmt.Errorf("%v expects \"Debug\" to be 0 or 1, but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "FormData":
@@ -525,7 +524,7 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 					return nil, fmt.Errorf("%v expects \"FormData\" to be a dictionary, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "Header":
@@ -539,7 +538,7 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 				default:
 					return nil, fmt.Errorf("%v expects \"Header\" to be a dictionary, but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "PathParams":
@@ -553,7 +552,7 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 				default:
 					return nil, fmt.Errorf("%v expects \"PathParams\" to be a string, but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "QueryParam":
@@ -568,7 +567,7 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 					return nil, fmt.Errorf("%v expects \"QueryParam\" to be a dictionary, "+
 						"but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			case "RawPathParams":
@@ -582,7 +581,7 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 				default:
 					return nil, fmt.Errorf("%v expects \"RawPathParams\" to be a string, but received a %v: %v",
 						goalFnName,
-						reflect.TypeOf(value),
+						value.Type(),
 						value)
 				}
 			default:
@@ -592,8 +591,8 @@ func augmentRequestWithOptions(req *resty.Request, optionsD *goal.D, methodLower
 	default:
 		return nil, fmt.Errorf("%v expects a Goal dictionary with string keys, but received a %v: %v",
 			goalFnName,
-			reflect.TypeOf(kas),
-			kas)
+			optionsKeys.Type(),
+			optionsKeys)
 	}
 	return req, nil
 }
@@ -619,16 +618,16 @@ func processFormData(goalD *goal.D, goalFnName string) (url.Values, error) {
 					"to be a dictionary with values that are strings or lists of strings, "+
 					"but received a %v: %v",
 					goalFnName,
-					reflect.TypeOf(hv),
-					hv)
+					formDataValue.Type(),
+					formDataValue)
 			}
 		}
 	default:
 		return nil, fmt.Errorf("%v expects \"FormData\" to be a dictionary "+
 			"with string keys, but received a %v: %v",
 			goalFnName,
-			reflect.TypeOf(fdks),
-			fdks)
+			formDataKeys.Type(),
+			formDataKeys)
 	}
 	return urlValues, nil
 }
@@ -654,16 +653,16 @@ func processHeader(goalD *goal.D, goalFnName string) (http.Header, error) {
 					"a dictionary with values that are strings or lists of strings, "+
 					"but received a %v: %v",
 					goalFnName,
-					reflect.TypeOf(hv),
-					hv)
+					headerValue.Type(),
+					headerValue)
 			}
 		}
 	default:
 		return nil, fmt.Errorf("%v expects \"Header\" to be a dictionary "+
 			"with string keys, but received a %v: %v",
 			goalFnName,
-			reflect.TypeOf(hks),
-			hks)
+			headerKeys.Type(),
+			headerKeys)
 	}
 	return header, nil
 }
@@ -687,16 +686,16 @@ func processQueryParam(goalD *goal.D, goalFnName string) (url.Values, error) {
 				return nil, fmt.Errorf("%v expects \"QueryParam\" to be a dictionary "+
 					"with values that are strings or lists of strings, but received a %v: %v",
 					goalFnName,
-					reflect.TypeOf(hv),
-					hv)
+					queryParamValue.Type(),
+					queryParamValue)
 			}
 		}
 	default:
 		return nil, fmt.Errorf("%v expects \"QueryParam\" to be a dictionary "+
 			"with string keys, but received a %v: %v",
 			goalFnName,
-			reflect.TypeOf(qpks),
-			qpks)
+			queryParamKeys.Type(),
+			queryParamKeys)
 	}
 	return urlValues, nil
 }
@@ -809,7 +808,7 @@ func serverHandleRequest(goalContext *goal.Context, goalHandler goal.V, requestD
 	d, ok := responseD.BV().(*goal.D)
 	if !ok {
 		//nolint:lll // Error message is long.
-		http.Error(w, fmt.Sprintf("Server Goal handler function must return a dictionary, but received a %q: %v", d.Type(), d), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Server Goal handler function must return a dictionary, but received a %q: %v", responseD.Type(), responseD), http.StatusInternalServerError)
 		return
 	}
 	karr := d.KeyArray()
@@ -851,6 +850,6 @@ func serverHandleRequest(goalContext *goal.Context, goalHandler goal.V, requestD
 		}
 	default:
 		//nolint:lll // Error message is long.
-		http.Error(w, fmt.Sprintf(`Sever Goal handler function's return value must be a dictionary with string keys, but keys were of type %q: %v`, ks.Type(), ks), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf(`Sever Goal handler function's return value must be a dictionary with string keys, but keys were of type %q: %v`, karr.Type(), karr), http.StatusInternalServerError)
 	}
 }
