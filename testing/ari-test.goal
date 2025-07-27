@@ -8,3 +8,9 @@ tt.t{"wow9"~munge"9wow9!@"}
 tt.t{"wow9"~munge"9w#o#w9!@"}
 tt.t{"wow98"~munge"9w#o#w9!@8"}
 tt.t{"WoW98"~munge"9W#o#W9!@8"}
+tt.t{3~getin[..[a:3];"a";999]}
+tt.t{999~getin[..[a:3];"b";999]}
+tt.t{"wow"~getin[..[a:3;b:..[c:..[d:"wow"]]];!"b c d";999]}
+tt.t{999~getin[..[a:3;b:..[c:..[d:"wow"]]];!"b d c";999]}
+tt.t{5~getin[(3;5;7);1;999]}
+tt.t{999~getin[(3;5;7);4;999]}
