@@ -5,7 +5,8 @@ mktbl:{ks:!*x; vs:@[;ks]'x; ks!+vs} / given list of dicts, create dictionary-as-
 shape:{-1_#:'*:\x} / Implementation by John Earnest, shared on k-tree
 depths:{[ind;l]?[(@l)~"A";,/o[ind+1]'l; (@l)¿"NSI";(#l)#ind; ind-1]} / list depths
 zero:..[i:0;n:0.0;s:"";r:rx//;d:()!();f:(:);A:()] / handle, error don't fill
-getin:{[x;k;fb].[{x.(y)}[x];,k;{x}[fb]]} / like Clojure's get-in
+getor:{[x;k;fb]?["d"~@x;?[k¿!x;x[k];fb];?[k<#x;x[k];fb]]}
+getin:{[x;sel;fb][k:*sel;?[1~#sel;:getor[x;k;fb];?[k¿!x;:o[x[k];1_sel;fb]]]]}
 / Stats
 cile:{[ofone;coll]coll:^coll; t:#coll; slowcile:1-ofone; ntodrop:_slowcile*t; *ntodrop_|coll} / p95:cile[0.95]
 / Names
