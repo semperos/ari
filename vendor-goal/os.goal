@@ -27,10 +27,10 @@ mkdirp:{[path]
 rmtree:{[path]
   (rx#^[.\\/]*$#path)and:error..[
     msg:"%s: %q"$(ErrInvalid;path);op:"rmtree";path:path;err:ErrInvalid]
-  {[x;path]
+  {[;path]
     or[~"e"~@r:rmf path;~"d"~@d:.r;~ErrExist~d..err]and:r
     files:abspath'path,'('read path)..name
-    'o/[~"e"~@:;x;files]; rmf path}[1;'abspath path]}
+    'o/[~"e"~@:;1;files]; rmf path}[1;'abspath path]}
 
 / helpers below (not a part of stable API)
 getp:sub[?[PS~"/";rx`[^/]*/*$`;rx`[^\\/]*[\\/]*$`];""] / parent folder

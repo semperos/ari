@@ -1,0 +1,19 @@
+/ parse[spec;cmd] parses a list of command-line arguments cmd using the flag
+/ specification dict spec: keys represent flag names without the dash, and
+/ values are either monadic functions that parse an argument or a string
+/ left-argument for the default parsing function $; special value "?" is used
+/ for boolean flags. The first non-flag argument (including "-") or "--" stops
+/ flag parsing.  It returns a dict ..[cmd:s;opts:d;args:S] where the opts dict
+/ maps flags to their parsed values.
+/ For example ..[a:"s";b:_;c:"?"] specifies a flag -a with string argument
+/ (same as "s"$), a flag -b with string argument processed to lower case, and a
+/ boolean flag -c.
+parse:{[spec;cmd] c:*cmd; cmd:1_cmd; i:cmd?"--"
+  (opts;args): '{[spec|cmd;opts;args]cmd or:(opts;args)
+    and[m:rx/^--?(.+)/@*cmd;fl:*|m]or:(opts;args,cmd)
+    (fl¿!spec)or:error"unknown flag: -$fl"
+    ("?"~f:spec[fl])and:o[spec;1_cmd;opts[fl]:1;args]
+    (cmd:1_cmd)or:error"flag -$fl needs an argument"
+    o[spec;1_cmd;opts[fl]:?["s"~@f;f$*cmd;f@*cmd];args]}[i#cmd;.!"";!""]
+  ..[cmd:c;opts;args,:(1+i)_cmd]}
+1

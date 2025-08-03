@@ -19,4 +19,6 @@ dev:{sqrt var x}
 cov:{avg[x*y]-avg[x]*avg y}
 / cor[N;N] returns the correlation.
 cor:{cov[x;y]%dev[x]*dev y}
+/ cmb[X] returns all combination pairs from X; cmb[i] returns cmb[!i].
+cmb:{?[x~*x;(&|i:!x;,/{(1_x)_`x}@i);x o@#x]}
 1

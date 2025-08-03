@@ -8,15 +8,15 @@ ErrClosed:"file already closed"
 / to be clean) with the base name of a file.
 join:{?[x~".";y;"$x/$y"]}
 / ls[fs] returns ..[dir:I;path:S] with all non-dot files in file system fs.
-ls:{[fs]{[fs;path]
+ls:{[fs]{[fs|path]
   st:fs stat path; and[st;st..dir;d:fs read path]or:..[dir:!0;path:!""]
   d@:&~d..name[;;1]="."; paths:join'[path;d..name]; dirs:paths@&d..dir
   r:o[fs]'dirs; dir:d..dir,/r[;"dir"]; path:paths,/r[;"path"]
-  ..[dir;path]}[fs;"."]}
+  ..[dir;path]}["."]}
 / walk[f;g;x;fs] folds over fs with f[x;path;name;dir] using seed x, skipping
 / if g[path;name], where name is the base name of path, and dir is true for
 / directories.  It stops early if f returns an error.
-walk:{[f;g;x;fs]{[fs;f;g;x;path;name;dir]
+walk:{[f;g;x;fs]{[fs;f;g;x|path;name;dir]
   g[path;name]and:x; ("e"~@x:f[x;path;name;dir])and:x; and[dir;d:fs read path]or:x
-  o[fs;f;g]/[~"e"~@:;x;join'[path;d..name];d..name;d..dir]}[fs;f;g;x;".";".";1]}
+  o[fs;f;g]/[~"e"~@:;x;join'[path;d..name];d..name;d..dir]}[".";".";1]}
 1
