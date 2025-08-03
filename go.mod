@@ -11,7 +11,7 @@ require (
 	github.com/jarcoal/httpmock v1.3.1
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	github.com/marcboeker/go-duckdb v1.8.4
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	go.uber.org/ratelimit v0.3.1
 )
