@@ -156,6 +156,7 @@ func SQLQueryContext(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goa
 }
 
 func SQLExec(sqlDatabase *SQLDatabase, sqlQuery string, args []any) (goal.V, error) {
+	//nolint:noctx // deferring introducing Context
 	result, err := sqlDatabase.DB.Exec(sqlQuery, args...)
 	if err != nil {
 		return goal.NewGap(), err
