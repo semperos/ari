@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"codeberg.org/anaseto/goal"
+	"codeberg.org/anaseto/goal/archive/zip"
+	"codeberg.org/anaseto/goal/encoding/base64"
+	"codeberg.org/anaseto/goal/math"
 	gos "codeberg.org/anaseto/goal/os"
 	"github.com/semperos/ari/vendored/help"
 )
@@ -31,6 +34,7 @@ const (
 func goalLoadExtendedPreamble(ctx *goal.Context) error {
 	additionalPackages := map[string]string{
 		"dict":  goalSourceDict,
+		"flag":  goalSourceFlag,
 		"fmt":   goalSourceFmt,
 		"fs":    goalSourceFs,
 		"html":  goalSourceHTML,
@@ -41,6 +45,7 @@ func goalLoadExtendedPreamble(ctx *goal.Context) error {
 		"path":  goalSourcePath,
 		"table": goalSourceTable,
 	}
+
 	for pkg, source := range additionalPackages {
 		_, err := ctx.EvalPackage(source, "<builtin>", pkg)
 		if err != nil {
@@ -56,6 +61,9 @@ func goalLoadExtendedPreamble(ctx *goal.Context) error {
 
 //go:embed vendor-goal/dict.goal
 var goalSourceDict string
+
+//go:embed vendor-goal/flag.goal
+var goalSourceFlag string
 
 //go:embed vendor-goal/fmt.goal
 var goalSourceFmt string
@@ -184,8 +192,10 @@ func goalNewDictEmpty() *goal.D {
 // Integration with other parts of Ari
 
 func goalRegisterUniversalVariadics(ariContext *Context, goalContext *goal.Context, help Help) {
-	// From Goal itself, os lib imported without prefix. Includes 'say' verb, which works even in WASM.
-	gos.Import(goalContext, "")
+	gos.Import(goalContext, "")      // because Goal imports this without prefix
+	math.Import(goalContext, "math") // because this file isn't prefixed
+	zip.Import(goalContext, "")      // already zip-prefixed
+	base64.Import(goalContext, "")   // already base64-prefixed
 	goalContext.RegisterExtension("ari", AriVersion)
 	goalContext.AssignGlobal("ari.c", goal.NewI(0))
 	// Monads
