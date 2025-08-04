@@ -2,4 +2,4 @@
 
 cd cmd/wasm
 GOOS=js GOARCH=wasm go build -o goal.wasm
-cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" .
+cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" .

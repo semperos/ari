@@ -1,8 +1,6 @@
 module github.com/semperos/ari
 
-go 1.23
-
-toolchain go1.23.6
+go 1.24
 
 require (
 	codeberg.org/anaseto/goal v1.3.0

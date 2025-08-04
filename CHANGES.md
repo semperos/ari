@@ -1,5 +1,8 @@
 # v next
 
+- Upgrades Go version to 1.24, including relevant tweaks to WASM build
+- Imports the full suite of Goal extensions (see Goal's full.go)
+- Adds Goal's new flag lib
 - Many Ari functions were written with scalar use-cases in mind, but many of them would be more powerful if they supported both scalar and array arguments. Such pervasive/broadcasting behavior has been added to the following functions:
   - `time.format` _(also swapped arg order)_
   - `time.parse`
