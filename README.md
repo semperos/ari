@@ -123,9 +123,9 @@ To publish a new version of Ari:
 
 Use the `./script/build-wasm` script to generate a `./cmd/wasm/goal.wasm` file from the `./cmd/wasm/main.go` entry-point.
 
-You then need to locate the `wasm_exec.js` file for your specific Go version and copy that to the `./cmd/wasm` folder. Depending on your system installation, you might find it there under a `lib` or `misc` folder. If not, you can download a source tarball for your specific Go version from the Go downloads which includes this file.
+Run an HTTP server in the `./cmd/wasm` folder to serve up the `index.html`, which renders a gently adapted version of anaseto's WASM setup in Goal itself.
 
-JavaScript that controls the user interface in `./cmd/wasm/index.html` is written in Go in the `./cmd/wasm/main.go` file.
+NB: The JavaScript that controls the user interface in `./cmd/wasm/index.html` is written in Go in the `./cmd/wasm/main.go` file.
 
 See [Go Wiki: WebAssembly](https://go.dev/wiki/WebAssembly) for more information.
 
