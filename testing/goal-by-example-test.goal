@@ -1,0 +1,179 @@
+/Heavily adapted from:
+/K by EXAMPLE
+/  K is product of Kx Inc.  http://kx.com
+/  2005.06.29. Attila Vrabecz (VrAbi) http://vrabi.web.elte.hu/k
+/based on J by EXAMPLE by
+/  06/11/2005 (C) Oleg Kobchenko     http://olegykj.sourceforge.net
+/simple arithmetic ===============================================
+tt.t{4~2+2}         /comment is ' /': left of /: whitespace or nothing
+tt.t{-1~2-3}        /negative numbers
+tt.t{14~2*3+4}      /no precedence, right to left
+tt.t{10~(2*3)+4}    /parentheses changes order
+tt.t{0.75~3%4}      /division represented by '%'
+tt.t{16.0~4 exp 2}  /square
+tt.t{2.0~sqrt 4}    /square root
+/operations using lists ==========================================
+tt.t{(2 4 6)~2*1 2 3}            /numeric list with space separators
+tt.t{(0.5 0.5 0.5)~1 2 3%2 4 6}  /list to list operations, same size
+tt.t{3~#1 2 3}                   /size of vector
+tt.t{(1 1 1)~3#1}                /generate sequence of same numbers
+tt.t{(1 2 1 2 1)~5#1 2}          /or from a list of given elements
+/ list elements ===================================================
+tt.t{1~*1 2 3}        /first element
+tt.t{(3 2 1)~|1 2 3}  /reverse
+tt.t{3~*|1 2 3}       /last element
+tt.t{(2 3)~1_1 2 3}   /rest without first element
+tt.t{(1 2)~-1_1 2 3}  /rest without last element
+/ indexing and sorting ============================================
+tt.t{2~1 2 3@1}             /indexing is zero-based
+tt.t{(2 1)~1 2 3@1 0}       /index can be vector too
+tt.t{(0 1 2)~!3}            /generate zero-based sequence
+tt.t{1~2 4 6?4}             /index of given element(s)
+tt.t{(1 0 2)~<2 1 6}        /indices of sorted order (grade)
+tt.t{(1 2 6)~{x@<x}2 1 6}   /sort vector (application)
+tt.t{(1 2 6)~{x[<x]}2 1 6}  /sort vector (bracket syntax)
+/ list aggregation ================================================
+tt.t{(1 2 3 10 20)~1 2 3,10 20}         /join vectors
+tt.t{6~1+2+3}                           /sum of elements
+tt.t{6~+/1 2 3}                         /insert '+' between elements
+tt.t{(1 3 6)~+\1 2 3}                   /running sum of elements
+tt.t{(1 3 6)~1,(1+2),(1+2+3)}           /same as this
+tt.t{(1 2;2 3;3 4;4 5)~-2^1 2 3 4 5}    / pairs (windows of 2 items)
+tt.t{10 14~+/-2^1 2 3 4 5}              /sums of columns
+tt.t{10 14~(1 2)+(2 3)+(3 4)+(4 5)}     /same as this
+tt.t{3 5 7 9~+/'-2^1 2 3 4 5}           /sums of rows
+tt.t{3 5 7 9~((1+2);(2+3);(3+4);(4+5))} /same as this
+tt.t{"A"~@((1 2);(3 4 6);(7 6))}        /list, can be non-rectangular
+tt.t{(3 4 6)~*(3 4 6;7 6)}              /first item in the list
+/ function combinations ===========================================
+sq:{x exp 2}
+tt.t{20.0~{x+sq x}4}            /a + a^2
+tt.t{(2.0 16.0)~(sqrt;sq)@`4}   /[sqrt(a), a^2]
+tt.t{25.0~sq@+/2 3}             /(a+b)^2
+tt.t{13.0~+/sq 2 3}             /a^2 + b^2
+tt.t{25.0~{+/(sq x),2*/x}2 3}   /(a + b)^2 = a^2 + b^2 + 2ab
+tt.t{5.0~sqrt+/sq 3 4}          /sqrt(a^2 + b^2)
+/ user defined functions and arguments ============================
+d1:-                           /dyadic projection
+tt.t{1~d1[3;2]}                /called
+d2:{x-y}                       /explicit dyad
+tt.t{1~d2[3;2]}                /called
+m1:-:                          /monadic projection
+tt.t{(-1 -2 -3)~m1 1 2 3}      /called
+m2:0-                          /monadic projection
+tt.t{(-1 -2 -3)~m2 1 2 3}      /called
+m3:{-x}                        /explicit monad
+tt.t{(-1 -2 -3)~m3 1 2 3}      /called
+tt.t{(1 1)~(d1;d2).`3 2}       /dyads
+tt.t{(-1 -1 -1)~(m1;m2;m3).`1} /monads
+/ exponent and logarithm ==========================================
+e:exp 1                     /exponent, Euler's number
+tt.t{2.718281828459045~e}   /decimal representation
+tt.t{1.0~log e}             /logarithm, ln e
+tt.t{2.0~log exp 2}         /logarithm, ln e^2
+tt.t{65536.0~2 exp 16}      /exponent base 2, 2^16
+tt.t{16.0~2 log 65536}      /logarithm, log2 65536
+tt.t{16~(log 65536)%log 2}  /expressed as division of natural logarithms
+/ trigonometry ====================================================
+tt.t{math.pi~math.π}             /pi, provided by Go
+acos:{2*atan[sqrt(1-x)%1+x]}     /acos
+tt.t{-1~cos math.pi}             /identity cos
+tt.t{math.π~acos -1}             /identity acos
+:a:(math.pi;2*math.pi;sq math.π) /pi, 2pi, pi^2
+tt.t{a~3.141592653589793 6.283185307179586 9.869604401089358} /tested
+:t:(+/sq(cos;sin)@`)             /theorem of trigonometry
+tt.t{1.0~t math.pi}              /tested
+tt.t{(1 1 1.0)~t a}              /test theorem at angles (pi, 2pi, pi^2)
+/ matrices ========================================================
+tt.t{(1 2 3;2 4 6;3 6 9)~1 2 3*´1 2 3} /each right; multiply (outer product: multiplication table)
+/ (1 2 3
+/  2 4 6
+/  3 6 9)
+tt.t{(1 0 0;0 1 0;0 0 1)~{x=´x}@!3} /identity matrix
+/ (1 0 0
+/  0 1 0
+/  0 0 1)
+tt.t{(0 1 2;3 4 5)~2$!6}  /cut; generate matrix with x rows
+/ (0 1 2
+/  3 4 5)
+tt.t{(0 1;2 3;4 5)~-2$!6}   /cut; generate matrix with x cols
+/ (0 1
+/  2 3
+/  4 5)
+tt.t{(0 1;1 1)~2$0 1 1 1}   /cut given vector to matrix
+/ (0 1
+/  1 1)
+/ structural transforms ===========================================
+:N:2$'2$!12    /2x2x3 matrix
+/ ((0  1  2
+/   3  4  5)
+/  (6  7  8
+/   9 10 11))
+tt.t{0 1 2 3 4 5 6 7 8 9 10 11~,//N}   /ravel: list of atoms
+tt.t{(0 1 2;3 4 5;6 7 8;9 10 11)~,/N}  /join top-level items, in this case 2x3 matrices
+/ (0 1 2
+/  3 4 5
+/  6 7 8
+/  9 10 11)
+tt.t{(0 1 2 3 4 5;6 7 8 9 10 11)~,/'N}  /ravel each sub-matrix
+/ (0 1 2 3 4 5
+/  6 7 8 9 10 11)
+:M:1+3$!9  /3x3 matrix
+say'(:: ;+: ;|: ;|:'; 1 rotate)@`M
+/ ((1 2 3     / ::  returns argument
+/   4 5 6
+/   7 8 9)
+/  (1 4 7     / +:  transposes/flips
+/   2 5 8
+/   3 6 9)
+/  (7 8 9     / |:  reverses items, here top-level arrays
+/   4 5 6
+/   1 2 3)
+/  (3 2 1     / |:' reverses each items
+/   6 5 4
+/   9 8 7)
+/  (4 5 6     / (rotate) rotates items
+/   7 8 9
+/   1 2 3))
+/ selection ======================================================
+N  /reminder of N
+/ ((0 1 2
+/   3 4 5)
+/  (6 7 8
+/   9 10 11))
+tt.t{10~((N 1)1)1}   /repetitive selection of items From list
+tt.t{10~3@[;1]/N}    /apply select 3 times
+tt.t{10~N[1;1;1]}    /scatter select
+tt.t{10~N . 1 1 1}   /scatter select too
+/ factorial ==========================================
+tt.t{(1 2 6 24 120)~(f:{?[x<0;0;*/1.+!x]})'1+!5}   /factorial
+tt.t{(1 2 6 24 120)~*\1+!5}                        /running product
+/ randomness and probability ======================================
+:A:?5 /5 random floats from 0..1
+/ 0.03076858832772078 0.05949331939073166 0.8927460717308945 0.1388339346947738 0.1718002917289505
+tt.t{5~#A}           /5 of them
+tt.t{*/(A<1)&(0<A)}  /all (0,1)
+:B:10?2              /coin toss
+/ 1 0 0 1 0 1 1 1 1 1
+tt.t{10>+/B}
+:C:-3?3              /deal 3 out of 3 cards in certain order
+/ 2 0 1
+tt.t{(!3)~^C}        /each value is represented
+tt.t{(0.03076858832772078 0.8927460717308945)~(&/;|/)@`A}  /min and max over the list
+B?0 /first zero
+/ 1
+{(+/x)%#x}C~´10000{-3?3}\_n  /method monte carlo
+/ 0.16528347165283472
+/ unique elements =================================================
+S:1 2 3 3 2 3 3 2 4 4 2  /mississippi
+:D:?S
+tt.t{(1 2 3 4)~D}        /? is unique/distinct
+:K:D?´S                  /find (?) indexes
+tt.t{(0 1 2 2 1 2 2 1 3 3 1)~K} /test it
+=.K
+/ (,0
+/  1 1 1 1
+/  2 2 2 2
+/  3 3)
+tt.t{(,0;1 1 1 1;2 2 2 2;3 3)~=.K}  /= is group, group keys
+tt.t{(1 4 4 2)~#'=.K}  /frequencies

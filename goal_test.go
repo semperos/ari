@@ -206,7 +206,7 @@ func getMatchTests(glob string) ([]matchTest, error) {
 
 // Adapted from Goal implementation.
 func getScriptMatchTests(glob string) ([]matchTest, error) {
-	d := os.DirFS("testing/scripts")
+	d := os.DirFS("testing/scripts") // currently unused
 	fnames, err := fs.Glob(d, glob)
 	if err != nil {
 		return nil, err
