@@ -6,7 +6,7 @@ require (
 	codeberg.org/anaseto/goal v1.3.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/go-resty/resty/v2 v2.16.5
-	github.com/jarcoal/httpmock v1.4.0
+	github.com/jarcoal/httpmock v1.4.1
 	github.com/knz/bubbline v0.0.0-20230717192058-486954f9953f
 	github.com/marcboeker/go-duckdb v1.8.5
 	github.com/spf13/cobra v1.9.1
