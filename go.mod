@@ -3,7 +3,7 @@ module github.com/semperos/ari
 go 1.24
 
 require (
-	codeberg.org/anaseto/goal v1.3.0
+	codeberg.org/anaseto/goal v1.3.1-0.20250826101324-6b0b4f8071f4
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/jarcoal/httpmock v1.4.1

@@ -1,3 +1,3 @@
 # Vendored Goal Code from Goal Project
 
-Pulled from Goal at Git commit: `c44eac20d27e08f7410862b2cf2c03361c5e23eb`
+Pulled from Goal at Git commit: `6b0b4f8071f48ec714e19978a06a029819820306`
