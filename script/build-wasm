@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -eu
+
 cd cmd/wasm
+rm -f goal.wasm wasm_exec.js
 GOOS=js GOARCH=wasm go build -o goal.wasm
 cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" .
