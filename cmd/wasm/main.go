@@ -110,6 +110,9 @@ func main() {
 		if e.Get("ctrlKey").Bool() && key == "Enter" {
 			e.Call("preventDefault")
 			evalTextArea()
+		} else if e.Get("metaKey").Bool() && key == "Enter" {
+			e.Call("preventDefault")
+			evalTextArea()
 		} else if key == "F1" {
 			out := getEltById("out")
 			out.Set("value", helpString)
