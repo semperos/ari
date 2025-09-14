@@ -148,6 +148,42 @@ func helpDyadic(help Help, args []goal.V) goal.V {
 	return goal.NewI(1)
 }
 
+// Return a string of the help documentation, instead of printing.
+func vfGoalHelps(help Help) func(_ *goal.Context, args []goal.V) goal.V {
+	return func(_ *goal.Context, args []goal.V) goal.V {
+		switch len(args) {
+		case monadic:
+			return helpMonadics(help, args)
+		default:
+			return goal.Panicf("helps : too many arguments (%d), expects 1 argument", len(args))
+		}
+	}
+}
+
+func helpMonadics(help Help, args []goal.V) goal.V {
+	x := args[0]
+	switch xv := x.BV().(type) {
+	case goal.S:
+		return goal.NewS(strings.TrimSpace(help.Func(string(xv))))
+	case *goal.R:
+		regex := xv.Regexp()
+		goalHelpMap, ok := help.Dictionary["goal"]
+		if !ok {
+			panic(`Developer Error: Help dictionary should have a "goal" entry.`)
+		}
+		var b strings.Builder
+		for binding, helpString := range goalHelpMap {
+			if !isGeneralHelpEntry(binding) && (regex.MatchString(binding) || regex.MatchString(helpString)) {
+				b.WriteString(strings.TrimSpace(help.Func(binding)))
+				b.WriteString("\n")
+			}
+		}
+		return goal.NewS(b.String())
+	default:
+		return goal.Panicf("help x : x must be a string or regex, received a %q: %v", x.Type(), x)
+	}
+}
+
 // We do not want to match on these help topics for regex help matching, as it makes the output too noisy.
 func isGeneralHelpEntry(entry string) bool {
 	return slices.Contains([]string{
@@ -199,6 +235,7 @@ func goalRegisterUniversalVariadics(ariContext *Context, goalContext *goal.Conte
 	goalContext.RegisterExtension("ari", AriVersion)
 	goalContext.AssignGlobal("ari.c", goal.NewI(0))
 	// Monads
+	goalContext.RegisterMonad("helps", vfGoalHelps(help))
 	goalContext.RegisterMonad("ratelimit.new", vfRateLimitNew)
 	goalContext.RegisterMonad("ratelimit.take", vfRateLimitTake)
 	goalContext.RegisterMonad("time.day", vfTimeDay)
