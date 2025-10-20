@@ -60,7 +60,6 @@ Flags:
   - Table-related `csv.tbl` and `json.tbl` to make Goal tables from the output of `csv` and `json` respectively
   - `tt.` test framework
   - `time.` functions for more extensive date/time handling
-  - `tui.` functions for basic terminal UI styling (colors, padding/margin, borders)
 - Dedicated SQL mode
   - The ari CLI uses DuckDB, but the `github.com/semperos/ari` Go package doesn't directly depend on a specific SQL database driver, so you can BYODB.
   - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.

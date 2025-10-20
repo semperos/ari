@@ -48,7 +48,6 @@
 //     change the REPL prompt.
 //   - A `help` Goal verb that allows (re)defining help strings for globals/keywords in Goal
 //   - A dependency on `github.com/marcboeker/go-duckdb` to use DuckDB as the SQL database
-//   - TUI functions for basic terminal styling
 //   - Common configuration options can be saved to a `$HOME/.config/ari/ari-config.yaml` file
 //     for reuse, which are overridden when CLI arguments are provided.
 package ari

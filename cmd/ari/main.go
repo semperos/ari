@@ -202,7 +202,6 @@ func outputFormatFromString(s string) (outputFormat, error) {
 func ariMain(cmd *cobra.Command, args []string) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
-	registerCliGoalBindings(ariContext)
 	ariContext.GoalContext.AssignGlobal("ARGS", goal.NewAS(args))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -350,13 +349,6 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		editorREPL(&mainCliSystem)
 	}
 	return 0
-}
-
-func registerCliGoalBindings(ariContext *ari.Context) {
-	goalContext := ariContext.GoalContext
-	goalContext.RegisterMonad("tui.color", vfTuiColor)
-	goalContext.RegisterMonad("tui.style", vfTuiStyle)
-	goalContext.RegisterDyad("tui.render", vfTuiRender)
 }
 
 func rawREPL(cliSystem *CliSystem) {
