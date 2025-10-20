@@ -33,7 +33,6 @@ Flags:
   -m, --mode string            language mode at startup (default "goal")
   -f, --output-format string   evaluation output format (default "goal")
   -p, --println                print final value of the script + newline
-  -r, --raw                    raw REPL w/out history or auto-complete
   -v, --version                print version info and exit
 ```
 
@@ -42,18 +41,16 @@ Flags:
 - [Goal] is the core language
   - Goal's `lib` files are loaded by default, with prefix matching their file names (see [vendor-goal](vendor-goal) folder in this repo)
 - Extensible CLI REPL with:
-  - Auto-completion with documentation for:
-    - Built-in keywords
-    - Built-in syntax aliases (e.g., typing "first" and TAB will show `*` and `¿` in auto-complete results)
-    - User-defined globals
   - Runtime configuration:
-    - Configure the REPL prompt by setting string values for the `ari.prompt` and `ari.nextprompt` (for multiline input) globals
+    - Configure the REPL prompt by setting string values for the `ari.prompt` global
     - Replace default REPL printing by setting a function value for the `ari.print` global (function receives a single Goal value to print)
     - Configure the output format with `--output-format` or using one of the `)output.` system commands at the REPL. Formats include CSV/TSV, JSON, Markdown, and LaTeX.
   - `ari.p` is bound to the previous result (value from last evaluation at the REPL)
-  - Alternatively run `ari` with `--raw` for a simpler, raw REPL that lacks line editing, history, and auto-complete, but is better suited for interaction via an editor like (Neo)Vim, or if you prefer rlwrap or another line editor to the one that ships with ari.
-  - `help` based on Goal's, but allows adding help strings when used dyadically (e.g.,`"sql.q"help"Run SQL query"`)
+  - `help` based on Goal's, but:
+    - Monadically: accepts a regular expression instead of a string, using the regex to return documentation that matches it.
+    - Dyadically: adds the right argument as the help string for the left argument (e.g.,`"sql.q"help"Run SQL query"`)
 - New Goal functions:
+  - `ac` which stands for auto-complete, taking a glob string and returning Goal globals that match
   - `http.` functions for HTTP requests using [Resty]
   - `ratelimit.new` and `ratelimit.take` for rate limiting (leaky bucket algorithm) using [uber-go/ratelimit]
   - `sql.` functions for SQL queries and commands
@@ -63,7 +60,6 @@ Flags:
 - Dedicated SQL mode
   - The ari CLI uses DuckDB, but the `github.com/semperos/ari` Go package doesn't directly depend on a specific SQL database driver, so you can BYODB.
   - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.
-  - Auto-completion of SQL keywords
   - Help entries for SQL keywords (shown during auto-complete, still WIP)
   - Results of the last-run query/command set to the `sql.p` Goal global (for "SQL previous" and mirroring `ari.p`), so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
 
@@ -71,7 +67,7 @@ Flags:
 
 - [Shortcut API Client](https://github.com/semperos/sc-client-goal)
 
-I began building Ari to replicate the experience described in the [Background](#background) section of this README. That code is not publicly available at this time.
+I have over 75kb of Goal code in a private repo I use for various kinds of scripting and data analysis at work, some of which I plan to share publicly.
 
 ## Examples
 
