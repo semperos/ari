@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -16,7 +15,6 @@ import (
 	"unsafe"
 
 	"codeberg.org/anaseto/goal"
-	"github.com/knz/bubbline"
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/semperos/ari"
 	"github.com/spf13/cobra"
@@ -57,15 +55,12 @@ const (
 )
 
 type CliSystem struct {
-	ariContext    *ari.Context
-	autoCompleter *AutoCompleter
-	cliEditor     *bubbline.Editor
-	cliMode       cliMode
-	debug         bool
-	outputFormat  outputFormat
-	programName   string
-	prompt        string
-	rawREPL       bool
+	ariContext   *ari.Context
+	cliMode      cliMode
+	debug        bool
+	outputFormat outputFormat
+	programName  string
+	prompt       string
 }
 
 func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
@@ -90,13 +85,6 @@ func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
 func (cliSystem *CliSystem) switchModeToGoal() error {
 	cliSystem.cliMode = cliModeGoal
 	cliSystem.prompt = cliModeGoalPrompt
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.Prompt = cliModeGoalPrompt
-		cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
-		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
-		cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
-		cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
-	}
 	cliSystem.detectPrompt()
 	return nil
 }
@@ -124,13 +112,6 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly(args []string) error {
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
 	cliSystem.prompt = cliModeSQLReadOnlyPrompt
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
-		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
-		cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
-		cliSystem.cliEditor.Prompt = cliModeSQLReadOnlyPrompt
-		cliSystem.cliEditor.NextPrompt = cliModeSQLReadOnlyNextPrompt
-	}
 	return nil
 }
 
@@ -152,13 +133,6 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite(args []string) error {
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
 	cliSystem.prompt = cliModeSQLReadWritePrompt
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
-		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
-		cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
-		cliSystem.cliEditor.Prompt = cliModeSQLReadWritePrompt
-		cliSystem.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
-	}
 	return nil
 }
 
@@ -209,13 +183,11 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		return 1
 	}
 	programName := os.Args[0]
-	// Delay initializing CLI editor and friends until needed
 	mainCliSystem := CliSystem{
 		ariContext:  ariContext,
 		debug:       viper.GetBool("debug"),
 		programName: programName,
 		prompt:      cliModeGoalPrompt,
-		rawREPL:     viper.GetBool("raw"),
 	}
 
 	// MUST COME FIRST
@@ -323,13 +295,6 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		return 0
 	}
 
-	// With files loaded (which might adjust the prompt via Goal code)
-	// and knowing we're not executing and exiting immediately,
-	// set up the CLI REPL.
-	if !mainCliSystem.rawREPL {
-		mainCliSystem.cliEditor = cliEditorInitialize()
-		mainCliSystem.autoCompleter = &AutoCompleter{ariContext: ariContext}
-	}
 	startupCliModeString := viper.GetString("mode")
 	startupCliMode, err := cliModeFromString(startupCliModeString)
 	if err != nil {
@@ -344,19 +309,191 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	}
 
 	// REPL
-	if mainCliSystem.rawREPL {
-		rawREPL(&mainCliSystem)
-	} else {
-		editorREPL(&mainCliSystem)
-	}
+	rawREPL(&mainCliSystem)
 	return 0
 }
 
 func registerCliGoalBindings(ariContext *ari.Context) {
-	goalContext := ariContext.GoalContext
-	goalContext.RegisterMonad("tui.color", vfTuiColor)
-	goalContext.RegisterMonad("tui.style", vfTuiStyle)
-	goalContext.RegisterDyad("tui.render", vfTuiRender)
+	// Previously registered TUI bindings, now removed
+}
+
+func matchesSystemCommand(s string) bool {
+	return strings.HasPrefix(s, ")")
+}
+
+// scanner represents the state of a readline scanner for the Goal REPL. It
+// handles multi-line expressions.
+type scanner struct {
+	r      *bufio.Reader
+	depth  []byte // (){}[] depth stack
+	state  scanState
+	done   bool
+	escape bool
+}
+
+type scanState int
+
+const (
+	scanNormal scanState = iota
+	scanComment
+	scanCommentBlock
+	scanString
+	scanQuote
+	scanRawQuote
+)
+
+const delimchars = ":+-*%!&|=~,^#_?@/`"
+
+// readLine reads until the first end of line that also ends a Goal expression.
+//
+// Adapated from Goal's implementation.
+//
+//nolint:cyclop,funlen,gocognit,gocyclo // Vendored code
+func (sc *scanner) readLine() (string, error) {
+	*sc = scanner{r: sc.r, depth: sc.depth[:0]}
+	sb := strings.Builder{}
+	var qr byte = '/'
+	nl := true       // at newline
+	cs := true       // at possible start of comment
+	cbdelim := false // after possible comment block start/end delimiter
+	for {
+		c, err := sc.r.ReadByte()
+		if err != nil {
+			return sb.String(), err
+		}
+		switch c {
+		case '\r':
+			continue
+		default:
+			sb.WriteByte(c)
+		}
+		switch sc.state {
+		case scanNormal:
+			switch c {
+			case '\n':
+				if len(sc.depth) == 0 || sc.done {
+					return sb.String(), nil
+				}
+				cs = true
+			case ' ', '\t':
+				cs = true
+			case '"':
+				sc.state = scanString
+				cs = false
+			case '{', '(', '[':
+				sc.depth = append(sc.depth, c)
+				cs = true
+			case '}', ')', ']':
+				if len(sc.depth) > 0 && sc.depth[len(sc.depth)-1] == opening(c) {
+					sc.depth = sc.depth[:len(sc.depth)-1]
+				} else {
+					// error, so return on next \n
+					sc.done = true
+				}
+				cs = false
+			default:
+				if strings.IndexByte(delimchars, c) != -1 {
+					acc := sb.String()
+					switch {
+					case strings.HasSuffix(acc[:len(acc)-1], "rx"):
+						qr = c
+						sc.state = scanQuote
+					case strings.HasSuffix(acc[:len(acc)-1], "rq"):
+						qr = c
+						sc.state = scanRawQuote
+					case strings.HasSuffix(acc[:len(acc)-1], "qq"):
+						qr = c
+						sc.state = scanQuote
+					default:
+						if c == '/' && cs {
+							sc.state = scanComment
+							cbdelim = nl
+						}
+					}
+				}
+				cs = false
+			}
+		case scanComment:
+			if c == '\n' {
+				//nolint:gocritic // vendored code
+				if cbdelim {
+					sc.state = scanCommentBlock
+				} else if len(sc.depth) == 0 || sc.done {
+					return sb.String(), nil
+				} else {
+					cs = true
+					sc.state = scanNormal
+				}
+			}
+			cbdelim = false
+		case scanCommentBlock:
+			if cbdelim && c == '\n' {
+				if len(sc.depth) == 0 || sc.done {
+					return sb.String(), nil
+				}
+				cs = true
+				sc.state = scanNormal
+			} else {
+				cbdelim = nl && c == '\\'
+			}
+		case scanQuote:
+			switch c {
+			case '\\':
+				sc.escape = !sc.escape
+			case qr:
+				if !sc.escape {
+					sc.state = scanNormal
+				}
+				sc.escape = false
+			default:
+				sc.escape = false
+			}
+		case scanString:
+			switch c {
+			case '\\':
+				sc.escape = !sc.escape
+			case '"':
+				if !sc.escape {
+					sc.state = scanNormal
+				}
+				sc.escape = false
+			default:
+				sc.escape = false
+			}
+		case scanRawQuote:
+			if c == qr {
+				//nolint:govet // vendored code
+				c, err := sc.r.ReadByte()
+				if err != nil {
+					return sb.String(), err
+				}
+				if c == qr {
+					sb.WriteByte(c)
+				} else {
+					//nolint:errcheck // Goal impl says cannot error
+					sc.r.UnreadByte() // cannot error
+					sc.state = scanNormal
+				}
+			}
+		}
+		nl = c == '\n'
+	}
+}
+
+// opening returns matching opening delimiter for a given closing delimiter.
+//
+// Adapted from Goal's implementation.
+func opening(r byte) byte {
+	switch r {
+	case ')':
+		return '('
+	case ']':
+		return '['
+	case '}':
+		return '{'
+	default:
+		return r
+	}
 }
 
 func rawREPL(cliSystem *CliSystem) {
@@ -380,43 +517,6 @@ func rawREPL(cliSystem *CliSystem) {
 	}
 }
 
-func editorREPL(cliSystem *CliSystem) {
-	cliEditor := cliSystem.cliEditor
-	for {
-		line, err := cliEditor.GetLine()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				cliSystem.shutdown()
-				break
-			}
-			if errors.Is(err, bubbline.ErrInterrupted) {
-				// Entered Ctrl+C to cancel input.
-				fmt.Fprintln(os.Stdout, "^C")
-			} else {
-				fmt.Fprintln(os.Stderr, "error:", err)
-			}
-			continue
-		}
-
-		// Add line to REPL history, even if not a legal expression (thus before we try to evaluate)
-		err = cliEditor.AddHistory(line)
-		if err != nil {
-			// NB: Not exiting if history file fails to load, just printing.
-			fmt.Fprintf(os.Stderr, "Failed to write REPL history with error: %v\n", err)
-		}
-
-		// Future: Consider user commands with ]
-		if matchesSystemCommand(line) {
-			err = cliSystem.replEvalSystemCommand(line)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to execute system command %q with error: %v\n", line, err)
-			}
-			continue
-		}
-
-		replHandleLine(cliSystem, line)
-	}
-}
 
 func replHandleLine(cliSystem *CliSystem, line string) {
 	switch cliSystem.cliMode {
@@ -550,7 +650,7 @@ func newExitError(ctx *goal.Context, e *goal.Error) *ExitError {
 	return ee
 }
 
-// detectPrompt interrogates Goal globals ari.prompt and ari.nextprompt
+// detectPrompt interrogates Goal global ari.prompt
 // to determine the prompt shown at the CLI REPL.
 func (cliSystem *CliSystem) detectPrompt() {
 	goalContext := cliSystem.ariContext.GoalContext
@@ -564,34 +664,11 @@ func (cliSystem *CliSystem) detectPrompt() {
 			fmt.Fprintf(os.Stderr, "ari.prompt must be a string, but found %q\n", prompt)
 		}
 	}
-
-	if !cliSystem.rawREPL {
-		nextPrompt, found := goalContext.GetGlobal("ari.nextprompt")
-		if found {
-			nextPromptS, ok := nextPrompt.BV().(goal.S)
-			if ok {
-				setNextPrompt(cliSystem, string(nextPromptS))
-			} else {
-				fmt.Fprintf(os.Stderr, "ari.nextprompt must be a string, but found %q\n", nextPrompt)
-			}
-		}
-	}
 }
 
-// setPrompt updates the REPL prompt, handling raw vs. rich REPL.
+// setPrompt updates the REPL prompt.
 func setPrompt(cliSystem *CliSystem, prompt string) {
-	if cliSystem.rawREPL {
-		cliSystem.prompt = prompt
-	} else {
-		cliSystem.cliEditor.Prompt = prompt
-	}
-}
-
-// setNextPrompt update the REPL prompt that appears on subsequent lines for multi-line entries. No effect for raw REPL.
-func setNextPrompt(cliSystem *CliSystem, nextPrompt string) {
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.Prompt = nextPrompt
-	}
+	cliSystem.prompt = prompt
 }
 
 // detectAriPrint returns a function for printing values at the REPL in goal mode.
@@ -863,7 +940,6 @@ working with SQL and HTTP APIs.`,
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 	cfgDir := path.Join(home, ".config", "ari")
-	defaultHistFile := path.Join(cfgDir, "ari-history.txt")
 	defaultCfgFile := path.Join(cfgDir, "ari-config.yaml")
 
 	// Config file has processing in initConfigFn outside of viper lifecycle, so it's a separate variable.
@@ -871,14 +947,10 @@ working with SQL and HTTP APIs.`,
 
 	pFlags := rootCmd.PersistentFlags()
 
-	flagNameHistory := "history"
 	flagNameDatabase := "database"
 
-	pFlags.String(flagNameHistory, defaultHistFile, "history of REPL entries")
 	pFlags.StringP(flagNameDatabase, "d", "", "DuckDB database (default: in-memory)")
 
-	err = viper.BindPFlag(flagNameHistory, pFlags.Lookup(flagNameHistory))
-	cobra.CheckErr(err)
 	err = viper.BindPFlag(flagNameDatabase, pFlags.Lookup(flagNameDatabase))
 	cobra.CheckErr(err)
 
@@ -896,9 +968,6 @@ working with SQL and HTTP APIs.`,
 	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("println", "p", false, "print final value of the script + newline")
 	err = viper.BindPFlag("println", rootCmd.Flags().Lookup("println"))
-	cobra.CheckErr(err)
-	rootCmd.Flags().BoolP("raw", "r", false, "raw REPL w/out history or auto-complete")
-	err = viper.BindPFlag("raw", rootCmd.Flags().Lookup("raw"))
 	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("version", "v", false, "print version info and exit")
 
