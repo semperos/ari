@@ -756,7 +756,6 @@ working with SQL and HTTP APIs.`,
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 	cfgDir := path.Join(home, ".config", "ari")
-	defaultHistFile := path.Join(cfgDir, "ari-history.txt")
 	defaultCfgFile := path.Join(cfgDir, "ari-config.yaml")
 
 	// Config file has processing in initConfigFn outside of viper lifecycle, so it's a separate variable.
@@ -764,13 +763,10 @@ working with SQL and HTTP APIs.`,
 
 	pFlags := rootCmd.PersistentFlags()
 
-	flagNameHistory := "history"
 	flagNameDatabase := "database"
 
-	pFlags.String(flagNameHistory, defaultHistFile, "history of REPL entries")
 	pFlags.StringP(flagNameDatabase, "d", "", "DuckDB database (default: in-memory)")
 
-	err = viper.BindPFlag(flagNameHistory, pFlags.Lookup(flagNameHistory))
 	cobra.CheckErr(err)
 	err = viper.BindPFlag(flagNameDatabase, pFlags.Lookup(flagNameDatabase))
 	cobra.CheckErr(err)

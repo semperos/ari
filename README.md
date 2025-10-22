@@ -28,7 +28,6 @@ Flags:
       --debug                  enable detailed debugging output on panic
   -e, --execute string         string of Goal code to execute, last result not printed automatically
   -h, --help                   help for ari
-      --history string         history of REPL entries (default "$HOME/.config/ari/ari-history.txt")
   -l, --load stringArray       Goal source files to load on startup
   -m, --mode string            language mode at startup (default "goal")
   -f, --output-format string   evaluation output format (default "goal")
