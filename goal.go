@@ -471,32 +471,6 @@ func GoalKeywordsHelp() map[string]string {
 	}, "\n")
 	sqlopen := `sql.open s    Open DuckDB database with data source name s`
 	sqlq := `sql.q s    Run SQL query, results as table.`
-	tuiColor := strings.Join([]string{
-		`tui.color s           Color string accepted by lipgloss.Color`,
-	}, "\n")
-	tuiRender := strings.Join([]string{
-		`tui.render style s    Return s marked up according to style (see tui.style)`,
-	}, "\n")
-	tuiStyle := strings.Join([]string{
-		`tui.style d           Return a style based on entries in d:
-		                        - Align (floats or one of "t", "r", "b", "l", or "c")
-								- Background (tui.color)
-								- Blink (bool)
-								- Bold (bool)
-								- Border (list of name + top, right, bottom, left bools)
-								- BorderBackground (tui.color)
-								- BorderForeground (tui.color)
-								- Faint (bool)
-		                        - Foreground (tui.color)
-								- Height (int)
-								- Italic (bool)
-								- Margin (top, right, bottom, left ints)
-								- Padding (top, right, bottom, left ints)
-								- Reverse (bool)
-								- Strikethrough (bool)
-								- Underline (bool)
-								- Width (int)`,
-	}, "\n")
 	vendoredGoalHelp := help.Map()
 	ariGoalHelp := map[string]string{
 		"http.client":  httpclient,
@@ -509,9 +483,6 @@ func GoalKeywordsHelp() map[string]string {
 		"http.put":     helpForHTTPFn("put"),
 		"sql.open":     sqlopen,
 		"sql.q":        sqlq,
-		"tui.color":    tuiColor,
-		"tui.render":   tuiRender,
-		"tui.style":    tuiStyle,
 	}
 	for k, v := range ariGoalHelp {
 		vendoredGoalHelp[k] = v

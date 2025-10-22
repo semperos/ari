@@ -29,26 +29,14 @@
 //
 // ## CLI ari
 //
-// The CLI application at `github.com/semperos/ari/cmd/ari` provides a rich REPL with
-// multi-line editing, history, and auto-complete functionality. This interface is ideal when
-// first learning Goal, using Goal as an ad hoc calculator, or when building a REPL-
-// based user experience.
-//
-// To drive ari's Goal REPL from an editor, you should prefer the `--raw` REPL,
-// which does not have line editing, history, or auto-complete features, but which has
-// better performance. You can use the Goal `ac` function with a string argument for glob matching
-// or a regular expression argument for loose regex matching of all bindings in your Goal
-// environment, optionally passing those results to `help` to view their help strings.
+// The CLI application at `github.com/semperos/ari/cmd/ari` provides a REPL equivalent to
+// Goal's normal REPL, but with all of Goal's own extensions and library files loaded in
+// addition to ari's own extensions described above.
 //
 // Concretely, the CLI app adds the following on top of the base ari library:
 //
-//   - A rich REPL using `github.com/knz/bubbline` (built on `github.com/charmbracelet/bubbletea`)
-//     with dedicated Goal and SQL modes, system commands starting with `)`, multiple output
-//     formats, basic profiling and debugging capabilities, and ability to programmatically
-//     change the REPL prompt.
 //   - A `help` Goal verb that allows (re)defining help strings for globals/keywords in Goal
 //   - A dependency on `github.com/marcboeker/go-duckdb` to use DuckDB as the SQL database
-//   - TUI functions for basic terminal styling
 //   - Common configuration options can be saved to a `$HOME/.config/ari/ari-config.yaml` file
 //     for reuse, which are overridden when CLI arguments are provided.
 package ari

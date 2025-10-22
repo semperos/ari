@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path"
@@ -16,15 +15,11 @@ import (
 	"unsafe"
 
 	"codeberg.org/anaseto/goal"
-	"github.com/knz/bubbline"
 	_ "github.com/marcboeker/go-duckdb"
 	"github.com/semperos/ari"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-// rootCmd represents the base command when called without any subcommands.
-// var
 
 type cliMode int
 
@@ -48,24 +43,18 @@ const (
 )
 
 const (
-	cliModeGoalPrompt             = "  "
-	cliModeGoalNextPrompt         = "  "
-	cliModeSQLReadOnlyPrompt      = "sql) "
-	cliModeSQLReadOnlyNextPrompt  = "   > "
-	cliModeSQLReadWritePrompt     = "sql!) "
-	cliModeSQLReadWriteNextPrompt = "    > "
+	cliModeGoalPrompt         = "  "
+	cliModeSQLReadOnlyPrompt  = "sql) "
+	cliModeSQLReadWritePrompt = "sql!) "
 )
 
 type CliSystem struct {
-	ariContext    *ari.Context
-	autoCompleter *AutoCompleter
-	cliEditor     *bubbline.Editor
-	cliMode       cliMode
-	debug         bool
-	outputFormat  outputFormat
-	programName   string
-	prompt        string
-	rawREPL       bool
+	ariContext   *ari.Context
+	cliMode      cliMode
+	debug        bool
+	outputFormat outputFormat
+	programName  string
+	prompt       string
 }
 
 func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
@@ -90,13 +79,6 @@ func (cliSystem *CliSystem) switchMode(cliMode cliMode, args []string) error {
 func (cliSystem *CliSystem) switchModeToGoal() error {
 	cliSystem.cliMode = cliModeGoal
 	cliSystem.prompt = cliModeGoalPrompt
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.Prompt = cliModeGoalPrompt
-		cliSystem.cliEditor.NextPrompt = cliModeGoalNextPrompt
-		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.goalAutoCompleteFn()
-		cliSystem.cliEditor.CheckInputComplete = modeGoalCheckInputComplete
-		cliSystem.cliEditor.SetExternalEditorEnabled(true, "goal")
-	}
 	cliSystem.detectPrompt()
 	return nil
 }
@@ -124,13 +106,6 @@ func (cliSystem *CliSystem) switchModeToSQLReadOnly(args []string) error {
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
 	cliSystem.prompt = cliModeSQLReadOnlyPrompt
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
-		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
-		cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
-		cliSystem.cliEditor.Prompt = cliModeSQLReadOnlyPrompt
-		cliSystem.cliEditor.NextPrompt = cliModeSQLReadOnlyNextPrompt
-	}
 	return nil
 }
 
@@ -152,13 +127,6 @@ func (cliSystem *CliSystem) switchModeToSQLReadWrite(args []string) error {
 	}
 	cliSystem.cliMode = cliModeSQLReadOnly
 	cliSystem.prompt = cliModeSQLReadWritePrompt
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.CheckInputComplete = modeSQLCheckInputComplete
-		cliSystem.cliEditor.AutoComplete = cliSystem.autoCompleter.sqlAutoCompleteFn()
-		cliSystem.cliEditor.SetExternalEditorEnabled(true, "sql")
-		cliSystem.cliEditor.Prompt = cliModeSQLReadWritePrompt
-		cliSystem.cliEditor.NextPrompt = cliModeSQLReadWriteNextPrompt
-	}
 	return nil
 }
 
@@ -202,7 +170,6 @@ func outputFormatFromString(s string) (outputFormat, error) {
 func ariMain(cmd *cobra.Command, args []string) int {
 	dataSourceName := viper.GetString("database")
 	ariContext, err := ari.NewContext(dataSourceName)
-	registerCliGoalBindings(ariContext)
 	ariContext.GoalContext.AssignGlobal("ARGS", goal.NewAS(args))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -215,7 +182,6 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		debug:       viper.GetBool("debug"),
 		programName: programName,
 		prompt:      cliModeGoalPrompt,
-		rawREPL:     viper.GetBool("raw"),
 	}
 
 	// MUST COME FIRST
@@ -279,6 +245,7 @@ func ariMain(cmd *cobra.Command, args []string) int {
 	programToExecute, err := cmd.Flags().GetString("execute")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		mainCliSystem.shutdown()
 		return 1
 	}
 	//nolint:nestif // separate returns in each if
@@ -288,10 +255,12 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		if goalV.IsError() {
 			ee := newExitError(ariContext.GoalContext, goalV.Error())
 			formatREPLError(ee)
+			mainCliSystem.shutdown()
 			return ee.Code
 		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Program panicked with: %v\n  \n%q\n", err, programToExecute)
+			mainCliSystem.shutdown()
 			return 1
 		}
 		// Support -e/--execute along with a file argument.
@@ -299,6 +268,7 @@ func ariMain(cmd *cobra.Command, args []string) int {
 			if printFinalValue {
 				printInOutputFormat(ariContext.GoalContext, mainCliSystem.outputFormat, goalV)
 			}
+			mainCliSystem.shutdown()
 			return 0
 		}
 	}
@@ -309,57 +279,46 @@ func ariMain(cmd *cobra.Command, args []string) int {
 		path, err = filepath.Abs(f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "File %q is not recognized as a path on your system: %v", f, err)
+			mainCliSystem.shutdown()
+			return 1
 		}
 		ariContext.GoalContext.AssignGlobal("FILE", goal.NewS(path))
 		var goalV goal.V
 		goalV, err = runScript(&mainCliSystem, f)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to run file %q with error: %v", f, err)
+			mainCliSystem.shutdown()
 			return 1
 		}
 		if printFinalValue {
 			printInOutputFormat(ariContext.GoalContext, mainCliSystem.outputFormat, goalV)
 		}
+		mainCliSystem.shutdown()
 		return 0
 	}
 
-	// With files loaded (which might adjust the prompt via Goal code)
-	// and knowing we're not executing and exiting immediately,
-	// set up the CLI REPL.
-	if !mainCliSystem.rawREPL {
-		mainCliSystem.cliEditor = cliEditorInitialize()
-		mainCliSystem.autoCompleter = &AutoCompleter{ariContext: ariContext}
-	}
 	startupCliModeString := viper.GetString("mode")
 	startupCliMode, err := cliModeFromString(startupCliModeString)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		mainCliSystem.shutdown()
 		return 1
 	}
 	// NB: This sets mainCliSystem.cliMode
 	err = mainCliSystem.switchMode(startupCliMode, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to initialize mode %v with error: %v", startupCliModeString, err)
+		mainCliSystem.shutdown()
 		return 1
 	}
 
 	// REPL
-	if mainCliSystem.rawREPL {
-		rawREPL(&mainCliSystem)
-	} else {
-		editorREPL(&mainCliSystem)
-	}
+	ariRepl(&mainCliSystem)
+	mainCliSystem.shutdown()
 	return 0
 }
 
-func registerCliGoalBindings(ariContext *ari.Context) {
-	goalContext := ariContext.GoalContext
-	goalContext.RegisterMonad("tui.color", vfTuiColor)
-	goalContext.RegisterMonad("tui.style", vfTuiStyle)
-	goalContext.RegisterDyad("tui.render", vfTuiRender)
-}
-
-func rawREPL(cliSystem *CliSystem) {
+func ariRepl(cliSystem *CliSystem) {
 	sc := &scanner{r: bufio.NewReader(os.Stdin)}
 	for {
 		fmt.Fprint(os.Stdout, cliSystem.prompt)
@@ -368,44 +327,6 @@ func rawREPL(cliSystem *CliSystem) {
 		if err != nil && line == "" {
 			return
 		}
-		if matchesSystemCommand(line) {
-			err = cliSystem.replEvalSystemCommand(line)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to execute system command %q with error: %v\n", line, err)
-			}
-			continue
-		}
-
-		replHandleLine(cliSystem, line)
-	}
-}
-
-func editorREPL(cliSystem *CliSystem) {
-	cliEditor := cliSystem.cliEditor
-	for {
-		line, err := cliEditor.GetLine()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				cliSystem.shutdown()
-				break
-			}
-			if errors.Is(err, bubbline.ErrInterrupted) {
-				// Entered Ctrl+C to cancel input.
-				fmt.Fprintln(os.Stdout, "^C")
-			} else {
-				fmt.Fprintln(os.Stderr, "error:", err)
-			}
-			continue
-		}
-
-		// Add line to REPL history, even if not a legal expression (thus before we try to evaluate)
-		err = cliEditor.AddHistory(line)
-		if err != nil {
-			// NB: Not exiting if history file fails to load, just printing.
-			fmt.Fprintf(os.Stderr, "Failed to write REPL history with error: %v\n", err)
-		}
-
-		// Future: Consider user commands with ]
 		if matchesSystemCommand(line) {
 			err = cliSystem.replEvalSystemCommand(line)
 			if err != nil {
@@ -550,7 +471,7 @@ func newExitError(ctx *goal.Context, e *goal.Error) *ExitError {
 	return ee
 }
 
-// detectPrompt interrogates Goal globals ari.prompt and ari.nextprompt
+// detectPrompt interrogates Goal the ari.prompt global
 // to determine the prompt shown at the CLI REPL.
 func (cliSystem *CliSystem) detectPrompt() {
 	goalContext := cliSystem.ariContext.GoalContext
@@ -559,38 +480,10 @@ func (cliSystem *CliSystem) detectPrompt() {
 	if found {
 		promptS, ok := prompt.BV().(goal.S)
 		if ok {
-			setPrompt(cliSystem, string(promptS))
+			cliSystem.prompt = string(promptS)
 		} else {
 			fmt.Fprintf(os.Stderr, "ari.prompt must be a string, but found %q\n", prompt)
 		}
-	}
-
-	if !cliSystem.rawREPL {
-		nextPrompt, found := goalContext.GetGlobal("ari.nextprompt")
-		if found {
-			nextPromptS, ok := nextPrompt.BV().(goal.S)
-			if ok {
-				setNextPrompt(cliSystem, string(nextPromptS))
-			} else {
-				fmt.Fprintf(os.Stderr, "ari.nextprompt must be a string, but found %q\n", nextPrompt)
-			}
-		}
-	}
-}
-
-// setPrompt updates the REPL prompt, handling raw vs. rich REPL.
-func setPrompt(cliSystem *CliSystem, prompt string) {
-	if cliSystem.rawREPL {
-		cliSystem.prompt = prompt
-	} else {
-		cliSystem.cliEditor.Prompt = prompt
-	}
-}
-
-// setNextPrompt update the REPL prompt that appears on subsequent lines for multi-line entries. No effect for raw REPL.
-func setNextPrompt(cliSystem *CliSystem, nextPrompt string) {
-	if !cliSystem.rawREPL {
-		cliSystem.cliEditor.Prompt = nextPrompt
 	}
 }
 
@@ -896,9 +789,6 @@ working with SQL and HTTP APIs.`,
 	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("println", "p", false, "print final value of the script + newline")
 	err = viper.BindPFlag("println", rootCmd.Flags().Lookup("println"))
-	cobra.CheckErr(err)
-	rootCmd.Flags().BoolP("raw", "r", false, "raw REPL w/out history or auto-complete")
-	err = viper.BindPFlag("raw", rootCmd.Flags().Lookup("raw"))
 	cobra.CheckErr(err)
 	rootCmd.Flags().BoolP("version", "v", false, "print version info and exit")
 
