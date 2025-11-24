@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@ff7abcd0c3c05ccf6adc123a8cd1fd4fb30fb493
+      - uses: actions/checkout@c2d88d3ecc89a9ef08eebf45d9637801dcee7eb5
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00
         with:
           go-version: "1.24"
