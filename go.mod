@@ -7,7 +7,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/marcboeker/go-duckdb v1.8.5
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	go.uber.org/ratelimit v0.3.1
 )
