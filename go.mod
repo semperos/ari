@@ -3,7 +3,7 @@ module github.com/semperos/ari
 go 1.24
 
 require (
-	codeberg.org/anaseto/goal v1.4.0
+	codeberg.org/anaseto/goal v1.5.0
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/jarcoal/httpmock v1.4.1
 	github.com/marcboeker/go-duckdb v1.8.5
