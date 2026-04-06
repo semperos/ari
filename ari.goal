@@ -8,7 +8,8 @@ zero:..[i:0;n:0.0;s:"";r:rx//;d:()!();f:(:);A:()] / handle, error don't fill
 getor:{[x;k;fb]?["d"~@x;?[k¿!x;x[k];fb];?[k<#x;x[k];fb]]}
 getin:{[x;sel;fb][k:*sel;?[1~#sel;:getor[x;k;fb];?[k¿!x;:o[x[k];1_sel;fb]]]]}
 / Stats
-cile:{[ofone;coll]coll:^coll; t:#coll; slowcile:1-ofone; ntodrop:_slowcile*t; *ntodrop_|coll} / p95:cile[0.95]
+cile:{[ofone;coll]coll:^coll; cile:1-ofone; ntodrop:_cile*#coll; *ntodrop_|coll}; median:cile[0.5;]
+statsummary:{[coll]scoll:^coll; ..[count:#scoll;min:&/scoll;q25:cile[0.25;scoll];median:median scoll;mean:math.avg scoll;q75:cile[0.75;scoll];max:|/scoll;sd:math.dev coll]}
 / Names
 munge:{[s]sub[rx/^[0-9]|[^a-zA-Z0-9]/;""]s}
 / DuckDB
@@ -20,7 +21,6 @@ clip:{os:rt.get"os"
        os~"windows";"clip"
        error"Unsupported OS. Submit a PR to https://github.com/semperos/ari"]
  x run cmd}
-pp.tbl:fmt.tbl[;0i-1;0i-1;"%.2f"]; pp.dict:fmt.dict[;"%.2f"] / TODO goal covers this now
 md.tbl:{[t;fmt] / helper
   k:!t; v:(..?[(@x)¿"nN";p.fmt$x;$'x])'.t; w:(-1+""#k)|(|/-1+""#)'v
   (k;v):(-w)!'´(k;v); "|"+("|\n|"/,/"|"/(k;"-"*w;+v))+"|"}
