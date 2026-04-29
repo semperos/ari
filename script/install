@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-set -e
-
-./script/test && ./script/lint && ./script/build-wasm && echo "INSTALLED"
