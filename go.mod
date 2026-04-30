@@ -5,6 +5,9 @@ go 1.25.0
 require (
 	codeberg.org/anaseto/goal v1.5.0
 	fyne.io/fyne/v2 v2.7.3
+	github.com/go-resty/resty/v2 v2.16.5
+	go.uber.org/ratelimit v0.3.1
+	modernc.org/sqlite v1.49.1
 )
 
 require (
@@ -21,7 +24,6 @@ require (
 	github.com/fyne-io/oksvg v0.2.0 // indirect
 	github.com/go-gl/gl v0.0.0-20231021071112-07e5d0ea2e71 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20240506104042-037f3cc74f2a // indirect
-	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/go-text/render v0.2.0 // indirect
 	github.com/go-text/typesetting v0.3.3 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
@@ -42,7 +44,6 @@ require (
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/yuin/goldmark v1.7.8 // indirect
-	go.uber.org/ratelimit v0.3.1 // indirect
 	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
@@ -51,10 +52,4 @@ require (
 	modernc.org/libc v1.72.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.49.1 // indirect
-)
-
-replace (
-	codeberg.org/anaseto/goal => ../goal
-	fyne.io/fyne/v2 => ../fyne
 )
