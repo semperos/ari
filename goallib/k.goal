@@ -1,0 +1,9 @@
+/ group X returns indices of X grouped by distinct values .
+group:{(&x!¿c)!=(!#x)!c:%x}
+/ by[X;Y] returns values X grouped by keys Y.
+by:{(&y!¿c)!=x!c:%y}
+/ freq X returns count by distinct values.
+freq:{(&x!¿c)!=c:%x}
+/ reshape[X;y] rearranges (*/X)#y into shape X.
+reshape:{((*/x)#y){(-y)$x}/|1_x}
+1

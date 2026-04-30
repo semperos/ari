@@ -1,0 +1,11 @@
+/ This file implements typical adverbial combinations involving each-right as
+/ user-defined functions.
+/ If you cannot type each-right's non-ASCII symbol ´ easily, you might want to
+/ import or copy-paste them. The equivalent form in ngn/k is shown in the
+/ comments.
+er:{[f;x;y]x f´y}    / each-right x f/:y
+eer:{[f;x;y]x f'´y}  / each each-right x f'/: y
+ere:{[f;x;y]x f´'y}  / each-right each x f/:' y
+erel:{[f;x;y]x f´`y} / each-right each-left x f/:\:y
+eler:{[f;x;y]x f`´y} / each-left each-right x f\:/:y
+1

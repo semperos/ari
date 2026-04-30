@@ -14,7 +14,7 @@
 # v0.1.4 2024-10-14
 
 - Corrects the version of itself that Ari reports to Goal, surfaced via `rt.get"v"`
-- (Dev) Adds `./script/release` (written in Goal) to better automate releases of Ari
+- (Dev) Adds `./scripts/release` (written in Goal) to better automate releases of Ari
 
 # v0.1.3 2024-10-11
 
@@ -43,7 +43,7 @@
 # v0.1.1 2024-09-13
 
 - Goal version from commit [fa948e4ad6cb7c9d5d8d1b0d6b95e5128d600087](https://codeberg.org/anaseto/goal/commit/fa948e4ad6cb7c9d5d8d1b0d6b95e5128d600087)
-- Test framework. See usage in the `testing/` folder and the test scripts in the `script/` folder.
+- Test framework. See usage in the `testing/` folder and the test scripts in the `scripts/` folder.
 - Raw REPL. The default REPL provides a rich editing experience with history, auto-complete, etc.
   However, that rich REPL is not ideal for evaluating code that is sent from an editor to the REPL,
   since it is both slow and doesn't allow for more than one complete multi-line expression at a time.

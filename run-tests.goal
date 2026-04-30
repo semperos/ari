@@ -1,0 +1,6 @@
+/ ari test runner.
+/ Run from the repository root with: ari run-tests.goal
+eval read "lib/tt.goal"
+eval read "lib/util.goal"
+'tt.chkall 0
+tt.report 0

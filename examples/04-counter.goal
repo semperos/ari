@@ -1,0 +1,28 @@
+/ ari example 04 — Counter
+/ A simple counter demonstrating stateful callbacks via global assignment (::).
+
+a:fyne.app[0]
+w:fyne.window["Counter";a]
+
+count:0                            / top-level global
+
+display:fyne.label["Count: 0"]
+
+inc:fyne.button["+";{[x]
+    count::count+1                 / :: assigns to the global, not a local copy
+    fyne.settext[display;"Count: "+$count]
+}]
+
+dec:fyne.button["-";{[x]
+    count::count-1
+    fyne.settext[display;"Count: "+$count]
+}]
+
+rst:fyne.button["Reset";{[x]
+    count::0
+    fyne.settext[display;"Count: 0"]
+}]
+
+btns:fyne.hbox[(dec; rst; inc)]
+fyne.setcontent[w;fyne.padded[fyne.center[fyne.vbox[(display; btns)]]]]
+fyne.run[w]

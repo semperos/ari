@@ -1,0 +1,17 @@
+/ ari example 05 — Slider & ProgressBar
+/ Moving the slider updates the progress bar and the label.
+
+a:fyne.app[0]
+w:fyne.window["Slider → Progress";a]
+
+pct:fyne.label["0.0 %"]
+bar:fyne.progress[0.0]
+
+/ Slider goes 0..100; bar expects 0..1.
+sl:fyne.slider[(0.0;100.0);{[v]
+    fyne.setvalue[bar;v%100]
+    fyne.settext[pct;($v)+" %"]
+}]
+
+fyne.setcontent[w;fyne.padded[fyne.vbox[(pct; bar; sl)]]]
+fyne.run[w]

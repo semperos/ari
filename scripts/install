@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")/.."
+
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
+BINARY_NAME="ari"
+
+echo "Building $BINARY_NAME..."
+go build -o "$BINARY_NAME" .
+
+echo "Installing to $INSTALL_DIR/$BINARY_NAME..."
+mkdir -p "$INSTALL_DIR"
+mv "$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+
+echo "Done: $INSTALL_DIR/$BINARY_NAME"
+
+# Warn if the install dir is not in PATH
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    echo ""
+    echo "Warning: $INSTALL_DIR is not in your PATH."
+    echo "Add the following to your shell config (e.g. ~/.bashrc or ~/.zshrc):"
+    echo ""
+    echo "  export PATH=\"\$PATH:$INSTALL_DIR\""
+fi

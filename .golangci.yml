@@ -137,7 +137,15 @@ linters:
           strict: false
     inamedparam:
       skip-single-param: true
+    gomoddirectives:
+      replace-local: true
     mnd:
+      ignored-numbers:
+        - '2'
+        - '3'
+        - '4'
+        - '5'
+        - '16'
       ignored-functions:
         - args.Error
         - flag.Arg

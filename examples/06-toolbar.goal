@@ -1,0 +1,14 @@
+/ ari example 06 — Toolbar with icons
+/ Demonstrates fyne.toolbar and fyne.action with named theme icons.
+
+a:fyne.app[0]
+w:fyne.window["Toolbar";a]
+
+status:fyne.label["Ready"]
+
+toolbar:fyne.toolbar[fyne.action["add"; {[x] fyne.settext[status;"Add clicked"]}];fyne.action["delete"; {[x] fyne.settext[status;"Delete clicked"]}];fyne.action["save"; {[x] fyne.settext[status;"Save clicked"]}];fyne.action["refresh"; {[x] fyne.settext[status;"Refresh clicked"]}]]
+
+body:fyne.vbox[(toolbar; fyne.separator[0]; status)]
+
+fyne.setcontent[w;body]
+fyne.run[w]

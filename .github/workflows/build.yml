@@ -19,7 +19,7 @@ jobs:
           go-version: "1.24"
       - name: build-wasm
         run: |
-          ./script/build-wasm
+          ./scripts/build-wasm
       - name: test
         run: |
-          ./script/test
+          ./scripts/test

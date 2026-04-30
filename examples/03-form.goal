@@ -1,0 +1,34 @@
+/ ari example 03 — Feedback form
+/ Demonstrates entry, multiline, select, button, check, dialog.
+
+a:fyne.app[0]
+w:fyne.window["Feedback";a]
+
+name:fyne.entry["Your name"]
+msg:fyne.multiline["Your message …"]
+
+mood:fyne.select[("Happy";"Curious";"Confused");{[v] 0}]
+
+/ Create the send button first (no callback yet) so we can put it in the form.
+sendBtn:fyne.button["Send";{"ok"}]
+
+/ Agree check enables / disables the send button.
+agree:fyne.check["I agree to the terms";{[v]
+    ?[v=1; [fyne.enable[sendBtn]]; [fyne.disable[sendBtn]]]
+}]
+fyne.disable[sendBtn]
+
+/ Now wire up the real send callback that reads the form fields.
+sendFn:{[w;x]
+    n:fyne.text[name]
+    m:fyne.text[msg]
+    s:fyne.text[mood]
+    fyne.showinfo["Sent";(n+": "+m+" ["+s+"]"; w)]
+}
+/ Rebuild button with actual callback.
+sendBtn:fyne.button["Send";sendFn[w;]]
+
+form:fyne.form[("Name";    name);("Message"; msg);("Mood";    mood);("";        agree);("";        sendBtn)]
+
+fyne.setcontent[w;fyne.padded[form]]
+fyne.run[w]

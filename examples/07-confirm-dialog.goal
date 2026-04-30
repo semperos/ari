@@ -1,0 +1,15 @@
+/ ari example 07 — Confirm dialog
+
+a:fyne.app[0]
+w:fyne.window["Confirm Dialog";a]
+
+status:fyne.label["Press the button."]
+
+btn:fyne.button["Delete item";{[x]
+    fyne.confirm["Delete";("Are you sure?";{[ok]
+        ?[ok=1;[fyne.settext[status;"Item deleted."]];[fyne.settext[status;"Cancelled."]]]
+    };w)]
+}]
+
+fyne.setcontent[w;fyne.padded[fyne.vbox[(btn; status)]]]
+fyne.run[w]
