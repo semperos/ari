@@ -18,4 +18,4 @@ jobs:
         with:
           go-version: "1.24"
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@f08454af877ea2a5246a58683951857b61853eab
+        uses: golangci/golangci-lint-action@66dfb5ced26a67061e51023867e8152326d587ff
