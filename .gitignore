@@ -4,3 +4,4 @@ dist/
 .ari.history
 wasm_exec.js
 *.wasm
+dev/

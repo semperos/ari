@@ -82,6 +82,7 @@ import (
 	"math"
 	"os"
 	"sort"
+	"time"
 
 	goal "codeberg.org/anaseto/goal"
 	fynesdk "fyne.io/fyne/v2"
@@ -188,6 +189,8 @@ func Import(ctx *goal.Context, pfx string) { //nolint:funlen
 	reg("fyne.padded", vfPadded, false)
 	reg("fyne.center", vfCenter, false)
 	reg("fyne.do", wrapCtx(ctx, vfDo), false)
+	reg("fyne.spinner", vfSpinner, false)
+	reg("fyne.async", wrapCtx(ctx, vfAsync), false)
 	reg("fyne.table", wrapCtx(ctx, vfTable), false)
 
 	// ---- multi-arg (registered as monads so bracket syntax works freely) ----
@@ -1340,6 +1343,115 @@ func vfConfirm(ctx *goal.Context, args []goal.V) goal.V {
 		return goal.NewI(0)
 	default:
 		return goal.Panicf("fyne.confirm : expected 2 or 4 arguments, got %d", len(args))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// fyne.spinner  (monad: fyne.spinner 0)
+// ---------------------------------------------------------------------------
+
+// vfSpinner creates an infinite progress bar (animated activity indicator).
+// The animation starts automatically when the widget is shown.
+// Usage: fyne.spinner 0
+func vfSpinner(_ *goal.Context, args []goal.V) goal.V {
+	if len(args) > 1 {
+		return goal.Panicf("fyne.spinner : too many arguments (%d)", len(args))
+	}
+	return newWidget(fynewidget.NewProgressBarInfinite())
+}
+
+// ---------------------------------------------------------------------------
+// fyne.async  (variadic)
+// ---------------------------------------------------------------------------
+
+// vfAsync runs a Goal function asynchronously in a background goroutine.
+//
+// One-argument form:
+//
+//	fyne.async f
+//
+// Runs f in a goroutine. f is called with 0i. Use fyne.do inside f to update
+// the UI safely from the goroutine.
+//
+// Four-argument form:
+//
+//	fyne.async[workfn; onsuccess; ontimeout; secs]
+//
+//   - workfn    runs in a goroutine, called with 0i; its return value is the result.
+//   - onsuccess is called on the Fyne main thread with the result when workfn finishes.
+//   - ontimeout is called on the Fyne main thread with 0i if secs elapse before
+//     workfn finishes, or if workfn returns a Goal panic (error).
+//   - secs      timeout duration in seconds (float).
+//
+// Note: Goal's evaluation context is not goroutine-safe. This verb is designed
+// for the common pattern where workfn performs I/O and returns a result, and the
+// main thread is otherwise idle (waiting for Fyne events) during the fetch.
+// Avoid pressing buttons while a load is in progress.
+func vfAsync(ctx *goal.Context, args []goal.V) goal.V { //nolint:cyclop // switch on arg count
+	switch len(args) {
+	case 1:
+		// fyne.async f — simple fire-and-forget goroutine
+		fn := args[0]
+		if !fn.IsFunction() {
+			return goal.Panicf("fyne.async f : expected function, got %q", fn.Type())
+		}
+		go func() { callFn(ctx, fn, goal.NewI(0)) }()
+		return goal.NewI(0)
+
+	case 4:
+		// fyne.async[workfn; onsuccess; ontimeout; secs]
+		// args in Goal stack order (last positional arg first):
+		//   args[0]=secs, args[1]=ontimeout, args[2]=onsuccess, args[3]=workfn
+		workfn := args[3]
+		onsuccess := args[2]
+		ontimeout := args[1]
+		secs := toFloat(args[0])
+		if !workfn.IsFunction() {
+			return goal.Panicf("fyne.async[workfn;...]: workfn must be a function, got %q", workfn.Type())
+		}
+		if !onsuccess.IsFunction() {
+			return goal.Panicf("fyne.async[...;onsuccess;...]: onsuccess must be a function, got %q", onsuccess.Type())
+		}
+		if !ontimeout.IsFunction() {
+			return goal.Panicf("fyne.async[...;ontimeout;...]: ontimeout must be a function, got %q", ontimeout.Type())
+		}
+		// Buffered channel of size 1 so the work goroutine never blocks on send
+		// even if the timeout has already fired.
+		done := make(chan goal.V, 1)
+		// Work goroutine: evaluates workfn and sends result (or panic) to done.
+		go func() {
+			var result goal.V
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						result = goal.Panicf("fyne.async: goroutine panic: %v", r)
+					}
+				}()
+				result = workfn.ApplyAt(ctx, goal.NewI(0))
+			}()
+			done <- result
+		}()
+		// Coordinator goroutine: waits for work or timeout, then dispatches
+		// the appropriate callback on the Fyne main thread.
+		go func() {
+			timer := time.NewTimer(time.Duration(float64(time.Second) * secs))
+			defer timer.Stop()
+			select {
+			case result := <-done:
+				if result.IsPanic() {
+					fmt.Fprintln(os.Stderr, "fyne.async workfn error:", result.Sprint(ctx, true))
+					fynesdk.Do(func() { callFn(ctx, ontimeout, goal.NewI(0)) })
+				} else {
+					fynesdk.Do(func() { callFn(ctx, onsuccess, result) })
+				}
+			case <-timer.C:
+				fynesdk.Do(func() { callFn(ctx, ontimeout, goal.NewI(0)) })
+			}
+		}()
+		return goal.NewI(0)
+
+	default:
+		return goal.Panicf("fyne.async : expected 1 or 4 arguments, got %d", len(args))
 	}
 }
 
