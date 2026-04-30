@@ -1,0 +1,18 @@
+#!/bin/bash
+# Build the ari WASM binary into wasm/ and refresh wasm_exec.js for the
+# current Go toolchain version.
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "Building wasm/ari.wasm..."
+GOOS=js GOARCH=wasm go build -o wasm/ari.wasm .
+echo "Done: wasm/ari.wasm"
+
+echo "Copying wasm_exec.js from Go toolchain..."
+cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" wasm/wasm_exec.js
+echo "Done: wasm/wasm_exec.js"
+
+echo ""
+echo "Serve wasm/ over HTTP to use, e.g.:"
+echo "  cd wasm && python3 -m http.server 8080"

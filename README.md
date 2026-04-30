@@ -110,12 +110,12 @@ Ari is implemented in Go and Goal. See the `script` folder for common developmen
 To publish a new version of Ari:
 
 ```shell
-./script/release vx.y.z
+./scripts/release vx.y.z
 ```
 
 ### WASM
 
-Use the `./script/build-wasm` script to generate a `./cmd/wasm/goal.wasm` file from the `./cmd/wasm/main.go` entry-point.
+Use the `./scripts/build-wasm` script to generate a `./cmd/wasm/goal.wasm` file from the `./cmd/wasm/main.go` entry-point.
 
 Run an HTTP server in the `./cmd/wasm` folder to serve up the `index.html`, which renders a gently adapted version of anaseto's WASM setup in Goal itself.
 

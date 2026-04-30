@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Run the ari test suite.
+# Must be run from the repository root, or via: scripts/test
+
+set -e
+cd "$(dirname "$0")/.."
+
+# Go package tests (sql, http, …)
+go test -v -failfast -race -covermode=atomic -coverprofile=coverage.txt -coverpkg=./... ./sql/... ./http/...
+
+# Goal-level tests
+go run . run-tests.goal

@@ -1,0 +1,50 @@
+/ ari example 08 — SQL + GUI
+/ Demonstrates sql.* verbs with an in-memory SQLite database and displays
+/ query results in live Fyne table widgets.
+/ Run with: ari examples/08-sql-demo.goal
+
+/ ---------------------------------------------------------------------------
+/ 1. Database setup
+/ ---------------------------------------------------------------------------
+
+db: sql.open["sqlite://:memory:"]
+
+sql.exec[db;"CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT, price REAL, stock INTEGER)"]
+
+sql.exec[db; "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)" ; ("Widget";   9.99; 100)]
+sql.exec[db; "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)" ; ("Gadget";  24.50;  50)]
+sql.exec[db; "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)" ; ("Doohick";  4.99; 200)]
+sql.exec[db; "INSERT INTO products (name, price, stock) VALUES (?, ?, ?)" ; ("Thingamabob"; 14.75; 0)]
+
+/ Readings table — includes NULLs to show NULL handling
+sql.exec[db;"CREATE TABLE readings (sensor TEXT, value REAL)"]
+sql.exec[db; "INSERT INTO readings VALUES (?, ?)" ; ("A"; 3.14)]
+sql.exec[db;"INSERT INTO readings VALUES ('B', NULL)"]
+sql.exec[db; "INSERT INTO readings VALUES (?, ?)" ; ("C"; 2.72)]
+
+/ ---------------------------------------------------------------------------
+/ 2. Queries — results are dicts: column name -> column array
+/ ---------------------------------------------------------------------------
+
+products: sql.q[db;"SELECT id, name, price, stock FROM products ORDER BY price"]
+cheap:    sql.q[db; "SELECT name, price FROM products WHERE price < ?" ; ,10.0]
+readings: sql.q[db;"SELECT sensor, value FROM readings ORDER BY sensor"]
+
+/ ---------------------------------------------------------------------------
+/ 3. GUI — one table per tab so each fills the available height
+/ ---------------------------------------------------------------------------
+
+a: fyne.app[0]
+w: fyne.window["SQL Demo";a]
+fyne.resize[w;(700.0; 400.0)]
+
+tblAll:      fyne.table[products]
+tblCheap:    fyne.table[cheap]
+tblReadings: fyne.table[readings]
+
+tabs: fyne.tabs[("All products"; tblAll); ("Products under 10"; tblCheap); ("Sensor readings"; tblReadings)]
+
+fyne.setcontent[w;fyne.padded[tabs]]
+fyne.run[w]
+
+sql.close[db]

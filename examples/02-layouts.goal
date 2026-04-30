@@ -1,0 +1,25 @@
+/ ari example 02 — Layouts
+/ Demonstrates vbox, hbox, border, split, tabs, padded, center.
+
+a:fyne.app[0]
+w:fyne.window["Layouts";a]
+fyne.resize[w;(700.0;450.0)]
+
+/ ---- helpers ---------------------------------------------------------------
+lbl:{[s] fyne.label[s]}
+
+/ ---- VBox & HBox -----------------------------------------------------------
+vb:fyne.vbox[(lbl"Top"; lbl"Middle"; lbl"Bottom")]
+hb:fyne.hbox[(lbl"Left"; lbl"Centre"; lbl"Right")]
+
+/ ---- Border ----------------------------------------------------------------
+brd:fyne.border[lbl"NORTH"; lbl"SOUTH"; lbl"WEST"; lbl"EAST"; lbl"Centre"]
+
+/ ---- HSplit ----------------------------------------------------------------
+sp:fyne.split["h";(vb; hb)]
+
+/ ---- Tabs ------------------------------------------------------------------
+tabs:fyne.tabs[("Border"; brd); ("Split"; sp)]
+
+fyne.setcontent[w;fyne.padded[tabs]]
+fyne.run[w]

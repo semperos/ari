@@ -1,0 +1,7 @@
+/ ari example 01 — Hello World
+/ Run with: ari examples/01-hello-world.goal
+
+a:fyne.app[0]
+w:fyne.window["Hello";a]
+fyne.setcontent[w;fyne.label["Hello, World!"]]
+fyne.run[w]

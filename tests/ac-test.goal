@@ -1,0 +1,61 @@
+/ Tests for ac - the ari REPL auto-complete function.
+
+/ Returns a non-empty array of strings
+tt.t{0<#ac"*"}
+tt.t{"s"=@*ac"*"}
+
+/ Results are always sorted (case-insensitive)
+tt.t{r~r@<_r:ac"*"}
+
+/ Glob: exact name still matches
+tt.t{"say"in ac"say"}
+tt.t{"say"in ac"say*"}
+
+/ Glob: * matches any suffix
+tt.t{"sin"in ac"sin*"}
+tt.t{"cos"in ac"cos*"}
+
+/ Glob: ? matches a single character
+tt.t{"sin"in ac"si?"}
+
+/ No match returns empty list
+tt.t{0=#ac"zzznomatch*"}
+
+/ --- Built-in keywords ---
+tt.t{"and"in ac"and*"}
+tt.t{"or"in ac"or*"}
+tt.t{"in"in ac"in*"}
+tt.t{"nan"in ac"nan*"}
+
+/ --- goal/os verbs ---
+tt.t{"say"in ac"sa*"}
+tt.t{"read"in ac"read*"}
+tt.t{"open"in ac"open*"}
+
+/ --- goal/math verbs ---
+tt.t{"sin"in ac"s*"}
+tt.t{"cos"in ac"c*"}
+tt.t{"sqrt"in ac"sq*"}
+tt.t{"round"in ac"ro*"}
+
+/ --- goal/encoding/base64 verbs ---
+tt.t{"base64.enc"in ac"base64*"}
+tt.t{"base64.dec"in ac"base64*"}
+tt.t{"base64.urlenc"in ac"base64*"}
+tt.t{"base64.urldec"in ac"base64*"}
+
+/ --- goal/archive/zip verbs ---
+tt.t{"zip.open"in ac"zip*"}
+tt.t{"zip.write"in ac"zip*"}
+
+/ --- ari/sql verbs ---
+tt.t{"sql.open"in ac"sql*"}
+tt.t{"sql.close"in ac"sql*"}
+tt.t{"sql.q"in ac"sql*"}
+tt.t{"sql.exec"in ac"sql*"}
+
+/ --- tt framework itself is visible ---
+tt.t{"tt.t"in ac"tt*"}
+tt.t{"tt.report"in ac"tt*"}
+
+1

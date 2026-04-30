@@ -1,0 +1,53 @@
+/ Tests for lib/stats.goal — load via arilib import "stats".
+/ Note: in Goal, `f ,x` is parsed as the dyadic join `f , x`, not function
+/ application. Use bracket notation `f[,x]` when passing an enlisted atom.
+
+arilib import "stats"
+
+/ --- stats.avg ---
+tt.t{3.0~stats.avg 1 2 3 4 5}
+tt.t{2.5~stats.avg 1 2 3 4}
+tt.t{42.0~stats.avg[,42]}          / single-element: use bracket notation
+
+/ --- stats.var ---
+tt.t{2.0~stats.var 1 2 3 4 5}      / population variance of 1..5
+tt.t{0.0~stats.var[,7]}            / single element: zero variance
+
+/ --- stats.dev ---
+tt.t{1e-10>abs[stats.dev[1 2 3 4 5]-sqrt 2.0]}
+tt.t{0.0~stats.dev[,7]}
+
+/ --- stats.cile ---
+tt.t{3~stats.cile[0.5;1 2 3 4 5]}  / median of odd list
+tt.t{2~stats.cile[0.5;1 2 3 4]}    / median of even list
+tt.t{2~stats.cile[0.25;1 2 3 4 5]} / Q1
+tt.t{4~stats.cile[0.75;1 2 3 4 5]} / Q3
+tt.t{5~stats.cile[1.0;1 2 3 4 5]}  / max via cile
+tt.t{3~stats.cile[0.5;5 3 1 4 2]}  / sorts input before computing
+
+/ --- stats.median ---
+tt.t{3~stats.median 1 2 3 4 5}
+tt.t{2~stats.median 1 2 3 4}
+tt.t{3~stats.median 5 3 1 4 2}     / unsorted input
+
+/ --- stats.summary ---
+/ All dict values are floats because the homogeneous value array unifies
+/ around the float sd field.
+r:stats.summary 1 2 3 4 5
+tt.t{5.0~r["count"]}
+tt.t{1.0~r["min"]}
+tt.t{5.0~r["max"]}
+tt.t{3.0~r["mean"]}
+tt.t{3.0~r["median"]}
+tt.t{2.0~r["q25"]}
+tt.t{4.0~r["q75"]}
+tt.t{1e-10>abs[r["sd"]-sqrt 2.0]}
+
+/ summary sorts its input — same result for any permutation
+r2:stats.summary 5 3 1 4 2
+tt.t{5.0~r2["count"]}
+tt.t{1.0~r2["min"]}
+tt.t{5.0~r2["max"]}
+tt.t{3.0~r2["mean"]}
+
+1

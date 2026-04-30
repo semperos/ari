@@ -1,0 +1,4 @@
+/   ac "say*"        glob-match against all globals + keywords
+/   ac rx/^say/      regex-match against all globals + keywords
+ac:{gs:,/rt.get'!"! kw";ms:?["s"=@x;(..p.x%p.gs)#gs;[(..p.x@p.gs)#gs]]; ms@<_ms }
+1
