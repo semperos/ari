@@ -2,7 +2,9 @@
 
 Ari stands for **A**rray **R**elational **I**nteractive programming environment.
 
-Ari is a set of extensions to the [Goal] programming language with an extensible CLI and dedicated SQL mode.
+Ari is a set of extensions to the [Goal] programming language that includes SQL support, an HTTP client with rate limiting support, and GUI bindings (Fyne).
+
+This is my personal daily driver for scripting and data analysis, even in the age of coding agents.
 
 ## Installation
 
@@ -10,102 +12,15 @@ Ari is a set of extensions to the [Goal] programming language with an extensible
 go install github.com/semperos/ari/cmd/ari@latest
 ```
 
-Then run `ari` for a REPL or `ari --help` to see CLI options.
+## Practical Usage
 
-```
-ari is an interactive environment for array + relational programming.
-
-It embeds the Goal array programming language, with extensions for
-working with SQL and HTTP APIs.
-
-Usage:
-  ari [flags] [source file]
-
-Flags:
-      --config string          ari configuration (default "$HOME/.config/ari/ari-config.yaml")
-      --cpu-profile            write CPU profile to file
-  -d, --database string        DuckDB database (default: in-memory)
-      --debug                  enable detailed debugging output on panic
-  -e, --execute string         string of Goal code to execute, last result not printed automatically
-  -h, --help                   help for ari
-  -l, --load stringArray       Goal source files to load on startup
-  -m, --mode string            language mode at startup (default "goal")
-  -f, --output-format string   evaluation output format (default "goal")
-  -p, --println                print final value of the script + newline
-  -v, --version                print version info and exit
-```
-
-## Features
-
-- [Goal] is the core language
-  - Goal's `lib` files are loaded by default, with prefix matching their file names (see [vendor-goal](vendor-goal) folder in this repo)
-- Extensible CLI REPL with:
-  - Runtime configuration:
-    - Configure the REPL prompt by setting string values for the `ari.prompt` global
-    - Replace default REPL printing by setting a function value for the `ari.print` global (function receives a single Goal value to print)
-    - Configure the output format with `--output-format` or using one of the `)output.` system commands at the REPL. Formats include CSV/TSV, JSON, Markdown, and LaTeX.
-  - `ari.p` is bound to the previous result (value from last evaluation at the REPL)
-  - `help` based on Goal's, but:
-    - Monadically: accepts a regular expression instead of a string, using the regex to return documentation that matches it.
-    - Dyadically: adds the right argument as the help string for the left argument (e.g.,`"sql.q"help"Run SQL query"`)
-- New Goal functions:
-  - `ac` which stands for auto-complete, taking a glob string and returning Goal globals that match
-  - `http.` functions for HTTP requests using [Resty]
-  - `ratelimit.new` and `ratelimit.take` for rate limiting (leaky bucket algorithm) using [uber-go/ratelimit]
-  - `sql.` functions for SQL queries and commands
-  - Table-related `csv.tbl` and `json.tbl` to make Goal tables from the output of `csv` and `json` respectively
-  - `tt.` test framework
-  - `time.` functions for more extensive date/time handling
-- Dedicated SQL mode
-  - The ari CLI uses DuckDB, but the `github.com/semperos/ari` Go package doesn't directly depend on a specific SQL database driver, so you can BYODB.
-  - Activate with `)sql` for read-only, `)sql!` for read/write modes. Execute `)goal` to return to the default Goal mode.
-  - Help entries for SQL keywords (shown during auto-complete, still WIP)
-  - Results of the last-run query/command set to the `sql.p` Goal global (for "SQL previous" and mirroring `ari.p`), so you can switch between `)sql` and `)goal` at the REPL to run queries via SQL and do data processing via Goal.
-
-## Projects Using Ari
-
+- [Examples in this repo](examples)
 - [Shortcut API Client](https://github.com/semperos/sc-client-goal)
-
-I have over 75kb of Goal code in a private repo I use for various kinds of scripting and data analysis at work, some of which I plan to share publicly.
-
-## Examples
-
-### Minimal HTTP Server
-
-```
-"localhost:1234"http.serve{say x; ..[status:200;bodystring:"OK"]}
-```
-
-### Slack API
-
-Use Slack's API to get all messages in a channel for last 30 days. The first five lines set up the HTTP client specifically for Slack; the second block shows a code comment which can be evaluated to see a list of channels from which to pick the ID you need; the third block of code sets up the starting and ending timestamps with which to call the Slack API and a recursive function to fetch messages; the final line defines an `allmsgs` global with all messages from the given channel for the given time range, and then returns `"ok"` when it completes.
-
-```
-url:"https://slack.com/api/"; aj:"application/json"; tk: 'env"SLACK_USER_TOKEN"
-hd:..[Accept:aj;"Content-Type":aj;"Authorization":"Bearer $tk"]; hc:http.client[..[Header:hd]]
-hp:{[f]{[httpf;path]r: 'httpf[hc;url+path]; 'json r"bodystring"}[f]}
-hpp:{[f]{[httpf;path;reqopts]r: 'httpf[hc;url+path;reqopts]; 'json r"bodystring"}[f]}
-get:hp[http.get]; getq:hpp[http.get]; post:hpp[http.post]
-
-/ convos:get"conversations.list"; chans:convos"channels"; ^(..name,id)'chans
-channel:"<ID HERE>"
-
-day:time.Hour * 24; unow:time.utc time.now@0
-oldest:time.unix[time.add[unow;-30 * day]]
-latest:time.unix[unow]
-msgs:{[acc;channel;oldest;latest] \latest
-  hist:post["conversations.history";..[Body:""json..[channel;oldest;latest]]]
-  ms:hist"messages"; newlatest:(..ts)@*|ms; acc,:ms
-  ?[hist"has_more"
-    o[acc;channel;oldest;newlatest]
-    acc]}
-
-allmsgs:msgs[();channel;oldest;latest]; "ok"
-```
+- [Personal Anthology](https://goalprogramming.info/personal-anthology.html)
 
 ## Development
 
-Ari is implemented in Go and Goal. See the `script` folder for common development operations.
+Ari is implemented in Go and Goal. See the `scripts` folder for common development operations.
 
 To publish a new version of Ari:
 
@@ -113,21 +28,9 @@ To publish a new version of Ari:
 ./scripts/release vx.y.z
 ```
 
-### WASM
-
-Use the `./scripts/build-wasm` script to generate a `./cmd/wasm/goal.wasm` file from the `./cmd/wasm/main.go` entry-point.
-
-Run an HTTP server in the `./cmd/wasm` folder to serve up the `index.html`, which renders a gently adapted version of anaseto's WASM setup in Goal itself.
-
-NB: The JavaScript that controls the user interface in `./cmd/wasm/index.html` is written in Go in the `./cmd/wasm/main.go` file.
-
-See [Go Wiki: WebAssembly](https://go.dev/wiki/WebAssembly) for more information.
-
 ## Background
 
-I stumbled into a fairly flexible, powerful setup using Julia and DuckDB to do data analysis.
-
-Details:
+In 2024 I stumbled into a flexible, powerful setup using Julia and DuckDB to do data analysis:
 
 - Julia as primary programming language
 - Julia Pluto Notebooks as primary programming environment
@@ -151,7 +54,7 @@ Details:
 Why move away from this setup?
 
 - Concision and expressive power of array languages.
-- A lot of my code was SQL in Julia.
+- A lot of my code was SQL via Julia.
 
 Ari embeds the Goal array programming language. What gaps from my Julia+DuckDB experience need to be filled to use Goal where I used Julia?
 
@@ -223,5 +126,3 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 <!-- Links -->
 
 [Goal]: https://codeberg.org/anaseto/goal
-[Resty]: https://github.com/go-resty/resty
-[uber-go/ratelimit]: https://github.com/uber-go/ratelimit
