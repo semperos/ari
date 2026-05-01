@@ -1,26 +1,12 @@
 / Statistics library for Goal.
 / Load with: arilib import "stats"
 / All names are exported under the "stats." prefix.
-
-/ avg[N] returns the arithmetic mean of a numeric list.
-avg:{(+/x)%#x}
-
-/ var[N] returns the population variance of a numeric list.
-var:{avg[x*x]-m*m:avg x}
-
-/ dev[N] returns the population standard deviation of a numeric list.
-dev:{sqrt var x}
-
+main.goallib import "math"
 / cile[f;N] returns the f-th quantile of a collection (e.g. cile[0.25;x] = Q1).
 / The collection is sorted ascending before computing; f is the cumulative
 / proportion to keep (0.5 = median, 0.25 = Q1, 0.75 = Q3).
 cile:{[ofone;coll]coll:^coll; cile:1-ofone; ntodrop:_cile*#coll; *ntodrop_|coll}
-
-/ median[N] returns the median of a collection.
-median:cile[0.5;]
-
 / summary[N] returns a dictionary of summary statistics:
 /   count, min, q25, median, mean, q75, max, sd
-summary:{[coll]scoll:^coll; ..[count:#scoll;min:&/scoll;q25:cile[0.25;scoll];median:median scoll;mean:avg scoll;q75:cile[0.75;scoll];max:|/scoll;sd:dev coll]}
-
+summary:{[coll]scoll:^coll; ..[count:#scoll;min:&/scoll;q25:cile[0.25;scoll];median:math.med scoll;mean:math.avg scoll;q75:cile[0.75;scoll];max:|/scoll;sd:math.dev coll]}
 1

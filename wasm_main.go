@@ -34,6 +34,7 @@ import (
 	"codeberg.org/anaseto/goal"
 	goalzip "codeberg.org/anaseto/goal/archive/zip"
 	goalbase64 "codeberg.org/anaseto/goal/encoding/base64"
+	goalfs "codeberg.org/anaseto/goal/io/fs"
 	goalmath "codeberg.org/anaseto/goal/math"
 
 	arihelp "github.com/semperos/ari/help"
@@ -46,25 +47,6 @@ var wasmGoallibFS embed.FS
 
 //go:embed lib
 var wasmLibFS embed.FS
-
-// wasmEmbeddedLib wraps an fs.FS as a Goal boxed value so that it can be
-// used as the left-hand argument to the `import` dyad:
-//
-//	arilib import "util"   →  loads lib/util.goal
-//	goallib import "fmt"   →  loads goallib/fmt.goal
-type wasmEmbeddedLib struct {
-	fs.FS
-	name string
-}
-
-func (e *wasmEmbeddedLib) Append(_ *goal.Context, dst []byte, _ bool) []byte {
-	return append(dst, e.name...)
-}
-func (e *wasmEmbeddedLib) Matches(y goal.BV) bool {
-	yv, ok := y.(*wasmEmbeddedLib)
-	return ok && e.name == yv.name
-}
-func (e *wasmEmbeddedLib) Type() string { return e.name }
 
 // ariCtx is the persistent Goal context for the browser REPL session.
 // Use resetAriCtx() to clear state between sessions.
@@ -83,13 +65,13 @@ func buildAriCtx() *goal.Context {
 	if err != nil {
 		panic(err)
 	}
-	ctx.AssignGlobal("goallib", goal.NewV(&wasmEmbeddedLib{goalsub, "goallib"}))
+	ctx.AssignGlobal("goallib", goalfs.NewFS(goalsub, "goallib"))
 
 	sub, err := fs.Sub(wasmLibFS, "lib")
 	if err != nil {
 		panic(err)
 	}
-	ctx.AssignGlobal("arilib", goal.NewV(&wasmEmbeddedLib{sub, "arilib"}))
+	ctx.AssignGlobal("arilib", goalfs.NewFS(sub, "arilib"))
 
 	return ctx
 }
