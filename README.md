@@ -9,7 +9,7 @@ This is my personal daily driver for scripting and data analysis, even in the ag
 ## Installation
 
 ```shell
-go install github.com/semperos/ari/cmd/ari@latest
+go install github.com/semperos/ari@latest
 ```
 
 ## Practical Usage
