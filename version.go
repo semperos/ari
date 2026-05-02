@@ -2,4 +2,4 @@
 package main
 
 // Version of Ari. Run rt.get"v" to access this value at runtime.
-const AriVersion = "v0.2.0"
+const AriVersion = "v0.2.1"
