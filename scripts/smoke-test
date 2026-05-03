@@ -1,0 +1,124 @@
+#!/usr/bin/env ruby
+# scripts/smoke-test — Launch each example and verify it starts without crashing.
+#
+# Strategy: every example calls fyne.run[], which blocks until the window is
+# closed.  A process still alive after STARTUP_SECS seconds → started OK.
+# A process that exits within that window with a non-zero status → failed.
+#
+# Usage:
+#   scripts/smoke-test            # build ari first, then test
+#   scripts/smoke-test --no-build # skip build, use existing binary
+
+require "tempfile"
+require "optparse"
+
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+STARTUP_SECS = 3
+POLL_INTERVAL = 0.1
+
+ROOT = File.expand_path("..", __dir__)
+Dir.chdir(ROOT)
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+build = true
+OptionParser.new do |opts|
+  opts.on("--no-build", "Skip building ari; use existing binary") { build = false }
+end.parse!
+
+ari = ENV.fetch("ARI", "./ari")
+
+# ---------------------------------------------------------------------------
+# Colour helpers
+# ---------------------------------------------------------------------------
+def green(s)  = "\e[0;32m#{s}\e[0m"
+def red(s)    = "\e[0;31m#{s}\e[0m"
+def yellow(s) = "\e[1;33m#{s}\e[0m"
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+if build
+  puts "Building ari..."
+  system("go build -o ari .") or abort("Build failed.")
+  puts "Built: #{ari}\n\n"
+end
+
+unless File.executable?(ari)
+  abort "Error: '#{ari}' not found or not executable.\n" \
+        "Run without --no-build, or set ARI=/path/to/ari."
+end
+
+# ---------------------------------------------------------------------------
+# Smoke-test loop
+# ---------------------------------------------------------------------------
+examples = Dir["examples/*.goal"].sort
+
+abort "No examples found in examples/" if examples.empty?
+
+puts "Smoke-testing #{examples.size} example(s) (startup window: #{STARTUP_SECS}s each)..."
+puts
+
+passed = []
+failed = []
+
+examples.each do |example|
+  name = File.basename(example)
+  log  = Tempfile.new(["ari-smoke-#{File.basename(name, '.goal')}-", ".log"])
+
+  pid = spawn(ari, example, out: log, err: log)
+
+  # Poll until the process exits or the startup window expires.
+  deadline = Time.now + STARTUP_SECS
+  alive = true
+  while Time.now < deadline
+    sleep POLL_INTERVAL
+    begin
+      Process.kill(0, pid)  # raises Errno::ESRCH if process is gone
+    rescue Errno::ESRCH
+      alive = false
+      break
+    end
+  end
+
+  if alive
+    puts "  #{green("PASS")}  #{name}  (pid #{pid} — stopping)"
+    Process.kill("TERM", pid) rescue nil
+    Process.wait(pid)         rescue nil
+    passed << name
+  else
+    _, status = Process.wait2(pid) rescue [nil, nil]
+    exit_code = status&.exitstatus.to_i
+
+    if exit_code == 0
+      puts "  #{green("PASS")}  #{name}  (exited 0 before timeout)"
+      passed << name
+    else
+      puts "  #{red("FAIL")}  #{name}  (exited #{exit_code})"
+      puts "    #{yellow("--- captured output ---")}"
+      log.rewind
+      log.read.each_line { |l| print "    #{l}" }
+      puts "    #{yellow("-----------------------")}"
+      failed << name
+    end
+  end
+
+  log.close!
+end
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+puts
+puts "Results: #{passed.size} passed, #{failed.size} failed"
+
+if failed.any?
+  puts red("Failed examples:")
+  failed.each { |n| puts "  - #{n}" }
+  exit 1
+end
+
+puts green("All examples started successfully.")
