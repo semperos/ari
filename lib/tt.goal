@@ -7,23 +7,22 @@
 / Test files are discovered via glob from the current working directory.
 / The FILE global is set to the test file's path while it is being evaluated,
 / so tt.record can group results by suite (file).
-
 tt.suite:"global"; tt.suitestate:..[es:();fs:();ps:();ss:()]; tt.state:..[global:tt.suitestate]
 tt.st:tt.state; tt.ffast:0; tt.clear:{tt.st::tt.state}
 tt.record:{[k;f;r] / key in test state; function tested; return value
   suite:@[.;"FILE";:[;tt.suite]]
   or[suite¿!tt.st;tt.st[suite]:tt.suitestate] / ensure starting suite state
   ?["ps"~k;(m:"\n"/"    "+=r"msg"
-            d:..[f:p.f;p:p.r;msg:"function panicked with:\n$p.m"]
+            d:..[f:f;p:r;msg:"function panicked with:\n$m"]
             tt.st[suite]:@[tt.st[suite];"ps";..x,p.d])
-    "es"~k;(d:..[f:p.f;e:p.r;msg:"function returned error: $p.r\n    $p.f"]
+    "es"~k;(d:..[f:f;e:r;msg:"function returned error: $r\n    $f"]
             tt.st[suite]:@[tt.st[suite];"es";..x,p.d])
-    "fs"~k;(d:..[f:p.f;r:p.r;msg:"function returned $p.r instead of 1\n    $p.f"]
+    "fs"~k;(d:..[f:f;r:r;msg:"function returned $r instead of 1\n    $f"]
             tt.st[suite]:@[tt.st[suite];"fs";..x,p.d])
-    "ss"~k;(d:..[f:p.f]; tt.st[suite]:@[tt.st[suite];"ss";..x,p.d])
+    "ss"~k;(d:..[f:f]; tt.st[suite]:@[tt.st[suite];"ss";..x,p.d])
     :error"tt.record k must be one of ps, es, fs, ss, but received $k"]}
 tt.tf:{[f]
-  r:rt.try[f;0;{pmsg:x"msg";f:y; error[..[f:p.f;msg:p.pmsg;pnc:1]]}[;f]]
+  r:rt.try[f;0;{error ..[msg:x"msg";f:y;pnc:1]}[;f]]
   ?["e"~@r;?[("d"=@.r)and(.r)..pnc;tt.record["ps";f;r];tt.record["es";f;r]]
     1~r;tt.record["ss";f;r]
     tt.record["fs";f;r]]
