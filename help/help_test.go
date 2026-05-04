@@ -268,6 +268,90 @@ func TestRateLimitVerbEntries(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// TestGoalBuiltinExtensions – Goal's own optional extensions (zip, base64,
+// math) must be reachable now that their HelpFunc() calls are wired in.
+// ---------------------------------------------------------------------------
+
+func TestZipSection(t *testing.T) {
+	h := helpFn(t)
+	for _, topic := range []string{"zip", "archive/zip"} {
+		t.Run(topic, func(t *testing.T) {
+			text := h(topic)
+			assertNotEmpty(t, topic, text)
+			assertContains(t, topic, text, "zip.open", "zip.write")
+		})
+	}
+}
+
+func TestZipVerbEntries(t *testing.T) {
+	h := helpFn(t)
+	cases := []struct {
+		topic string
+		want  []string
+	}{
+		{"zip.open", []string{"zip.open", "file system"}},
+		{"zip.write", []string{"zip.write", "zip file"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.topic, func(t *testing.T) {
+			text := h(tc.topic)
+			assertNotEmpty(t, tc.topic, text)
+			assertContains(t, tc.topic, text, tc.want...)
+		})
+	}
+}
+
+func TestBase64Section(t *testing.T) {
+	h := helpFn(t)
+	for _, topic := range []string{"base64", "encoding/base64"} {
+		t.Run(topic, func(t *testing.T) {
+			text := h(topic)
+			assertNotEmpty(t, topic, text)
+			assertContains(t, topic, text, "base64.enc", "base64.dec")
+		})
+	}
+}
+
+func TestBase64VerbEntries(t *testing.T) {
+	h := helpFn(t)
+	cases := []struct {
+		topic string
+		want  []string
+	}{
+		{"base64.enc", []string{"base64.enc", "encode"}},
+		{"base64.urlenc", []string{"base64.urlenc", "url"}},
+		{"base64.dec", []string{"base64.dec", "decode"}},
+		{"base64.urldec", []string{"base64.urldec", "url"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.topic, func(t *testing.T) {
+			text := h(tc.topic)
+			assertNotEmpty(t, tc.topic, text)
+			assertContains(t, tc.topic, text, tc.want...)
+		})
+	}
+}
+
+func TestMathSection(t *testing.T) {
+	h := helpFn(t)
+	text := h("math")
+	assertNotEmpty(t, "math", text)
+	assertContains(t, "math", text, "math.", "acos", "log2")
+}
+
+func TestMathVerbEntries(t *testing.T) {
+	h := helpFn(t)
+	for _, topic := range []string{"math.acos", "math.log2", "math.tanh", "math.cbrt"} {
+		t.Run(topic, func(t *testing.T) {
+			text := h(topic)
+			assertNotEmpty(t, topic, text)
+			// All math verbs resolve to the shared math help block.
+			assertContains(t, topic, text, "math.")
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // TestGoalCoreHelpPassthrough – a core Goal topic (e.g. "s" for syntax) must
 // still return useful content: the Wrap call must not swallow Goal's own help.
 // ---------------------------------------------------------------------------

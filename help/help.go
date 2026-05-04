@@ -3,14 +3,17 @@
 package help
 
 import (
+	goalzip "codeberg.org/anaseto/goal/archive/zip"
+	goalbase64 "codeberg.org/anaseto/goal/encoding/base64"
 	goalhelp "codeberg.org/anaseto/goal/help"
+	goalmath "codeberg.org/anaseto/goal/math"
 )
 
 // HelpFunc returns a combined help function covering Goal's core language and
 // all ari extensions (fyne, http, sql, ratelimit). Pass it to
 // cmd.Config{Help: help.HelpFunc()}.
 func HelpFunc() func(string) string { //nolint:revive // name stutters by design: callers use arihelp.HelpFunc()
-	return goalhelp.Wrap(extensionHelp(), goalhelp.HelpFunc())
+	return goalhelp.Wrap(extensionHelp(), goalmath.HelpFunc(), goalzip.HelpFunc(), goalbase64.HelpFunc(), goalhelp.HelpFunc())
 }
 
 func extensionHelp() func(string) string { //nolint:funlen

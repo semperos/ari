@@ -1,6 +1,7 @@
 # v0.2.2 2026-05-04
 
-- Upgrade to Goal 1.6.0, which among other things includes `p.` project syntax within lambdas.
+- Upgrade to [Goal 1.6.0](https://codeberg.org/anaseto/goal/src/commit/108ca158bcc18ef9265e786951ffce7021884089/CHANGES.md#v1-6-0-2026-05-04).
+- Leveraging Goal's new `HelpFunc` for fuller help documentation on its own extensions.
 
 # v0.2.1 2026-05-02
 
