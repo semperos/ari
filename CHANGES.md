@@ -1,6 +1,26 @@
-# v next
+# v0.2.2 2026-05-04
 
-- Upgrade to Goal 1.4.0.
+- Upgrade to Goal 1.6.0, which among other things includes `p.` project syntax within lambdas.
+
+# v0.2.1 2026-05-02
+
+Rewrite of ari. Used pi agent + Claude Sonnet 4.6 to help me.
+
+- Uses Goal's supported CLI harness. Cobra and Viper dependencies removed.
+- Removes DuckDB dependency (will probably add back later given how versatile DuckDB itself is); includes SQLite at this point (smaller footprint)
+- Adds Fyne GUI library as a dependency
+- Ports some of ari's definitions, but not all
+- More comprehensive http client implementation (still built on go-resty)
+
+See https://github.com/semperos/ari/pull/92 for full changeset.
+
+# v0.2.0
+
+This build did not release successfully. See the v0.2.1 section above.
+
+# v0.1.5 2026-04-06
+
+- Upgrade to Goal 1.5.0
 - Addition of `helps` function, which returns help as a string instead of printing it.
 - Upgrades Go version to 1.24, including relevant tweaks to WASM build.
 - Imports the full suite of Goal extensions (see Goal's full.go).
