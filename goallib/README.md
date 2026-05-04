@@ -3,7 +3,7 @@
 Files in this directory are copied from the [Goal](https://codeberg.org/anaseto/goal)
 project's `lib/` directory and embedded into the ari binary at build time.
 
-Pulled from Goal at Git commit: `33021c56b852e3b9169e349dd6875fc137fc3314`
+Pulled from Goal at Git commit: `108ca158bcc18ef9265e786951ffce7021884089`
 
 ---
 

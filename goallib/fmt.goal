@@ -5,9 +5,9 @@ dict:{[d;f]
 / tbl[t;r;c;f] outputs dict t as table using at most r rows and c columns, and
 / format string f for floating point numbers.
 / Example: tbl[t;5;8;"%.1f"].
-tbl:{[t;r;c;f] m:{?[x<0;x|-y;x&y]}; it:item[p.f$]
+tbl:{[t;r;c;f] m:{?[x<0;x|-y;x&y]}; it:item[f$]
   k:(mc:m[c;nc:#t])@keys@!t; v:m[r;nr:#*t]@'mc@.t
-  v:(..?[(@x)¿"nN";p.f$x;"A"~@x;p.it'x;"d"~@x;p.it x;$'x])'v
+  v:{?[(@x)¿"nN";p.f$x;"A"~@x;p.it'x;"d"~@x;p.it x;$'x]}'v
   w:(-1+""#k)|(|/-1+""#)'v; (k;v):(-w)!'´(k;v)
   say"\n"/,/" "/("=== Table ${nr}x$nc ===";k;"-"*w;+v)}
 / pp[x] pretty-prints x. NOTE: it relies on tput to estimate available
@@ -25,7 +25,7 @@ pps:{[r;c;x] r|:4; c|:4; n:#x; m:{?[x<y;x-1;y]}
     k:(|/-1+""#k)!k:keys@!x:m[r-:1;n]@x; v:it'.x
     "\n"/cut[c]',/("=== Dict ($n keys) ===";k{"$x| $y"}'v;?[r<n;"…\n";""])]
   k:cut[cc:2|(-4|-n)!c]'keys@!x:(n&-2!c)@x
-  v:cut[cc]''(..?[(@x)~"N";q.nums x;"A"~@x;p.it'x;$'x])'m[r:2|r-3;nr]@'.x
+  v:cut[cc]''{?[(@x)~"N";nums x;"A"~@x;p.it'x;$'x]}'m[r:2|r-3;nr]@'.x
   w:(-1+""#k)|(|/-1+""#)'v
   (k;v;w):?[c>+/ws:1+w;n;*&c<+\ws]#'(k;v;w); (k;v):(-w)!'´(k;v)
   "\n"/,/" "/(cut[c]"=== Table ${nr}x$n ===";k;"-"*w;+v;?[r<nr;"…\n";""])}

@@ -4,6 +4,10 @@ set -e
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 GOAL="$REPO/../goal"
 
+# Upgrade Go-level dependency
+go get -u codeberg.org/anaseto/goal
+go mod tidy
+
 echo "Pulling goal repo..."
 git -C "$GOAL" pull --rebase --prune
 

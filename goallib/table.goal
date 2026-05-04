@@ -1,8 +1,17 @@
-/ by[c;f;t] groups by column(s) named c, joining summary table f[t;by], where
-/ parameter "by" contains the grouping indices.
-by:{[c;f;t]t[&¿by;c],f[t;by:%?["A"~@g:t c;{(1+|/'x)/x}@%'g;g]]}
-/ sort[f;t] sorts table t by function(s) f; f takes a table argument.
-sort:{[f;t]?["A"~@f;t{x@y x}/|f;t@f t]}
+/ by[c;f;t] groups table t by column(s) named c, using function f for computing results.
+/ Depending on f's rank, it is passed different arguments:
+/   1) f[x] where x is a table of grouped columns;
+/   2) f[x;y] where x is the original table t, and y is a constant function
+/      returning grouping indices;
+/   3) f[x;y;z] where x is the original table t, y is a constant function
+/      returning grouping indices, and z the table with the grouping columns.
+/ In the first two cases, if the result is a dict with generic values, it is
+/ merged after the table with the grouping columns.
+by:{[c;f;t] by:%?["A"~@g:t c;{(1+|/'x)/x}@%'g;g]
+  m:{?[and["d"~@x;"A"~@.x];p.t[&¿p.by;p.c],x;x]}
+  ?[1~r:rt.rank f; m f[:[;by]='t[;({0}^c)^!t]]
+    2~r;           m f[t;:[;by]]
+                   f[t;:[;by];t[&¿by;c]]]}
 / ij[c;t1;t2] returns the inner join of tables t1 and t2, using a single common
 / column named c, and assuming t1 c contains distinct values. It gives t2
 / priority for any other common columns.

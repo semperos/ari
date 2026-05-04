@@ -19,20 +19,19 @@ volume:?[PS~"/";:[;""];{rx`^[0-9a-zA-Z]:|^(?:\\\\|/)[^\\./][^\\/]*[\\/][^\\./][^
 / mkdirp[s] is like mkdir, but creates any parent directories if necessary. It
 / does not error if the directory already exists.
 mkdirp:{[path]
-  (st:stat path)and:st..dir or error..[
-    msg:"$path is not a directory";op:"mkdir";path:path;err:"not a directory"]
-  ((&volume path)<&parent:getp path)and 'o parent
-  or[e:mkdir path;(st:stat path)and st..dir;e]}
+  getp:sub[?[PS~"/";rx`[^/]*/*$`;rx`[^\\/]*[\\/]*$`];""] / parent folder
+  {[getp|path]
+    (st:stat path)and:st..dir or error..[
+      msg:"$path is not a directory";op:"mkdir";path:path;err:"not a directory"]
+    ((&volume path)<&parent:getp path)and 'o[getp;parent]
+    or[e:mkdir path;(st:stat path)and st..dir;e]}path}
 / rmtree[s] removes path and any children it contains. USE WITH CAUTION.
 rmtree:{[path]
   (rx#^[.\\/]*$#path)and:error..[
     msg:"%s: %q"$(ErrInvalid;path);op:"rmtree";path:path;err:ErrInvalid]
-  {[;path]
+  rmf:{and["e"~@r:remove x;"d"~@d:.r;ErrNotExist~d..err]or r} / remove but ignore ENOENT
+  {[rmf|;path]
     or[~"e"~@r:rmf path;~"d"~@d:.r;~ErrExist~d..err]and:r
     files:abspath'path,'('read path)..name
-    'o/[~"e"~@:;1;files]; rmf path}[1;'abspath path]}
-
-/ helpers below (not a part of stable API)
-getp:sub[?[PS~"/";rx`[^/]*/*$`;rx`[^\\/]*[\\/]*$`];""] / parent folder
-rmf:{and["e"~@r:remove x;"d"~@d:.r;ErrNotExist~d..err]or r} / remove but ignore ENOENT
+    'o[rmf]/[~"e"~@:;1;files]; rmf path}[1;'abspath path]}
 1

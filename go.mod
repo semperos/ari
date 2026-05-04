@@ -3,7 +3,7 @@ module github.com/semperos/ari
 go 1.25.0
 
 require (
-	codeberg.org/anaseto/goal v1.5.0
+	codeberg.org/anaseto/goal v1.6.0
 	fyne.io/fyne/v2 v2.7.3
 	github.com/go-resty/resty/v2 v2.17.2
 	go.uber.org/ratelimit v0.3.1
