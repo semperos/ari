@@ -29,7 +29,7 @@ tt.tf:{[f]
   r}
 tt.t:{?[("f"~@x);:tt.tf@x;error"tt.t expects f, received %s: %v"$(@x;x)]}
 tt.fs:{sfx:,"test.goal"; pfx:"**/*""*"; fs:,/glob',/pfx+`sfx}
-tt.file:{orig:@[.;"FILE";0]; ::["FILE";x]; ?[tt.ffast; 'eval 'read x;eval 'read x]; ::["FILE";or[orig;tt.suite]]; x}
+tt.file:{orig:@[.;"FILE";0]; ::["FILE";x]; ?[tt.ffast; 'eval['read x;x;""];eval['read x;x;""]]; ::["FILE";or[orig;tt.suite]]; x}
 tt.chkall:{
   fs:tt.fs 0; rs:tt.file'fs; es:"e"=@'rs
   ?[|/es
