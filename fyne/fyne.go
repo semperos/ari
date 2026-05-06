@@ -37,7 +37,10 @@
 //	fyne.title   – get title string from a fyne.window
 //	fyne.vbox    – create VBox container from array of widgets
 //	fyne.hbox    – create HBox container from array of widgets
-//	fyne.scroll  – wrap a widget in a ScrollContainer
+//	fyne.scroll  – wrap a widget in a bidirectional ScrollContainer
+//	fyne.hscroll – wrap a widget in a horizontal-only ScrollContainer
+//	fyne.vscroll – wrap a widget in a vertical-only ScrollContainer
+//	fyne.hscrollbox – Miller-columns row: fixed-width vscroll columns + outer hscroll with trackpad gesture support
 //	fyne.padded  – wrap a widget in a Padded container
 //	fyne.center  – wrap a widget in a Center container
 //	fyne.do      – run a Goal function on the Fyne main event thread
@@ -61,6 +64,7 @@
 //
 // Bracket calls (multi-arg):
 //
+//	fyne.minsize[w;h;widget] → widget in a container that reports (w,h) as minimum size
 //	fyne.border[top;bottom;left;right;...rest] → Border container
 //	fyne.tabs[("label";widget);...] → AppTabs container
 //	fyne.form[("label";widget);...] → Form widget
@@ -87,6 +91,7 @@ import (
 	goal "codeberg.org/anaseto/goal"
 	fynesdk "fyne.io/fyne/v2"
 	fyneapp "fyne.io/fyne/v2/app"
+	fynecanvas "fyne.io/fyne/v2/canvas"
 	fynecont "fyne.io/fyne/v2/container"
 	fynedialog "fyne.io/fyne/v2/dialog"
 	fynelayout "fyne.io/fyne/v2/layout"
@@ -192,6 +197,10 @@ func Import(ctx *goal.Context, pfx string) { //nolint:funlen
 	reg("fyne.spinner", vfSpinner, false)
 	reg("fyne.async", wrapCtx(ctx, vfAsync), false)
 	reg("fyne.table", wrapCtx(ctx, vfTable), false)
+	reg("fyne.hscroll", vfHScroll, false)
+	reg("fyne.vscroll", vfVScroll, false)
+	reg("fyne.minsize", vfMinSize, false)
+	reg("fyne.hscrollbox", vfHScrollBox, false)
 
 	// ---- multi-arg (registered as monads so bracket syntax works freely) ----
 	reg("fyne.border", wrapCtx(ctx, vfBorder), false)
@@ -1668,4 +1677,216 @@ func vfTable(ctx *goal.Context, args []goal.V) goal.V { //nolint:gocognit,gocycl
 	}
 
 	return newWidget(tbl)
+}
+
+// ---------------------------------------------------------------------------
+// fyne.hscroll  (monad: fyne.hscroll widget)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// fyne.hscrollbox  (bracket: fyne.hscrollbox[colW; widgets])
+// ---------------------------------------------------------------------------
+
+// columnPanel is a fixed-width, vertically-scrolling column widget for Miller-
+// style column layouts.  Because it IS the outermost fyne.Scrollable in its
+// own subtree (no nested vscroll), the Fyne event dispatcher calls its
+// Scrolled method directly.
+//
+//   - Horizontal deltas (DX) are forwarded to hTarget (the outer HScroll)
+//     so that two-finger horizontal trackpad swipes actually move the column
+//     row instead of being swallowed.
+//   - Vertical deltas (DY) update the panel's own scroll offset, giving
+//     per-column independent vertical scrolling.
+type columnPanel struct {
+	fynewidget.BaseWidget
+	content fynesdk.CanvasObject
+	minW    float32
+	offsetY float32
+	hTarget fynesdk.Scrollable // outer HScroll; wired by vfHScrollBox
+}
+
+func newColumnPanel(content fynesdk.CanvasObject, minW float32) *columnPanel {
+	p := &columnPanel{content: content, minW: minW}
+	p.ExtendBaseWidget(p)
+	return p
+}
+
+// Scrolled implements fyne.Scrollable.
+func (p *columnPanel) Scrolled(ev *fynesdk.ScrollEvent) {
+	if ev.Scrolled.DX != 0 && p.hTarget != nil {
+		p.hTarget.Scrolled(ev)
+	}
+	if ev.Scrolled.DY != 0 {
+		contentH := p.content.MinSize().Height
+		panelH := p.Size().Height
+		maxOffset := fynesdk.Max(contentH-panelH, 0)
+		if maxOffset > 0 {
+			p.offsetY -= ev.Scrolled.DY
+			p.offsetY = fynesdk.Max(0, fynesdk.Min(p.offsetY, maxOffset))
+			p.Refresh()
+		}
+	}
+}
+
+// MinSize reports the fixed column width and no minimum height.
+func (p *columnPanel) MinSize() fynesdk.Size {
+	return fynesdk.NewSize(p.minW, 0)
+}
+
+// CreateRenderer returns the renderer for this column panel.
+func (p *columnPanel) CreateRenderer() fynesdk.WidgetRenderer {
+	bar := fynecanvas.NewRectangle(fynetheme.Color(fynetheme.ColorNameScrollBar))
+	bar.CornerRadius = fynetheme.Size(fynetheme.SizeNameScrollBarSmall) / 2
+	objects := []fynesdk.CanvasObject{p.content, bar}
+	return &columnPanelRenderer{panel: p, bar: bar, objects: objects}
+}
+
+type columnPanelRenderer struct {
+	panel   *columnPanel
+	bar     *fynecanvas.Rectangle
+	objects []fynesdk.CanvasObject
+}
+
+func (r *columnPanelRenderer) Layout(size fynesdk.Size) {
+	contentH := r.panel.content.MinSize().Height
+	r.panel.content.Resize(fynesdk.NewSize(size.Width, fynesdk.Max(contentH, size.Height)))
+	r.panel.content.Move(fynesdk.NewPos(0, -r.panel.offsetY))
+	if contentH > size.Height {
+		barW := fynetheme.Size(fynetheme.SizeNameScrollBar)
+		barH := (size.Height / contentH) * size.Height
+		maxOff := contentH - size.Height
+		barY := (r.panel.offsetY / maxOff) * (size.Height - barH)
+		r.bar.Resize(fynesdk.NewSize(barW, barH))
+		r.bar.Move(fynesdk.NewPos(size.Width-barW, barY))
+		r.bar.Show()
+	} else {
+		r.bar.Hide()
+	}
+}
+
+func (r *columnPanelRenderer) MinSize() fynesdk.Size {
+	return fynesdk.NewSize(r.panel.minW, 0)
+}
+
+func (r *columnPanelRenderer) Refresh() {
+	r.bar.FillColor = fynetheme.Color(fynetheme.ColorNameScrollBar)
+	r.bar.CornerRadius = fynetheme.Size(fynetheme.SizeNameScrollBarSmall) / 2
+	r.Layout(r.panel.Size())
+	fynecanvas.Refresh(r.panel)
+}
+
+func (r *columnPanelRenderer) Objects() []fynesdk.CanvasObject { return r.objects }
+func (r *columnPanelRenderer) Destroy()                       {}
+
+// vfHScrollBox creates a Miller-columns-style horizontally-scrollable row of
+// fixed-width, vertically-scrolling column panels.
+//
+// Usage (bracket notation): fyne.hscrollbox[colW; widgetArray]
+//
+// Each widget in widgetArray is wrapped in a columnPanel that:
+//   - has a fixed minimum width of colW pixels;
+//   - scrolls its content vertically on two-finger up/down swipes;
+//   - forwards horizontal scroll events to the outer HScroll container
+//     so that two-finger left/right trackpad swipes work as expected on macOS.
+//
+// The returned value is the outer HScroll widget (a fyne.widget).
+func vfHScrollBox(_ *goal.Context, args []goal.V) goal.V {
+	// bracket call — args in reverse order: args[1]=colW, args[0]=widgetArray
+	if len(args) != 2 {
+		return goal.Panicf("fyne.hscrollbox[colW;widgets] : expected 2 arguments, got %d", len(args))
+	}
+	colW := float32(toFloat(args[1]))
+	contents, ok := toCanvasObjects(args[0])
+	if !ok {
+		return goal.Panicf("fyne.hscrollbox[colW;widgets] : second argument must be a fyne.widget or array of fyne.widget")
+	}
+
+	// Build a columnPanel wrapper for each content widget.
+	panels := make([]*columnPanel, len(contents))
+	cols := make([]fynesdk.CanvasObject, len(contents))
+	for i, c := range contents {
+		p := newColumnPanel(c, colW)
+		panels[i] = p
+		cols[i] = p
+	}
+
+	// Wrap all panels in an HBox, then in an outer HScroll.
+	hbox := fynecont.NewHBox(cols...)
+	hscroll := fynecont.NewHScroll(hbox)
+
+	// Wire every panel's horizontal-scroll delegate to the outer HScroll.
+	for _, p := range panels {
+		p.hTarget = hscroll
+	}
+
+	return newWidget(hscroll)
+}
+
+// vfHScroll wraps a widget in a horizontal-only ScrollContainer.
+// The content scrolls left/right; its height is fixed to the container height.
+// Usage: fyne.hscroll widget.
+func vfHScroll(_ *goal.Context, args []goal.V) goal.V {
+	if len(args) != 1 {
+		return goal.Panicf("fyne.hscroll widget : expected 1 argument, got %d", len(args))
+	}
+	w, ok := args[0].BV().(*Widget)
+	if !ok {
+		return goal.Panicf("fyne.hscroll widget : expected fyne.widget, got %q", args[0].Type())
+	}
+	return newWidget(fynecont.NewHScroll(w.obj))
+}
+
+// ---------------------------------------------------------------------------
+// fyne.vscroll  (monad: fyne.vscroll widget)
+// ---------------------------------------------------------------------------
+
+// vfVScroll wraps a widget in a vertical-only ScrollContainer.
+// The content scrolls up/down; its width is fixed to the container width.
+// Usage: fyne.vscroll widget.
+func vfVScroll(_ *goal.Context, args []goal.V) goal.V {
+	if len(args) != 1 {
+		return goal.Panicf("fyne.vscroll widget : expected 1 argument, got %d", len(args))
+	}
+	w, ok := args[0].BV().(*Widget)
+	if !ok {
+		return goal.Panicf("fyne.vscroll widget : expected fyne.widget, got %q", args[0].Type())
+	}
+	return newWidget(fynecont.NewVScroll(w.obj))
+}
+
+// ---------------------------------------------------------------------------
+// fyne.minsize  (bracket: fyne.minsize[w;h;widget])
+// ---------------------------------------------------------------------------
+
+// minSizeLayout is a custom Fyne layout that enforces a declared minimum size
+// while expanding its single child to fill whatever space the parent provides.
+type minSizeLayout struct{ minW, minH float32 }
+
+func (l minSizeLayout) MinSize(_ []fynesdk.CanvasObject) fynesdk.Size {
+	return fynesdk.NewSize(l.minW, l.minH)
+}
+
+func (l minSizeLayout) Layout(objects []fynesdk.CanvasObject, size fynesdk.Size) {
+	for _, o := range objects {
+		o.Move(fynesdk.NewPos(0, 0))
+		o.Resize(size)
+	}
+}
+
+// vfMinSize wraps a widget in a container that reports (w,h) as its minimum
+// size. The child always fills all space the parent actually allocates, so in
+// an HBox each column gets exactly w pixels wide and the full row height.
+// Usage: fyne.minsize[w;h;widget].
+func vfMinSize(_ *goal.Context, args []goal.V) goal.V {
+	// bracket call — args in stack order: args[2]=w, args[1]=h, args[0]=widget
+	if len(args) != 3 {
+		return goal.Panicf("fyne.minsize[w;h;widget] : expected 3 arguments, got %d", len(args))
+	}
+	wid, ok := args[0].BV().(*Widget)
+	if !ok {
+		return goal.Panicf("fyne.minsize[w;h;widget] : expected fyne.widget in 3rd arg, got %q", args[0].Type())
+	}
+	minW := float32(toFloat(args[2]))
+	minH := float32(toFloat(args[1]))
+	return newWidget(fynecont.New(minSizeLayout{minW, minH}, wid.obj))
 }
