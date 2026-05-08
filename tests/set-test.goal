@@ -1,0 +1,7 @@
+/ Tests for lib/set.goal - set operations on Goal arrays.
+import "set"
+as:1 2 3 4 5
+bs:4 5 6 7 8 9 0
+tt.t{4 5 6 7 8 9 0 1 2 3~set.union[as;bs]}
+tt.t{1 2 3~set.difference[as;bs]}
+tt.t{4 5~set.intersection[as;bs]}

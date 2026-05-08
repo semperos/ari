@@ -1,8 +1,8 @@
-/ Tests for lib/stats.goal — load via arilib import "stats".
+/ Tests for lib/stats.goal — load via import "stats" (requires GOALLIB=lib).
 / Note: in Goal, `f ,x` is parsed as the dyadic join `f , x`, not function
 / application. Use bracket notation `f[,x]` when passing an enlisted atom.
 
-arilib import "stats"
+import "stats"
 
 / --- stats.cile ---
 tt.t{3~stats.cile[0.5;1 2 3 4 5]}  / median of odd list

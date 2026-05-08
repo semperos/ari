@@ -1,48 +1,49 @@
-/ Tests for ac - the ari REPL auto-complete function.
+/ Tests for util.ac - the ari REPL auto-complete function.
+import "util"
 / Returns a non-empty array of strings
-tt.t{0<#ac"*"}
-tt.t{"s"=@*ac"*"}
+tt.t{0<#util.ac"*"}
+tt.t{"s"=@*util.ac"*"}
 / Results are always sorted (case-insensitive)
-tt.t{r~r@<_r:ac"*"}
+tt.t{r~r@<_r:util.ac"*"}
 / Glob: exact name still matches
-tt.t{"say"in ac"say"}
-tt.t{"say"in ac"say*"}
+tt.t{"say"in util.ac"say"}
+tt.t{"say"in util.ac"say*"}
 / Glob: * matches any suffix
-tt.t{"sin"in ac"sin*"}
-tt.t{"cos"in ac"cos*"}
+tt.t{"sin"in util.ac"sin*"}
+tt.t{"cos"in util.ac"cos*"}
 / Glob: ? matches a single character
-tt.t{"sin"in ac"si?"}
+tt.t{"sin"in util.ac"si?"}
 / No match returns empty list
-tt.t{0=#ac"zzznomatch*"}
+tt.t{0=#util.ac"zzznomatch*"}
 / --- Built-in keywords ---
-tt.t{"and"in ac"*and"}
-tt.t{"or"in ac"or*"}
-tt.t{"in"in ac"in*"}
-tt.t{"nan"in ac"nan*"}
+tt.t{"and"in util.ac"*and"}
+tt.t{"or"in util.ac"or*"}
+tt.t{"in"in util.ac"in*"}
+tt.t{"nan"in util.ac"nan*"}
 / --- goal/os verbs ---
-tt.t{"say"in ac"sa*"}
-tt.t{"read"in ac"read*"}
-tt.t{"open"in ac"open*"}
+tt.t{"say"in util.ac"sa*"}
+tt.t{"read"in util.ac"read*"}
+tt.t{"open"in util.ac"open*"}
 / --- goal/math verbs ---
-tt.t{"sin"in ac"s*"}
-tt.t{"cos"in ac"c*"}
-tt.t{"sqrt"in ac"sq*"}
-tt.t{"round"in ac"ro*"}
+tt.t{"sin"in util.ac"s*"}
+tt.t{"cos"in util.ac"c*"}
+tt.t{"sqrt"in util.ac"sq*"}
+tt.t{"round"in util.ac"ro*"}
 / --- goal/encoding/base64 verbs ---
-tt.t{"base64.enc"in ac"base64*"}
-tt.t{"base64.dec"in ac"base64*"}
-tt.t{"base64.urlenc"in ac"base64*"}
-tt.t{"base64.urldec"in ac"base64*"}
+tt.t{"base64.enc"in util.ac"base64*"}
+tt.t{"base64.dec"in util.ac"base64*"}
+tt.t{"base64.urlenc"in util.ac"base64*"}
+tt.t{"base64.urldec"in util.ac"base64*"}
 / --- goal/archive/zip verbs ---
-tt.t{"zip.open"in ac"zip*"}
-tt.t{"zip.write"in ac"zip*"}
+tt.t{"zip.open"in util.ac"zip*"}
+tt.t{"zip.write"in util.ac"zip*"}
 / --- ari/sql verbs ---
-tt.t{"sql.open"in ac"sql*"}
-tt.t{"sql.close"in ac"sql*"}
-tt.t{"sql.q"in ac"sql*"}
-tt.t{"sql.exec"in ac"sql*"}
+tt.t{"sql.open"in util.ac"sql*"}
+tt.t{"sql.close"in util.ac"sql*"}
+tt.t{"sql.q"in util.ac"sql*"}
+tt.t{"sql.exec"in util.ac"sql*"}
 / --- tt framework itself is visible ---
-tt.t{"tt.t"in ac"tt*"}
-tt.t{"tt.report"in ac"tt*"}
+tt.t{"tt.t"in util.ac"tt*"}
+tt.t{"tt.report"in util.ac"tt*"}
 
 1

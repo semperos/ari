@@ -1,6 +1,7 @@
 / ari test runner.
 / Run from the repository root with: ari run-tests.goal
-eval read "lib/tt.goal"
-eval read "lib/util.goal"
+/ Requires GOALLIB=lib (set by scripts/test) so test files can import
+/ lib modules with plain `import "name"` calls.
+"" import "tt"
 'tt.chkall 0
 tt.report 0

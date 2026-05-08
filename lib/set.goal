@@ -1,0 +1,5 @@
+/ set - set operations
+union:{y,x[&~x in y]}
+difference:{x[&~x in y]}
+intersection:{x[&x in y]}
+1

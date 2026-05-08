@@ -1,5 +1,4 @@
 / tt - a simple test framework for Goal.
-/ Ported from ari (https://codeberg.org/anaseto/ari) by Daniel Semperos.
 / Usage:
 /   tt.t{expr}          run expr as a test (must return 1 to pass)
 /   tt.chkall 0         discover and run all *test.goal files

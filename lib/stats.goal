@@ -1,6 +1,4 @@
-/ Statistics library for Goal.
-/ Load with: arilib import "stats"
-/ All names are exported under the "stats." prefix.
+/ statistics
 main.goallib import "math"
 / cile[f;N] returns the f-th quantile of a collection (e.g. cile[0.25;x] = Q1).
 / The collection is sorted ascending before computing; f is the cumulative
