@@ -21,58 +21,40 @@ package main
 
 import (
 	"compress/zlib"
-	"embed"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"runtime/debug"
 	"strings"
 	"syscall/js"
 
 	"codeberg.org/anaseto/goal"
-	goalzip "codeberg.org/anaseto/goal/archive/zip"
-	goalbase64 "codeberg.org/anaseto/goal/encoding/base64"
-	goalfs "codeberg.org/anaseto/goal/io/fs"
-	goalmath "codeberg.org/anaseto/goal/math"
 
+	"github.com/semperos/ari"
 	arihelp "github.com/semperos/ari/help"
-	goalhttp "github.com/semperos/ari/http"
-	goalratelimit "github.com/semperos/ari/ratelimit"
 )
-
-//go:embed goallib
-var wasmGoallibFS embed.FS
-
-//go:embed lib
-var wasmLibFS embed.FS
 
 // ariCtx is the persistent Goal context for the browser REPL session.
 // Use resetAriCtx() to clear state between sessions.
 var ariCtx *goal.Context
 
+// buildAriCtx constructs the wasm-flavored ari context (no OSIO, no SQL,
+// no Fyne — those don't apply in a browser).
 func buildAriCtx() *goal.Context {
-	ctx := goal.NewContext()
-
-	goalmath.Import(ctx, "")
-	goalbase64.Import(ctx, "")
-	goalzip.Import(ctx, "")
-	goalratelimit.Import(ctx, "")
-	goalhttp.Import(ctx, "")
-
-	goalsub, err := fs.Sub(wasmGoallibFS, "goallib")
+	opts := ari.Options{
+		EnableMath:      true,
+		EnableBase64:    true,
+		EnableZip:       true,
+		EnableRateLimit: true,
+		EnableHTTP:      true,
+		EnableArilib:    true,
+		EnableGoallib:   true,
+	}
+	ctx, err := ari.New(opts)
 	if err != nil {
 		panic(err)
 	}
-	ctx.AssignGlobal("goallib", goalfs.NewFS(goalsub, "goallib"))
-
-	sub, err := fs.Sub(wasmLibFS, "lib")
-	if err != nil {
-		panic(err)
-	}
-	ctx.AssignGlobal("arilib", goalfs.NewFS(sub, "arilib"))
-
 	return ctx
 }
 
