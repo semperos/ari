@@ -1,0 +1,5 @@
+rule:"/"+79*"=";parse:{[file]\file;raw: 'read file;rule\raw}
+render:{[step](text;code):")"\step;say text;lines:=code;lines:lines[&~""~'lines]; {print "$x\n";res: 'eval x; print " $res\n"}'lines;say"";rq^(run next"" to proceed)^}
+idx::1;steps::();next:{?[idx=-1+#steps;[ 'eval *steps;say "Finished lab '$labtitle' (by $labauthor)"];[idx::idx+1;render steps[idx]]]}
+play:{[parts]pre:*parts;steps::parts; 'eval pre;say rule;say "Lab: '$labtitle' (by $labauthor)";say rule;render steps[idx]}
+start:{[file]parts:parse file;play parts}
