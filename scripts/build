@@ -5,5 +5,5 @@ cd "$(dirname "$0")/.."
 
 # Run scripts/upgrade-goal first to refresh goallib/ from ../goal.
 echo "Building ari..."
-go build -o ari .
+go build -o ari ./cmd/ari
 echo "Done: ./ari"

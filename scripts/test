@@ -12,4 +12,4 @@ go test -v -failfast -race -covermode=atomic -coverprofile=coverage.txt -coverpk
 # GOALLIB makes lib/ available to plain `import "name"` calls in Goal files,
 # so test files can declare their own deps without being pre-loaded here.
 export GOALLIB="$(pwd)/lib"
-go run . run-tests.goal
+go run ./cmd/ari run-tests.goal

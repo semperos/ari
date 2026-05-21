@@ -4,7 +4,7 @@
 //
 // Compile with:
 //
-//	GOOS=js GOARCH=wasm go build -o wasm/ari.wasm .
+//	GOOS=js GOARCH=wasm go build -o wasm/ari.wasm ./cmd/ari-wasm
 //
 // Then copy wasm_exec.js:
 //
@@ -14,65 +14,35 @@
 //
 //	cd wasm && python3 -m http.server 8080
 //
-// Note: fyne (GUI) and sql (SQLite/CGo) are excluded — they don't apply in
-// a browser context. The math, base64, zip, http, and ratelimit extensions
-// are included.
+// Note: Fyne (GUI) and SQL (SQLite/CGo) are excluded — they don't apply in a
+// browser context. The math, base64, zip, http, and ratelimit extensions are
+// included via ari.New(ari.DefaultOptions()).
 package main
 
 import (
 	"compress/zlib"
-	"embed"
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"runtime/debug"
 	"strings"
 	"syscall/js"
 
-	"codeberg.org/anaseto/goal"
-	goalzip "codeberg.org/anaseto/goal/archive/zip"
-	goalbase64 "codeberg.org/anaseto/goal/encoding/base64"
-	goalfs "codeberg.org/anaseto/goal/io/fs"
-	goalmath "codeberg.org/anaseto/goal/math"
-
+	goal "codeberg.org/anaseto/goal"
+	arilib "github.com/semperos/ari"
 	arihelp "github.com/semperos/ari/help"
-	goalhttp "github.com/semperos/ari/http"
-	goalratelimit "github.com/semperos/ari/ratelimit"
 )
 
-//go:embed goallib
-var wasmGoallibFS embed.FS
-
-//go:embed lib
-var wasmLibFS embed.FS
-
 // ariCtx is the persistent Goal context for the browser REPL session.
-// Use resetAriCtx() to clear state between sessions.
+// Use resetAriCtx() to reinitialise state between sessions.
 var ariCtx *goal.Context
 
 func buildAriCtx() *goal.Context {
-	ctx := goal.NewContext()
-
-	goalmath.Import(ctx, "")
-	goalbase64.Import(ctx, "")
-	goalzip.Import(ctx, "")
-	goalratelimit.Import(ctx, "")
-	goalhttp.Import(ctx, "")
-
-	goalsub, err := fs.Sub(wasmGoallibFS, "goallib")
+	ctx, err := arilib.New(arilib.DefaultOptions())
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("ari: failed to build context: %v", err))
 	}
-	ctx.AssignGlobal("goallib", goalfs.NewFS(goalsub, "goallib"))
-
-	sub, err := fs.Sub(wasmLibFS, "lib")
-	if err != nil {
-		panic(err)
-	}
-	ctx.AssignGlobal("arilib", goalfs.NewFS(sub, "arilib"))
-
 	return ctx
 }
 
@@ -198,7 +168,7 @@ func main() {
 		return nil
 	}))
 
-	getElt("ariVersion").Set("textContent", fmt.Sprintf("ari %s (wasm)", ariCtx.Version()))
+	getElt("ariVersion").Set("textContent", fmt.Sprintf("ari %s (wasm)", arilib.AriVersion))
 
 	<-make(chan bool)
 }

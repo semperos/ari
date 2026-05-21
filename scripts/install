@@ -7,7 +7,7 @@ INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 BINARY_NAME="ari"
 
 echo "Building $BINARY_NAME..."
-go build -o "$BINARY_NAME" .
+go build -o "$BINARY_NAME" ./cmd/ari
 
 echo "Installing to $INSTALL_DIR/$BINARY_NAME..."
 mkdir -p "$INSTALL_DIR"

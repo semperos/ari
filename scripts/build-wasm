@@ -6,7 +6,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 echo "Building wasm/ari.wasm..."
-GOOS=js GOARCH=wasm go build -o wasm/ari.wasm .
+GOOS=js GOARCH=wasm go build -o wasm/ari.wasm ./cmd/ari-wasm
 echo "Done: wasm/ari.wasm"
 
 echo "Copying wasm_exec.js from Go toolchain..."
