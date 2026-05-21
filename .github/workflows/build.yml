@@ -29,6 +29,9 @@ jobs:
       - name: build-wasm
         run: |
           ./scripts/build-wasm
+      - name: build-native
+        run: |
+          ./scripts/build
       - name: test
         run: |
           ./scripts/test

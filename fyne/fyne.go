@@ -1776,7 +1776,7 @@ func (r *columnPanelRenderer) Refresh() {
 }
 
 func (r *columnPanelRenderer) Objects() []fynesdk.CanvasObject { return r.objects }
-func (r *columnPanelRenderer) Destroy()                       {}
+func (r *columnPanelRenderer) Destroy()                        {}
 
 // vfHScrollBox creates a Miller-columns-style horizontally-scrollable row of
 // fixed-width, vertically-scrolling column panels.

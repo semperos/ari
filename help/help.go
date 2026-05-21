@@ -13,7 +13,13 @@ import (
 // all ari extensions (fyne, http, sql, ratelimit). Pass it to
 // cmd.Config{Help: help.HelpFunc()}.
 func HelpFunc() func(string) string { //nolint:revive // name stutters by design: callers use arihelp.HelpFunc()
-	return goalhelp.Wrap(extensionHelp(), goalmath.HelpFunc(), goalzip.HelpFunc(), goalbase64.HelpFunc(), goalhelp.HelpFunc())
+	return goalhelp.Wrap(
+		extensionHelp(),
+		goalmath.HelpFunc(),
+		goalzip.HelpFunc(),
+		goalbase64.HelpFunc(),
+		goalhelp.HelpFunc(),
+	)
 }
 
 func extensionHelp() func(string) string { //nolint:funlen

@@ -6,8 +6,8 @@ import (
 	"os"
 
 	goal "codeberg.org/anaseto/goal"
-	arifyne "github.com/semperos/ari/fyne"
 	gos "codeberg.org/anaseto/goal/os"
+	arifyne "github.com/semperos/ari/fyne"
 	goalsql "github.com/semperos/ari/sql"
 )
 

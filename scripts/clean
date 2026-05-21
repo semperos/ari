@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+cd "$(dirname "$0")/.."
+
+rm -f ari wasm/ari.wasm wasm/wasm_exec.js
