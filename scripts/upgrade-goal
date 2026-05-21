@@ -3,13 +3,21 @@ set -e
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 GOAL="$REPO/../goal"
+LETGO="$REPO/../let-go"
 
-# Upgrade Go-level dependency
+# Upgrade Go-level dependencies
 go get -u codeberg.org/anaseto/goal
+go get -u github.com/nooga/let-go
 go mod tidy
 
 echo "Pulling goal repo..."
 git -C "$GOAL" pull --rebase --prune
+
+echo "Pulling let-go repo..."
+git -C "$LETGO" pull --rebase --prune
+
+LETGOSHA="$(git -C "$LETGO" rev-parse HEAD)"
+echo "let-go HEAD: $LETGOSHA"
 
 GOALSHA="$(git -C "$GOAL" rev-parse HEAD)"
 echo "Goal HEAD: $GOALSHA"
@@ -50,3 +58,7 @@ used here under the terms of the ISC Licence:
 EOF
 
 echo "Done. goallib/ updated and README written."
+echo ""
+echo "Summary:"
+echo "  goal:   $GOALSHA"
+echo "  let-go: $LETGOSHA"

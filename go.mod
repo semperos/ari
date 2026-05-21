@@ -7,7 +7,7 @@ require (
 	fyne.io/fyne/v2 v2.7.3
 	github.com/alimpfard/line v0.0.0-20230131232016-03b4e7dee324
 	github.com/go-resty/resty/v2 v2.17.2
-	github.com/nooga/let-go v1.7.2
+	github.com/nooga/let-go v1.7.4
 	go.uber.org/ratelimit v0.3.1
 	modernc.org/sqlite v1.50.1
 )
