@@ -1,0 +1,142 @@
+labtitle:"Sets"
+labauthor:"Daniel Gregoire"
+arilib import"set"
+goallib import"math"
+
+/===============================================================================
+Set Operations
+
+This lab demonstrates the set operations provided by Goal and this ari extension.
+
+You're encouraged to play with the examples in each section before continuing.
+)
+
+/===============================================================================
+Distinct items
+
+Mathematically, a set is an unordered collection of distinct items.
+Goal does not have a built-in set data type, but you can create a copy of your
+array with only distinct items using the `?` verb.
+)
+a:1 2 3 4 1 2 3 4
+b:3 4 5 6 6 5 4 3
+?a
+?b
+sa:?a;sb:?b
+
+/===============================================================================
+Subsets
+
+One set A is a subset of another B if all the items in A are also in B.
+
+In Goal, the `in` verb tells us which items of x are in y, 1 for present and 0
+for absent:
+)
+sa in sb
+sb in sa
+
+/===============================================================================
+Subsets (cont'd)
+
+If all of the items in x are also in y, then `in` returns an array of 1's (the
+length of x).
+
+Applying a "minimum reduction" to that array (i.e., applying the minimum
+function `&` over all its items) will give us a 1 if x is a subset of y, or 0
+if any of the items in x weren't found in y:
+)
+&/sa in sb
+&/sb in sa
+&/(1 2) in sa
+&/(3 4) in sb
+
+/===============================================================================
+Set union
+
+The union of two sets is a set with all elements from both sets.
+
+If we simply concatenated the two sets, there would be duplicates. There are
+multiple approaches we could take:
+)
+union1:{?x,y} / Dedupe the concatenation of x and y
+union2:{y,x[&~x in y]} / Conjoin to y only those items of x not found in y
+union1[sa;sb]
+union2[sa;sb]
+
+/===============================================================================
+Set union (cont'd)
+
+Is there a difference in performance between union1 and union2?
+
+Give these expressions several moments to run through 10,000 iterations of each:
+)
+deck:!100000;#deck
+workfn:{s1:0i?deck;s2:0i?deck;start:time"unixmicro";x[s1;s2];end:time"unixmicro";end-start}
+union1fn:{workfn union1}
+union2fn:{workfn union2}
+union1timings:1_10000 union1fn\0n;#union1timings
+union2timings:1_10000 union2fn\0n;#union2timings
+math.avg union1timings
+math.avg union2timings
+
+/===============================================================================
+Set union (cont'd)
+
+The union2 implementation is the clear winner.
+
+Do the sizes of x and y matter?
+)
+bigxfn:{s1:0i?deck;s2:0i?!10;start:time"unixmicro";union2[s1;s2];end:time"unixmicro";end-start}
+bigyfn:{s1:0i?!10;s2:0i?deck;start:time"unixmicro";union2[s1;s2];end:time"unixmicro";end-start}
+bigxtimings:1_10000 bigxfn\0n;#bigxtimings
+bigytimings:1_10000 bigyfn\0n;#bigytimings
+math.avg bigxtimings
+math.avg bigytimings
+
+/===============================================================================
+Set union (cont'd)
+
+Yes, the sizes of x and y materially affect the performance.
+
+A version of union2 that is sensitive to argument sizes should perform best in
+the general case. We'll call this one `union`:
+)
+union:{?[(#y)>#x;y,x[&~x in y];x,y[&~y in x]]}
+bigxfn:{s1:0i?deck;s2:0i?!10;start:time"unixmicro";union[s1;s2];end:time"unixmicro";end-start}
+bigyfn:{s1:0i?!10;s2:0i?deck;start:time"unixmicro";union[s1;s2];end:time"unixmicro";end-start}
+bigxtimings:1_10000 bigxfn\0n;#bigxtimings
+bigytimings:1_10000 bigyfn\0n;#bigytimings
+math.avg bigxtimings
+math.avg bigytimings
+
+/===============================================================================
+Set intersection
+
+The intersection of two sets is the set of items found in both.
+
+We find that we've already implemented set intersection as part of defining
+set union. Study the definition below, which already optimizes for picking the
+smaller of the two arguments to use as the left argument to `in` like we did for
+union above:
+)
+intersection:{?[(#y)>#x;x[&x in y];y[&y in x]]}
+sa
+sb
+intersection[sa;sb]
+
+/===============================================================================
+Set difference
+
+The difference between two sets is a set whose items are found in the first set
+but not the second set.
+
+Definitionally, unlike set union and intersection, set difference is sensitive to
+the order of arguments, so we can't use the same optimization around `in` that
+we did for union and intersection.
+
+Elegantly, we can essentially read the Goal code like the English definition:
+
+"Select from x where there isn't an item of x in y."
+)
+difference:{x[&~x in y]}
+
