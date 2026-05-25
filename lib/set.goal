@@ -1,5 +1,5 @@
 / set - set operations
-union:{y,x[&~x in y]}
+union:{?[(#y)>#x;y,x[&~x in y];x,y[&~y in x]]}
 difference:{x[&~x in y]}
-intersection:{x[&x in y]}
+intersection:{?[(#y)>#x;x[&x in y];y[&y in x]]}
 1
