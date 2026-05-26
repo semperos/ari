@@ -1,6 +1,17 @@
-file::0n;rule:"/"+79*"=";parse:{[file]file;raw: 'read file;rule\raw}
-render:{[step](text;code):rx#\n\)\n#\step;say "$rule\n$text";lines:=code;lines:lines[&~""~'lines]; {print "$x\n";res: 'eval x; print " $res\n"}'lines;say"";say rq^(run next"" to proceed)^}
+width:80;file::0n;srcrule:"/"+79*"=";rule:"/"+(width-1)*"="
+parse:{[file]file;raw: 'read file;srcrule\raw}
+trunc:{len:width-2;x:x.(0 len);sub[rx/...$/;"..."]@x}
+box:{x:?[(#"c"$x)>(width-2);trunc x;x];ct:#"c"$x
+ tb:?[2!width;(((width-1)%2)*">")+"*"+((width-1)%2)*"<";((width%2)*">")+(width%2)*"<"]
+ df:-2+width-ct;ls:">"+(_df%2)*" ";rs:((-_-df%2)*" ")+"<"
+ tb+"\n"+ls+x+rs+"\n"+tb}
+render:{[step]
+ (text;code):rx#\n\)\n#\step;text:""^text;
+ lines:=code;lines:lines[&~""~'lines]
+ say "$rule\n$text\n"
+ {print "  $x\n";res: 'eval x; print "$res\n"}'lines
+ say"";say rq^(run next"" to proceed)^}
 idx::1;steps::();next:{?[idx=-1+#steps;[ 'eval *steps;say "$rule\nFinished lab '${main.labtitle}' (by ${main.labauthor})"];[idx::idx+1;render steps[idx]]]}
-play:{[parts]\pre:*parts;steps::parts; 'eval pre;say rule;say "Lab: '${main.labtitle}' (by ${main.labauthor})";render steps[idx]}
+play:{[parts]pre:*parts;steps::parts; 'eval pre;title:"${main.labtitle} (by ${main.labauthor})";tb:box title;say "\n$tb\n";render steps[idx]}
 start:{[file]file::file;parts:parse file;play parts}
 1

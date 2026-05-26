@@ -1,0 +1,95 @@
+labtitle:"Labs Intro"
+labauthor:"Daniel Gregoire"
+
+/===============================================================================
+What is a lab?
+
+A lab is a program designed to teach or explore a topic step by step.
+
+Each step has some explanatory text and executable code.
+
+After a step's text has been printed and code executed, the user is left at the
+Goal REPL to explore further before continuing.
+)
++/!101
+
+/===============================================================================
+How are labs structured?
+
+Take a look at the `labs` folder in the ari repository:
+
+https://github.com/semperos/ari/tree/main/labs
+
+A lab is a Goal program. At the beginning of the program, a `labtitle` and
+`labauthor` need to be defined. Any other Goal code needed to set up the lab
+can be included there.
+
+The remainder of the program encodes the steps of the lab.
+
+Each step begins with a forward slash followed by 79 equal signs (forming an
+80-column divider that is also a legal Goal comment). To end the explanatory
+section, add a single right parenthesis on a line by itself.
+
+After that single right parenthesis line, the remainder of the step is
+treated as executable code.
+)
+&/1 1 0 1
+
+/===============================================================================
+How are labs run?
+
+The ari project ships with a lab library:
+
+https://github.com/semperos/ari/tree/main/lib/lab.goal
+
+That library defines a `start` function that accepts a path to a lab file on
+the file system and runs it:
+
+start"labs/lab-sets.goal"
+
+This function loads the file, executes the preamble code, parses the steps, and
+then immediately executes the first step.
+
+When a step is executed, the explanatory text is printed to STDOUT first. Then
+each line of the step's executable code is first printed with two spaces of
+indentation, evaluated, and then that result is printed to STDOUT with no
+indentation. This style of indentation mirrors how Goal's own REPL behaves
+when using it interactively.
+)
+shell"ls labs"
+
+/===============================================================================
+How are labs run? (cont'd)
+
+After a step's code is executed, you are still in a normal, fully functional
+Goal REPL.
+
+You're encouraged to explore interactively at the REPL, playing with the lab's
+examples, trying out different variations, probing or visualizing data, etc.
+
+When you're ready to move to the next step, you can call the `next` function
+defined by the lab library:
+
+next""
+
+Note: The lab library does not re-run all previous steps' code when you progress
+to the next step. If you redefine a variable that the lab itself has defined,
+it's possible that subsequent steps will rely on those values and you might
+encounter unexpected behavior. Define new variables instead of overwriting
+existing ones.
+)
+shell"cat lib/lab.goal"
+
+/===============================================================================
+Completing a lab
+
+When you call the `next` function on the last step, it will tell you that you've
+completed the lab.
+
+The lab library does not clear any of the variables defined during the course of
+the lab, so if you want a fresh session, you should restart your REPL.
+
+Enjoy the labs included in this project and write your own to share with others!
+)
+user:env"USER"
+say"Bye $user!"
