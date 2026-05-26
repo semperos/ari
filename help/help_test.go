@@ -57,6 +57,8 @@ func TestTopicsIndex(t *testing.T) {
 		// Core language sections that Goal itself defines should also appear
 		// because we override the index to include extension rows.
 		"TOPICS",
+		// helps must appear in the index so users can discover it.
+		"helps",
 	)
 }
 
@@ -369,6 +371,21 @@ func TestGoalCoreHelpPassthrough(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// TestHelpsVerbEntry – the "helps" key must describe the verb and its purpose.
+// ---------------------------------------------------------------------------
+
+func TestHelpsVerbEntry(t *testing.T) {
+	h := helpFn(t)
+	text := h("helps")
+	assertNotEmpty(t, "helps", text)
+	assertContains(t, "helps", text,
+		"helps",     // verb name present
+		"string",    // describes the return type
+		"help",      // relates it to help
+	)
+}
+
 // TestUnknownTopicReturnsEmpty – a completely unknown key must return the
 // empty string (Goal's help convention for "not found").
 // ---------------------------------------------------------------------------

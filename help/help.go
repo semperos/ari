@@ -34,6 +34,10 @@ func extensionHelp() func(string) string { //nolint:funlen
 	m["sql"] = helpSQL
 	m["ratelimit"] = helpRateLimit
 
+	// helps
+	m["helps"] = `helps s    return help text for topic s as a string (same topics as help)
+  t: helps"http.get"    / capture help text for use in a program`
+
 	// -----------------------------------------------------------------------
 	// fyne individual verb entries
 	// -----------------------------------------------------------------------
@@ -236,6 +240,7 @@ Goal language:
 "rt"        runtime system
 "io"        IO verbs (like say, open, read)
 op          where op is a builtin's name (like "+" or "in")
+"helps"     helps s — return help text as a string instead of printing it
 
 Extensions:
 "fyne"      Fyne GUI extension (fyne.app, fyne.window, fyne.button, …)
