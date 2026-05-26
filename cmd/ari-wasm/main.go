@@ -117,6 +117,14 @@ func updateTextArea() {
 	in.Set("value", sb.String())
 }
 
+func selectedHelp(helpFn func(string) string) string {
+	inElt := getElt("in")
+	selStart := inElt.Get("selectionStart").Int()
+	selEnd := inElt.Get("selectionEnd").Int()
+	selected := inElt.Get("value").String()[selStart:selEnd]
+	return helpFn(selected)
+}
+
 func main() {
 	ariCtx = buildAriCtx()
 	helpFn := arihelp.HelpFunc()
@@ -132,11 +140,11 @@ func main() {
 		e := args[0]
 		key := e.Get("key").String()
 		switch {
-		case e.Get("ctrlKey").Bool() && key == "Enter":
+		case (e.Get("ctrlKey").Bool() || e.Get("metaKey").Bool()) && key == "Enter":
 			e.Call("preventDefault")
 			evalTextArea()
 		case key == "F1":
-			getElt("out").Set("value", helpFn(""))
+			getElt("out").Set("value", selectedHelp(helpFn))
 		}
 		return nil
 	}))
@@ -151,7 +159,7 @@ func main() {
 
 	// help button
 	getElt("help").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		getElt("out").Set("value", helpFn(""))
+		getElt("out").Set("value", selectedHelp(helpFn))
 		return nil
 	}))
 
