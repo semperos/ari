@@ -2,6 +2,6 @@
 / Run from the repository root with: ari run-tests.goal
 / Requires GOALLIB=lib (set by scripts/test) so test files can import
 / lib modules with plain `import "name"` calls.
-"" import "tt"
+""import"tt"
 'tt.chkall 0
 tt.report 0

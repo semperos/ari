@@ -1,0 +1,200 @@
+#!/usr/bin/env ruby
+# scripts/smoke-test-labs — Boot each lab and step through it with next"" until finished.
+#
+# Strategy: start each lab via the ari REPL with the lab library imported, then
+# repeatedly evaluate `next""` until the "Finished lab" closing message appears
+# twice in a row (which is what happens when next"" is called on a completed lab).
+#
+# Note: the correct three-arg import form is import[arilib;"";"lab"] —
+# arilib is the file system, "" is the (empty) global prefix so that start/next/etc.
+# are defined without a namespace, and "lab" is the module to load.
+#
+# Usage:
+#   scripts/smoke-test-labs            # build ari first, then test
+#   scripts/smoke-test-labs --no-build # skip build, use existing binary
+
+require "open3"
+require "optparse"
+
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+STEP_TIMEOUT = 120   # seconds to wait for a single next"" to complete
+MAX_STEPS    = 500   # safety cap — no real lab should need this many steps
+
+ROOT = File.expand_path("..", __dir__)
+Dir.chdir(ROOT)
+
+# ---------------------------------------------------------------------------
+# Argument parsing
+# ---------------------------------------------------------------------------
+build = true
+OptionParser.new do |opts|
+  opts.on("--no-build", "Skip building ari; use existing binary") { build = false }
+end.parse!
+
+ari = ENV.fetch("ARI", "./ari")
+
+# ---------------------------------------------------------------------------
+# Colour helpers
+# ---------------------------------------------------------------------------
+def green(s)  = "\e[0;32m#{s}\e[0m"
+def red(s)    = "\e[0;31m#{s}\e[0m"
+def yellow(s) = "\e[1;33m#{s}\e[0m"
+
+# ---------------------------------------------------------------------------
+# Build
+# ---------------------------------------------------------------------------
+if build
+  system("./scripts/build") or abort("Build failed.")
+  puts "Built: #{ari}\n\n"
+end
+
+unless File.executable?(ari)
+  abort "Error: '#{ari}' not found or not executable.\n" \
+        "Run without --no-build, or set ARI=/path/to/ari."
+end
+
+# ---------------------------------------------------------------------------
+# I/O helper: read from stdout (and drain stderr) until the REPL prompt "  "
+# appears at the end of the accumulated stdout buffer, or until timeout.
+# Returns the stdout text collected during this read.
+# ---------------------------------------------------------------------------
+def read_until_prompt(stdout, stderr, timeout)
+  stdout_buf = ""
+  open_ios   = [stdout, stderr]
+
+  deadline = Time.now + timeout
+  loop do
+    remaining = deadline - Time.now
+    break if remaining <= 0
+
+    ready = IO.select(open_ios, nil, nil, [remaining, 0.05].min)
+    next unless ready
+
+    ready[0].each do |io|
+      begin
+        chunk = io.read_nonblock(4096)
+        stdout_buf += chunk if io == stdout
+        # stderr is drained but not captured — errors show in the stdout
+        # buffer anyway because the Goal REPL routes them there.
+      rescue IO::WaitReadable
+        # not ready yet — try again next iteration
+      rescue EOFError
+        open_ios.delete(io)
+      end
+    end
+
+    # The REPL prints exactly two spaces ("  ") as its prompt, with no
+    # trailing newline, immediately before blocking for the next line of
+    # input.  Once we see that at the end of the buffer we know ari is
+    # waiting for our next command.
+    break if stdout_buf.end_with?("  ")
+    break if open_ios.empty?
+  end
+
+  stdout_buf
+end
+
+# ---------------------------------------------------------------------------
+# Smoke-test loop
+# ---------------------------------------------------------------------------
+labs = Dir["labs/*.goal"].sort
+
+abort "No labs found in labs/" if labs.empty?
+
+puts "Smoke-testing #{labs.size} lab(s) (step timeout: #{STEP_TIMEOUT}s each)..."
+puts
+
+passed = []
+failed = []
+
+labs.each do |lab|
+  name = File.basename(lab)
+  # import[arilib;"";"lab"] loads lib/lab.goal with an empty prefix so that
+  # start, next, etc. are available as plain globals.
+  expr = %(import[arilib;"";"lab"];start"#{lab}")
+
+  result       = :unknown
+  error_detail = ""
+
+  begin
+    Open3.popen3(ari, "-i", "-e", expr) do |stdin, stdout, stderr, wait_thr|
+      finish_count = 0
+      steps_taken  = 0
+      timed_out    = false
+
+      # Consume initial startup output (the lab title + first step).
+      read_until_prompt(stdout, stderr, STEP_TIMEOUT)
+
+      loop do
+        if steps_taken >= MAX_STEPS
+          error_detail = "Reached MAX_STEPS (#{MAX_STEPS}) without seeing " \
+                         "'Finished lab' twice — possible infinite loop."
+          result = :fail
+          break
+        end
+
+        unless wait_thr.alive?
+          error_detail = "ari process exited prematurely after #{steps_taken} step(s)."
+          result = :fail
+          break
+        end
+
+        stdin.puts('next""')
+        stdin.flush
+
+        output = read_until_prompt(stdout, stderr, STEP_TIMEOUT)
+        steps_taken += 1
+
+        if output.empty? && !wait_thr.alive?
+          error_detail = "ari process exited and produced no output after step #{steps_taken}."
+          result = :fail
+          break
+        end
+
+        if output.include?("Finished lab")
+          finish_count += 1
+          if finish_count >= 2
+            result = :pass
+            break
+          end
+        end
+      end
+
+      Process.kill("TERM", wait_thr.pid) rescue nil
+      Process.wait(wait_thr.pid)         rescue nil
+    end
+  rescue => e
+    result       = :fail
+    error_detail = e.message
+  end
+
+  if result == :pass
+    puts "  #{green("PASS")}  #{name}"
+    passed << name
+  else
+    puts "  #{red("FAIL")}  #{name}"
+    unless error_detail.empty?
+      puts "    #{yellow("--- error ---")}"
+      error_detail.each_line { |l| print "    #{l}" }
+      puts
+      puts "    #{yellow("-------------")}"
+    end
+    failed << name
+  end
+end
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+puts
+puts "Results: #{passed.size} passed, #{failed.size} failed"
+
+if failed.any?
+  puts red("Failed labs:")
+  failed.each { |n| puts "  - #{n}" }
+  exit 1
+end
+
+puts green("All labs completed successfully.")
