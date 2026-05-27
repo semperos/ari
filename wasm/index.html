@@ -22,6 +22,59 @@
 	<textarea id="out" class="fl" readonly="" placeholder="output (ctrl-enter to eval)" spellcheck="false"></textarea>
 </div>
 <script>
+// ariOnReady is called by the WASM binary once window.ari is registered.
+// All DOM wiring lives here so the Go code stays independent of element IDs.
+function ariOnReady() {
+	var inEl  = document.getElementById("in");
+	var outEl = document.getElementById("out");
+
+	document.getElementById("ariVersion").textContent = ari.version();
+	document.getElementById("loading").textContent = "";
+
+	// Restore state from URL hash on load.
+	var initialCode = ari.decodeState(window.location.hash);
+	if (initialCode) {
+		inEl.value = initialCode;
+	}
+
+	function runEval() {
+		outEl.value = ari.eval(inEl.value);
+		window.location.hash = ari.encodeState(inEl.value);
+	}
+
+	function showHelp() {
+		outEl.value = ari.help(inEl.value.slice(inEl.selectionStart, inEl.selectionEnd));
+	}
+
+	document.getElementById("eval").addEventListener("click", runEval);
+
+	inEl.addEventListener("keydown", function(e) {
+		if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+			e.preventDefault();
+			runEval();
+		} else if (e.key === "F1") {
+			showHelp();
+		}
+	});
+
+	document.getElementById("link").addEventListener("click", function() {
+		window.location.hash = ari.encodeState(inEl.value);
+		navigator.clipboard.writeText(window.location.href);
+	});
+
+	document.getElementById("help").addEventListener("click", showHelp);
+
+	document.getElementById("reset").addEventListener("click", function() {
+		ari.reset();
+		outEl.value = "";
+	});
+
+	window.addEventListener("hashchange", function() {
+		inEl.value = ari.decodeState(window.location.hash);
+	});
+}
+</script>
+<script>
 if (!WebAssembly.instantiateStreaming) { // polyfill
 	WebAssembly.instantiateStreaming = async (resp, importObject) => {
 		const source = await (await resp).arrayBuffer();
@@ -31,7 +84,6 @@ if (!WebAssembly.instantiateStreaming) { // polyfill
 const go = new Go();
 let mod, inst;
 WebAssembly.instantiateStreaming(fetch("ari.wasm"), go.importObject).then((result) => {
-	document.getElementById("loading").textContent = "";
 	mod = result.module;
 	inst = result.instance;
 	go.run(inst);

@@ -2,7 +2,21 @@
 
 // Browser REPL for ari – Goal + ari extensions (WASM build).
 //
-// Compile with:
+// This binary exposes a clean JavaScript API on window.ari so that any HTML
+// page can wire up its own DOM elements without depending on specific element
+// IDs. When the interpreter is ready, it calls window.ariOnReady() if that
+// function is defined, allowing the page to perform its own initialisation.
+//
+// # JavaScript API
+//
+//	ari.eval(code)           → string  evaluate Goal source; returns result+log
+//	ari.reset()                        reinitialise the interpreter
+//	ari.help(token)          → string  return help text for the given token
+//	ari.version()            → string  return ari version string
+//	ari.encodeState(code)    → string  compress+base64 code into a "#…" hash
+//	ari.decodeState(hash)    → string  reverse of encodeState
+//
+// # Compile
 //
 //	GOOS=js GOARCH=wasm go build -o wasm/ari.wasm ./cmd/ari-wasm
 //
@@ -35,7 +49,6 @@ import (
 )
 
 // ariCtx is the persistent Goal context for the browser REPL session.
-// Use resetAriCtx() to reinitialise state between sessions.
 var ariCtx *goal.Context
 
 func buildAriCtx() *goal.Context {
@@ -46,137 +59,121 @@ func buildAriCtx() *goal.Context {
 	return ctx
 }
 
-func getElt(id string) js.Value {
-	return js.Global().Get("document").Call("getElementById", id)
-}
-
-func evalTextArea() {
+// jsEval evaluates Goal source code and returns the result as a string.
+// The string includes any log output prepended to the result or error.
+func jsEval(code string) string {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Caught panic: %v\nStack Trace:\n", r)
+			log.Printf("Caught panic: %v", r)
 			debug.PrintStack()
-			getElt("out").Set("value", fmt.Sprintf("Caught panic: %v\n", r))
 		}
 	}()
-	in := getElt("in").Get("value").String()
-	out := getElt("out")
 	var sb strings.Builder
 	ariCtx.Log = &sb
-	x, err := ariCtx.Eval(in)
+	x, err := ariCtx.Eval(code)
 	if err != nil {
 		if e, ok := err.(*goal.Panic); ok {
-			out.Set("value", sb.String()+e.ErrorStack())
-		} else {
-			out.Set("value", sb.String()+err.Error())
+			return sb.String() + e.ErrorStack()
 		}
-	} else {
-		out.Set("value", sb.String()+x.Sprint(ariCtx, false))
+		return sb.String() + err.Error()
 	}
-	updateHash()
+	return sb.String() + x.Sprint(ariCtx, false)
 }
 
-func updateHash() {
+// encodeState compresses code with zlib, base64-encodes it, and returns a
+// string of the form "#<encoded>", suitable for use as window.location.hash.
+func encodeState(code string) string {
 	var sb strings.Builder
-	in := getElt("in").Get("value").String()
+	sb.WriteByte('#')
 	b64w := base64.NewEncoder(base64.RawURLEncoding, &sb)
 	zw := zlib.NewWriter(b64w)
-	sb.WriteByte('#')
-	fmt.Fprint(zw, in)
+	fmt.Fprint(zw, code)
 	zw.Flush()
 	zw.Close()
 	b64w.Close()
-	js.Global().Get("window").Get("location").Set("hash", sb.String())
+	return sb.String()
 }
 
-func updateTextArea() {
-	hash := js.Global().Get("window").Get("location").Get("hash").String()
-	in := getElt("in")
-	if hash == "" {
-		in.Set("value", "")
-		return
+// decodeState reverses encodeState. Accepts a hash string with or without the
+// leading "#". Returns the original Goal source, or "" on error.
+func decodeState(hash string) string {
+	if hash == "" || hash == "#" {
+		return ""
 	}
-	r := base64.NewDecoder(base64.RawURLEncoding, strings.NewReader(hash[1:]))
+	if hash[0] == '#' {
+		hash = hash[1:]
+	}
+	r := base64.NewDecoder(base64.RawURLEncoding, strings.NewReader(hash))
 	zr, err := zlib.NewReader(r)
 	if err != nil {
-		log.Printf("zlib reader: %v", err)
-		log.Printf("hash: %q", hash)
-		return
+		log.Printf("decodeState: zlib reader: %v", err)
+		return ""
 	}
 	defer func() {
 		if err := zr.Close(); err != nil {
-			log.Printf("zlib reader: close: %v", err)
+			log.Printf("decodeState: zlib close: %v", err)
 		}
 	}()
 	var sb strings.Builder
 	if _, err = io.Copy(&sb, zr); err != nil {
-		log.Printf("decoding hash: %v", err)
-		log.Printf("hash: %q", hash)
-		return
+		log.Printf("decodeState: copy: %v", err)
+		return ""
 	}
-	log.Print(sb.String())
-	in.Set("value", sb.String())
-}
-
-func selectedHelp(helpFn func(string) string) string {
-	inElt := getElt("in")
-	selStart := inElt.Get("selectionStart").Int()
-	selEnd := inElt.Get("selectionEnd").Int()
-	selected := inElt.Get("value").String()[selStart:selEnd]
-	return helpFn(selected)
+	return sb.String()
 }
 
 func main() {
 	ariCtx = buildAriCtx()
 	helpFn := arihelp.HelpFunc()
 
-	updateTextArea()
+	// Expose window.ari as a plain object with callable methods.
+	ariAPI := js.Global().Get("Object").New()
 
-	// eval button and ctrl-enter
-	getElt("eval").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		evalTextArea()
-		return nil
-	}))
-	getElt("in").Call("addEventListener", "keydown", js.FuncOf(func(this js.Value, args []js.Value) any {
-		e := args[0]
-		key := e.Get("key").String()
-		switch {
-		case (e.Get("ctrlKey").Bool() || e.Get("metaKey").Bool()) && key == "Enter":
-			e.Call("preventDefault")
-			evalTextArea()
-		case key == "F1":
-			getElt("out").Set("value", selectedHelp(helpFn))
+	ariAPI.Set("eval", js.FuncOf(func(_ js.Value, args []js.Value) any {
+		if len(args) < 1 {
+			return ""
 		}
-		return nil
+		return jsEval(args[0].String())
 	}))
 
-	// copy link to clipboard
-	getElt("link").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		updateHash()
-		href := js.Global().Get("window").Get("location").Get("href")
-		js.Global().Get("navigator").Get("clipboard").Call("writeText", href)
-		return nil
-	}))
-
-	// help button
-	getElt("help").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
-		getElt("out").Set("value", selectedHelp(helpFn))
-		return nil
-	}))
-
-	// reset button – clear context state between experiments
-	getElt("reset").Call("addEventListener", "click", js.FuncOf(func(this js.Value, args []js.Value) any {
+	ariAPI.Set("reset", js.FuncOf(func(_ js.Value, _ []js.Value) any {
 		ariCtx = buildAriCtx()
-		getElt("out").Set("value", "")
 		return nil
 	}))
 
-	// keep hash in sync with textarea
-	js.Global().Get("window").Call("addEventListener", "hashchange", js.FuncOf(func(this js.Value, args []js.Value) any {
-		updateTextArea()
-		return nil
+	ariAPI.Set("help", js.FuncOf(func(_ js.Value, args []js.Value) any {
+		token := ""
+		if len(args) > 0 {
+			token = args[0].String()
+		}
+		return helpFn(token)
 	}))
 
-	getElt("ariVersion").Set("textContent", fmt.Sprintf("%s (wasm)", ariCtx.Version()))
+	ariAPI.Set("version", js.FuncOf(func(_ js.Value, _ []js.Value) any {
+		return fmt.Sprintf("%s (wasm)", ariCtx.Version())
+	}))
 
-	<-make(chan bool)
+	ariAPI.Set("encodeState", js.FuncOf(func(_ js.Value, args []js.Value) any {
+		if len(args) < 1 {
+			return ""
+		}
+		return encodeState(args[0].String())
+	}))
+
+	ariAPI.Set("decodeState", js.FuncOf(func(_ js.Value, args []js.Value) any {
+		if len(args) < 1 {
+			return ""
+		}
+		return decodeState(args[0].String())
+	}))
+
+	js.Global().Set("ari", ariAPI)
+
+	// Notify the page that the interpreter is ready. The page should define
+	// window.ariOnReady before loading the WASM binary.
+	if onReady := js.Global().Get("ariOnReady"); onReady.Type() == js.TypeFunction {
+		onReady.Invoke()
+	}
+
+	<-make(chan bool) // keep goroutine alive
 }
