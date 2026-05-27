@@ -176,7 +176,7 @@ func main() {
 		return nil
 	}))
 
-	getElt("ariVersion").Set("textContent", fmt.Sprintf("ari %s (wasm)", arilib.AriVersion))
+	getElt("ariVersion").Set("textContent", fmt.Sprintf("%s (wasm)", ariCtx.Version()))
 
 	<-make(chan bool)
 }
