@@ -1,5 +1,5 @@
 / statistics
-main.goallib import "math"
+main.libs import "math"
 / cile[f;N] returns the f-th quantile of a collection (e.g. cile[0.25;x] = Q1).
 / The collection is sorted ascending before computing; f is the cumulative
 / proportion to keep (0.5 = median, 0.25 = Q1, 0.75 = Q3).

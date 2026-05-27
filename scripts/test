@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 go test -v -failfast -race -covermode=atomic -coverprofile=coverage.txt -coverpkg=./... ./sql/... ./http/...
 
 # Goal-level tests
-# GOALLIB makes lib/ available to plain `import "name"` calls in Goal files,
+# GOALLIB makes libs/ available to plain `import "name"` calls in Goal files,
 # so test files can declare their own deps without being pre-loaded here.
-export GOALLIB="$(pwd)/lib"
+export GOALLIB="$(pwd)/libs"
 go run ./cmd/ari run-tests.goal

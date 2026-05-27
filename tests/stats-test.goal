@@ -1,4 +1,4 @@
-/ Tests for lib/stats.goal — load via import "stats" (requires GOALLIB=lib).
+/ Tests for libs/stats.goal — load via import "stats" (requires GOALLIB=libs).
 / Note: in Goal, `f ,x` is parsed as the dyadic join `f , x`, not function
 / application. Use bracket notation `f[,x]` when passing an enlisted atom.
 

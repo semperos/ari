@@ -24,11 +24,8 @@ import (
 	goalratelimit "github.com/semperos/ari/ratelimit"
 )
 
-//go:embed lib
-var libFS embed.FS
-
-//go:embed goallib
-var goallibFS embed.FS
+//go:embed libs
+var libsFS embed.FS
 
 // Options configures which extensions are loaded into the Goal context
 // returned by [New].
@@ -70,8 +67,7 @@ func FullOptions() Options {
 //   - Zip verbs (zip.open, zip.write)
 //   - Rate-limit verbs (ratelimit.new, ratelimit.take)
 //   - HTTP client verbs (http.client, http.get, http.post, …)
-//   - arilib global (embedded lib/)
-//   - goallib global (embedded goallib/)
+//   - libs global (embedded libs/)
 //
 // Platform-specific extensions (OS I/O, Fyne, SQL) are added when the
 // corresponding Options field is true and the build supports them.
@@ -97,19 +93,17 @@ func New(opts Options) (*goal.Context, error) {
 	// Registered by build-tagged files: setup_native.go / setup_wasm.go.
 	importPlatformExtensions(ctx, opts)
 
-	// arilib: embedded lib/ — `arilib import "util"` loads lib/util.goal
-	sub, err := fs.Sub(libFS, "lib")
+	// libs: combined embedded library — `libs import "util"` loads libs/util.goal
+	sub, err := fs.Sub(libsFS, "libs")
 	if err != nil {
 		return nil, err
 	}
-	ctx.AssignGlobal("arilib", goalfs.NewFS(sub, "arilib"))
+	ctx.AssignGlobal("libs", goalfs.NewFS(sub, "libs"))
 
-	// goallib: embedded Goal standard lib — `goallib import "fmt"` loads goallib/fmt.goal
-	goalsub, err := fs.Sub(goallibFS, "goallib")
-	if err != nil {
+	// labs: embedded labs/ — only present in with_labs builds.
+	if err := importLabs(ctx); err != nil {
 		return nil, err
 	}
-	ctx.AssignGlobal("goallib", goalfs.NewFS(goalsub, "goallib"))
 
 	return ctx, nil
 }

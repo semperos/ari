@@ -5,8 +5,8 @@
 # repeatedly evaluate `next""` until the "Finished lab" closing message appears
 # twice in a row (which is what happens when next"" is called on a completed lab).
 #
-# Note: the correct three-arg import form is import[arilib;"";"lab"] —
-# arilib is the file system, "" is the (empty) global prefix so that start/next/etc.
+# Note: the correct three-arg import form is import[libs;"";"lab"] —
+# libs is the file system, "" is the (empty) global prefix so that start/next/etc.
 # are defined without a namespace, and "lab" is the module to load.
 #
 # Usage:
@@ -111,9 +111,9 @@ failed = []
 
 labs.each do |lab|
   name = File.basename(lab)
-  # import[arilib;"";"lab"] loads lib/lab.goal with an empty prefix so that
+  # import[libs;"";"lab"] loads libs/lab.goal with an empty prefix so that
   # start, next, etc. are available as plain globals.
-  expr = %(import[arilib;"";"lab"];start"#{lab}")
+  expr = %(import[libs;"";"lab"];start"#{lab}")
 
   result       = :unknown
   error_detail = ""
