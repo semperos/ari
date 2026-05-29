@@ -70,12 +70,12 @@ Is there a difference in performance between union1 and union2?
 
 Give these expressions several moments to run through 10,000 iterations of each:
 )
-deck:!100000;#deck
+deck:!1000;#deck
 workfn:{s1:0i?deck;s2:0i?deck;start:time"unixmicro";x[s1;s2];end:time"unixmicro";end-start}
 union1fn:{workfn union1}
 union2fn:{workfn union2}
-union1timings:1_10000 union1fn\0n;#union1timings
-union2timings:1_10000 union2fn\0n;#union2timings
+union1timings:1_1000 union1fn\0n;#union1timings
+union2timings:1_1000 union2fn\0n;#union2timings
 math.avg union1timings
 math.avg union2timings
 
@@ -88,8 +88,8 @@ Do the sizes of x and y matter?
 )
 bigxfn:{s1:0i?deck;s2:0i?!10;start:time"unixmicro";union2[s1;s2];end:time"unixmicro";end-start}
 bigyfn:{s1:0i?!10;s2:0i?deck;start:time"unixmicro";union2[s1;s2];end:time"unixmicro";end-start}
-bigxtimings:1_10000 bigxfn\0n;#bigxtimings
-bigytimings:1_10000 bigyfn\0n;#bigytimings
+bigxtimings:1_1000 bigxfn\0n;#bigxtimings
+bigytimings:1_1000 bigyfn\0n;#bigytimings
 math.avg bigxtimings
 math.avg bigytimings
 
@@ -104,8 +104,8 @@ the general case. We'll call this one `union`:
 union:{?[(#y)>#x;y,x[&~x in y];x,y[&~y in x]]}
 bigxfn:{s1:0i?deck;s2:0i?!10;start:time"unixmicro";union[s1;s2];end:time"unixmicro";end-start}
 bigyfn:{s1:0i?!10;s2:0i?deck;start:time"unixmicro";union[s1;s2];end:time"unixmicro";end-start}
-bigxtimings:1_10000 bigxfn\0n;#bigxtimings
-bigytimings:1_10000 bigyfn\0n;#bigytimings
+bigxtimings:1_1000 bigxfn\0n;#bigxtimings
+bigytimings:1_1000 bigyfn\0n;#bigytimings
 math.avg bigxtimings
 math.avg bigytimings
 
