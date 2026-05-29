@@ -42,10 +42,10 @@ The ari project ships with a lab library:
 
 https://github.com/semperos/ari/tree/main/lib/lab.goal
 
-That library defines a `start` function that accepts a path to a lab file on
-the file system and runs it:
+That library defines a `start` function that accepts the source of a lab as a
+string and runs it. Use `'read` to read a lab file from the file system:
 
-start"labs/lab-sets.goal"
+start 'read "labs/lab-sets.goal"
 
 This function loads the file, executes the preamble code, parses the steps, and
 then immediately executes the first step.

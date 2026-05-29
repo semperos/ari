@@ -1,5 +1,5 @@
-width:80;file::0n;srcrule:"/"+79*"=";rule:"/"+(width-1)*"="
-parse:{[file]file;raw: 'read file;srcrule\raw}
+width:80;srcrule:"/"+79*"=";rule:"/"+(width-1)*"="
+parse:{[labsrc]srcrule\labsrc}
 trunc:{len:width-2;x:x.(0 len);sub[rx/...$/;"..."]@x}
 box:{x:?[(#"c"$x)>(width-2);trunc x;x];ct:#"c"$x
  tb:?[2!width;(((width-1)%2)*">")+"*"+((width-1)%2)*"<";((width%2)*">")+(width%2)*"<"]
@@ -12,6 +12,6 @@ render:{[step]
  {print "  $x\n";res: 'eval x; print "$res\n"}'lines
  say"";say rq^(run next"" to proceed)^}
 idx::1;steps::();next:{?[idx=-1+#steps;[ 'eval *steps;say "$rule\nFinished lab '${main.labtitle}' (by ${main.labauthor})"];[idx::idx+1;render steps[idx]]]}
-play:{[parts]pre:*parts;steps::parts; 'eval pre;title:"${main.labtitle} (by ${main.labauthor})";tb:box title;say "\n$tb\n";render steps[idx]}
-start:{[file]file::file;parts:parse file;play parts}
+play:{[parts]pre:*parts;steps::parts; 'eval pre;title:"${main.labtitle} (by ${main.labauthor})";tb:box title;say "\n$tb\n";render steps[1]}
+start:{[labsrc]parts:parse labsrc;play parts}
 1

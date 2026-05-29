@@ -113,7 +113,7 @@ labs.each do |lab|
   name = File.basename(lab)
   # import[libs;"";"lab"] loads libs/lab.goal with an empty prefix so that
   # start, next, etc. are available as plain globals.
-  expr = %(import[libs;"";"lab"];start"#{lab}")
+  expr = %(import[libs;"";"lab"];start 'read "#{lab}")
 
   result       = :unknown
   error_detail = ""
@@ -125,6 +125,8 @@ labs.each do |lab|
       timed_out    = false
 
       # Consume initial startup output (the lab title + first step).
+      print "  ....  #{name}  (step 0)"
+      $stdout.flush
       read_until_prompt(stdout, stderr, STEP_TIMEOUT)
 
       loop do
@@ -144,6 +146,8 @@ labs.each do |lab|
         stdin.puts('next""')
         stdin.flush
 
+        print "\r  ....  #{name}  (step #{steps_taken + 1})"
+        $stdout.flush
         output = read_until_prompt(stdout, stderr, STEP_TIMEOUT)
         steps_taken += 1
 
@@ -170,6 +174,8 @@ labs.each do |lab|
     error_detail = e.message
   end
 
+  # Replace the progress line with the final PASS/FAIL for this lab.
+  print "\r\e[K"
   if result == :pass
     puts "  #{green("PASS")}  #{name}"
     passed << name
@@ -191,10 +197,4 @@ end
 puts
 puts "Results: #{passed.size} passed, #{failed.size} failed"
 
-if failed.any?
-  puts red("Failed labs:")
-  failed.each { |n| puts "  - #{n}" }
-  exit 1
-end
-
-puts green("All labs completed successfully.")
+exit 1 if failed.any?
