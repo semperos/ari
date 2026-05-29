@@ -83,7 +83,7 @@ if (!WebAssembly.instantiateStreaming) { // polyfill
 }
 const go = new Go();
 let mod, inst;
-WebAssembly.instantiateStreaming(fetch("ari.wasm"), go.importObject).then((result) => {
+WebAssembly.instantiateStreaming(fetch("ari.wasm", {cache: "no-cache"}), go.importObject).then((result) => {
 	mod = result.module;
 	inst = result.instance;
 	go.run(inst);
