@@ -380,9 +380,9 @@ func TestHelpsVerbEntry(t *testing.T) {
 	text := h("helps")
 	assertNotEmpty(t, "helps", text)
 	assertContains(t, "helps", text,
-		"helps",     // verb name present
-		"string",    // describes the return type
-		"help",      // relates it to help
+		"helps",  // verb name present
+		"string", // describes the return type
+		"help",   // relates it to help
 	)
 }
 
