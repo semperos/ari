@@ -1,33 +1,11 @@
 # vnext
 
-- **Removed Fyne GUI dependency.** The `fyne` package and all Fyne GUI bindings
-  (`fyne.app`, `fyne.window`, `fyne.label`, `fyne.button`, etc.) have been
-  removed. This shrinks the `ari` executable by ~25.5 MB (82 MB → 56 MB,
-  a 31% reduction). The `Fyne` field has been removed from `ari.Options` and
-  `ari.FullOptions()` no longer enables it.
-- **Removed Fyne examples.** The seven Fyne GUI example scripts
-  (`01-hello-world.goal` through `07-confirm-dialog.goal`) have been deleted.
-  The SQL demo (`08-sql-demo.goal`) has been stripped of its Fyne display layer,
-  converted to plain `say` output, and renumbered as `01-sql-demo.goal`.
-- **Updated smoke-test script.** `scripts/smoke-test-examples` has been
-  rewritten. The previous strategy relied on Fyne's blocking `fyne.run` call
-  (launch, wait N seconds, kill); examples are now run to completion and
-  checked for a clean exit status.
-
-- **DuckDB support.** The `sql` package now supports DuckDB alongside SQLite.
-  Open a DuckDB connection with `sql.open "duckdb://"` (in-memory) or
-  `sql.open "duckdb:///path/to/file.db"` (file-based). All existing verbs
-  (`sql.q`, `sql.exec`, `sql.tx`, `sql.close`) work identically against both
-  drivers. DuckDB requires CGo; SQLite remains CGo-free.
-- **Bug fix:** `0n` (Goal's null marker) in an `AF` parameter array is now
-  explicitly converted to SQL `NULL` before being handed to the driver.
-  SQLite silently coerced float NaN to NULL; DuckDB's strict type checking
-  exposed the gap. The fix is correct for both drivers.
-
-# v0.2.2 2026-05-04
+# v0.3.0 2026-06-04
 
 - Upgrade to [Goal 1.6.0](https://codeberg.org/anaseto/goal/src/commit/108ca158bcc18ef9265e786951ffce7021884089/CHANGES.md#v1-6-0-2026-05-04).
 - Leveraging Goal's new `HelpFunc` for fuller help documentation on its own extensions.
+- GUI features (Fyne) removed. Since introducing them, I didn't use them or find them effective for my needs. The REPL has remained sufficient.
+- DuckDB support re-added. I use the CSV and JSON automatic recognition of DuckDB quite a bit for initial data import.
 
 # v0.2.1 2026-05-02
 

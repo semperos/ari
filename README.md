@@ -4,12 +4,12 @@ Ari stands for **A**rray **R**elational **I**nteractive programming environment.
 
 Ari is a set of extensions to the [Goal] programming language that includes SQL support (SQLite and DuckDB) and an HTTP client with rate limiting support.
 
-This is my personal daily driver for scripting and data analysis, even in the age of coding agents.
+This is my personal daily driver for scripting and data analysis, even in the age of coding agents. Parts of this code base have been developed using coding agents and LLMs.
 
 ## Installation
 
 ```shell
-go install github.com/semperos/ari@latest
+go install github.com/semperos/cmd/ari@latest
 ```
 
 ## Practical Usage
