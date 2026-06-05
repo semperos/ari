@@ -13,6 +13,8 @@
 //
 //	db: sql.open "sqlite://data.db"
 //	db: sql.open "sqlite://:memory:"
+//	db: sql.open "duckdb://"           – DuckDB in-memory
+//	db: sql.open "duckdb:///data.db"   – DuckDB file-based
 //
 // # Verb summary
 //
@@ -164,6 +166,7 @@ func toQuerier(v goal.V) (querier, string, bool) {
 // New backends register here; no verb logic changes.
 var driverSchemes = map[string]string{ //nolint:gochecknoglobals // package-level registry initialised once at startup
 	"sqlite": "sqlite",
+	"duckdb": "duckdb",
 }
 
 // parseURI splits "scheme://dsn" into (scheme, dsn).
@@ -496,7 +499,11 @@ func goalToSQLArgs(v goal.V) ([]any, error) {
 	case *goal.AF:
 		out := make([]any, len(xv.Slice))
 		for i, x := range xv.Slice {
-			out[i] = x
+			if math.IsNaN(x) {
+				out[i] = nil // 0n → SQL NULL
+			} else {
+				out[i] = x
+			}
 		}
 		return out, nil
 	case *goal.AS:

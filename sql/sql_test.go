@@ -164,7 +164,7 @@ func TestOpenClose(t *testing.T) {
 
 func TestOpenBadScheme(t *testing.T) {
 	ctx := newCtx(t)
-	evalPanic(t, ctx, `sql.open "duckdb://:memory:"`)
+	evalPanic(t, ctx, `sql.open "postgres://localhost/mydb"`)
 }
 
 func TestOpenBadURI(t *testing.T) {

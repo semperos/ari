@@ -2,7 +2,7 @@
 
 Ari stands for **A**rray **R**elational **I**nteractive programming environment.
 
-Ari is a set of extensions to the [Goal] programming language that includes SQL support, an HTTP client with rate limiting support, and GUI bindings (Fyne).
+Ari is a set of extensions to the [Goal] programming language that includes SQL support (SQLite and DuckDB), an HTTP client with rate limiting support, and GUI bindings (Fyne).
 
 This is my personal daily driver for scripting and data analysis, even in the age of coding agents.
 
@@ -27,6 +27,31 @@ To publish a new version of Ari:
 ```shell
 ./scripts/release vx.y.z
 ```
+
+## SQL
+
+The `sql` package exposes a uniform set of verbs for any supported database. Open a connection with a URI whose scheme selects the driver:
+
+```
+db: sql.open "sqlite://:memory:"   / SQLite in-memory (pure Go, no CGo)
+db: sql.open "sqlite://data.db"    / SQLite file
+db: sql.open "duckdb://"           / DuckDB in-memory
+db: sql.open "duckdb:///data.db"   / DuckDB file
+```
+
+| Verb | Form | Description |
+|---|---|---|
+| `sql.open` | `sql.open uri` | Open a connection; returns `sql.conn` |
+| `sql.close` | `sql.close db` | Close a connection; returns `1i` |
+| `sql.q` | `db sql.q "SELECT ..."` | Query; returns columnar dict |
+| `sql.q` | `sql.q[db; "SELECT ... WHERE x=?"; args]` | Parameterised query |
+| `sql.exec` | `db sql.exec "INSERT ..."` | Execute statement; returns exec dict |
+| `sql.exec` | `sql.exec[db; "INSERT ... VALUES(?)"; args]` | Parameterised exec |
+| `sql.tx` | `db sql.tx {[tx] ...}` | Lambda-scoped transaction |
+
+Query results are columnar dicts mapping column name strings to typed arrays (`AI`, `AF`, `AS`, or `AV`). SQL `NULL` maps to Goal's `0n` (float NaN).
+
+> **Note:** DuckDB requires CGo. SQLite uses a pure-Go implementation ([modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite)) and has no CGo dependency.
 
 ## Background
 
