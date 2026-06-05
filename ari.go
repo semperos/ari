@@ -1,5 +1,5 @@
-// Package ari provides a Goal interpreter with extensions for SQL, HTTP,
-// and GUI (Fyne), consumable as a library or via the cmd/ari CLI.
+// Package ari provides a Goal interpreter with extensions for SQL and HTTP,
+// consumable as a library or via the cmd/ari CLI.
 //
 // Create a fully-configured Goal context with [New]:
 //
@@ -33,9 +33,6 @@ type Options struct {
 	// OS enables standard OS/IO verbs (print, say, read, open, run, shell, …).
 	// Not available in WASM builds; this field is ignored there.
 	OS bool
-	// Fyne enables the Fyne GUI verbs (fyne.app, fyne.window, fyne.label, …).
-	// Requires CGo; not available in WASM builds.
-	Fyne bool
 	// SQL enables the SQL database verbs (sql.open, sql.q, sql.exec, …).
 	// Requires CGo; not available in WASM builds.
 	SQL bool
@@ -49,13 +46,12 @@ func DefaultOptions() Options {
 }
 
 // FullOptions returns options that enable all available extensions, including
-// OS I/O, Fyne GUI, and SQL. Fyne and SQL require CGo and are silently
-// omitted in WASM builds regardless of this setting.
+// OS I/O and SQL. SQL requires CGo and is silently omitted in WASM builds
+// regardless of this setting.
 func FullOptions() Options {
 	return Options{
-		OS:   true,
-		Fyne: true,
-		SQL:  true,
+		OS:  true,
+		SQL: true,
 	}
 }
 
@@ -69,8 +65,8 @@ func FullOptions() Options {
 //   - HTTP client verbs (http.client, http.get, http.post, …)
 //   - libs global (embedded libs/)
 //
-// Platform-specific extensions (OS I/O, Fyne, SQL) are added when the
-// corresponding Options field is true and the build supports them.
+// Platform-specific extensions (OS I/O, SQL) are added when the corresponding
+// Options field is true and the build supports them.
 func New(opts Options) (*goal.Context, error) {
 	ctx := goal.NewContext()
 
@@ -89,7 +85,7 @@ func New(opts Options) (*goal.Context, error) {
 	// HTTP client verbs (http.client, http.get, http.post, …)
 	goalhttp.Import(ctx, "")
 
-	// Platform-specific extensions (OS I/O, Fyne GUI, SQL).
+	// Platform-specific extensions (OS I/O, SQL).
 	// Registered by build-tagged files: setup_native.go / setup_wasm.go.
 	importPlatformExtensions(ctx, opts)
 

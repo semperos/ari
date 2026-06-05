@@ -28,8 +28,8 @@
 //
 //	cd wasm && python3 -m http.server 8080
 //
-// Note: Fyne (GUI) and SQL (SQLite/CGo) are excluded — they don't apply in a
-// browser context. The math, base64, zip, http, and ratelimit extensions are
+// Note: SQL (SQLite/CGo) is excluded — it doesn't apply in a browser context.
+// The math, base64, zip, http, and ratelimit extensions are
 // included via ari.New(ari.DefaultOptions()).
 package main
 

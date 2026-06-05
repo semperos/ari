@@ -9,7 +9,7 @@ import (
 
 // importPlatformExtensions registers Goal's IO/FS verbs in WASM builds.
 //
-// Fyne GUI and SQL require CGo and are always excluded. The OS option is
+// SQL requires CGo and is always excluded. The OS option is
 // intentionally ignored here: the "import" dyad (and companions like "read",
 // "print", "say", "glob", "subfs") work against embedded fs.FS values
 // (e.g. libs) without any OS access. Registering them via

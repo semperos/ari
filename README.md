@@ -2,7 +2,7 @@
 
 Ari stands for **A**rray **R**elational **I**nteractive programming environment.
 
-Ari is a set of extensions to the [Goal] programming language that includes SQL support (SQLite and DuckDB), an HTTP client with rate limiting support, and GUI bindings (Fyne).
+Ari is a set of extensions to the [Goal] programming language that includes SQL support (SQLite and DuckDB) and an HTTP client with rate limiting support.
 
 This is my personal daily driver for scripting and data analysis, even in the age of coding agents.
 
