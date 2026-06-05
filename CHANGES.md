@@ -1,3 +1,15 @@
+# vnext
+
+- **DuckDB support.** The `sql` package now supports DuckDB alongside SQLite.
+  Open a DuckDB connection with `sql.open "duckdb://"` (in-memory) or
+  `sql.open "duckdb:///path/to/file.db"` (file-based). All existing verbs
+  (`sql.q`, `sql.exec`, `sql.tx`, `sql.close`) work identically against both
+  drivers. DuckDB requires CGo; SQLite remains CGo-free.
+- **Bug fix:** `0n` (Goal's null marker) in an `AF` parameter array is now
+  explicitly converted to SQL `NULL` before being handed to the driver.
+  SQLite silently coerced float NaN to NULL; DuckDB's strict type checking
+  exposed the gap. The fix is correct for both drivers.
+
 # v0.2.2 2026-05-04
 
 - Upgrade to [Goal 1.6.0](https://codeberg.org/anaseto/goal/src/commit/108ca158bcc18ef9265e786951ffce7021884089/CHANGES.md#v1-6-0-2026-05-04).
