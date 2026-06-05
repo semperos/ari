@@ -1,5 +1,19 @@
 # vnext
 
+- **Removed Fyne GUI dependency.** The `fyne` package and all Fyne GUI bindings
+  (`fyne.app`, `fyne.window`, `fyne.label`, `fyne.button`, etc.) have been
+  removed. This shrinks the `ari` executable by ~25.5 MB (82 MB → 56 MB,
+  a 31% reduction). The `Fyne` field has been removed from `ari.Options` and
+  `ari.FullOptions()` no longer enables it.
+- **Removed Fyne examples.** The seven Fyne GUI example scripts
+  (`01-hello-world.goal` through `07-confirm-dialog.goal`) have been deleted.
+  The SQL demo (`08-sql-demo.goal`) has been stripped of its Fyne display layer,
+  converted to plain `say` output, and renumbered as `01-sql-demo.goal`.
+- **Updated smoke-test script.** `scripts/smoke-test-examples` has been
+  rewritten. The previous strategy relied on Fyne's blocking `fyne.run` call
+  (launch, wait N seconds, kill); examples are now run to completion and
+  checked for a clean exit status.
+
 - **DuckDB support.** The `sql` package now supports DuckDB alongside SQLite.
   Open a DuckDB connection with `sql.open "duckdb://"` (in-memory) or
   `sql.open "duckdb:///path/to/file.db"` (file-based). All existing verbs

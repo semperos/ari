@@ -50,7 +50,6 @@ func TestTopicsIndex(t *testing.T) {
 	text := h("")
 	assertNotEmpty(t, "", text)
 	assertContains(t, "", text,
-		"fyne",
 		"http",
 		"sql",
 		"ratelimit",
@@ -66,22 +65,6 @@ func TestTopicsIndex(t *testing.T) {
 // TestExtensionSectionOverviews – each extension has a dedicated section help
 // text reachable by its short name.
 // ---------------------------------------------------------------------------
-
-func TestFyneSection(t *testing.T) {
-	h := helpFn(t)
-	text := h("fyne")
-	assertNotEmpty(t, "fyne", text)
-	assertContains(t, "fyne", text,
-		"fyne.app",
-		"fyne.window",
-		"fyne.label",
-		"fyne.button",
-		"fyne.run",
-		"fyne.do",
-		"fyne.table",
-		"fyne.confirm",
-	)
-}
 
 func TestHTTPSection(t *testing.T) {
 	h := helpFn(t)
@@ -120,71 +103,6 @@ func TestRateLimitSection(t *testing.T) {
 		"ratelimit.take",
 		"leaky-bucket",
 	)
-}
-
-// ---------------------------------------------------------------------------
-// TestFyneVerbEntries – spot-check individual fyne.* verb entries.
-// ---------------------------------------------------------------------------
-
-func TestFyneVerbEntries(t *testing.T) {
-	h := helpFn(t)
-
-	cases := []struct {
-		topic string
-		want  []string
-	}{
-		{"fyne.app", []string{"fyne.app", "app ID"}},
-		{"fyne.window", []string{"fyne.window", "title"}},
-		{"fyne.run", []string{"fyne.run", "ShowAndRun"}},
-		{"fyne.setcontent", []string{"fyne.setcontent", "widget"}},
-		{"fyne.settitle", []string{"fyne.settitle"}},
-		{"fyne.resize", []string{"fyne.resize", "width"}},
-		{"fyne.title", []string{"fyne.title"}},
-		{"fyne.label", []string{"fyne.label", "Label"}},
-		{"fyne.entry", []string{"fyne.entry", "Entry"}},
-		{"fyne.password", []string{"fyne.password"}},
-		{"fyne.multiline", []string{"fyne.multiline"}},
-		{"fyne.progress", []string{"fyne.progress", "ProgressBar"}},
-		{"fyne.separator", []string{"fyne.separator"}},
-		{"fyne.spacer", []string{"fyne.spacer"}},
-		{"fyne.button", []string{"fyne.button", "Button"}},
-		{"fyne.check", []string{"fyne.check", "Check"}},
-		{"fyne.slider", []string{"fyne.slider", "Slider"}},
-		{"fyne.select", []string{"fyne.select", "Select"}},
-		{"fyne.text", []string{"fyne.text"}},
-		{"fyne.settext", []string{"fyne.settext"}},
-		{"fyne.value", []string{"fyne.value"}},
-		{"fyne.setvalue", []string{"fyne.setvalue"}},
-		{"fyne.enable", []string{"fyne.enable"}},
-		{"fyne.disable", []string{"fyne.disable"}},
-		{"fyne.show", []string{"fyne.show"}},
-		{"fyne.hide", []string{"fyne.hide"}},
-		{"fyne.refresh", []string{"fyne.refresh"}},
-		{"fyne.vbox", []string{"fyne.vbox", "VBox"}},
-		{"fyne.hbox", []string{"fyne.hbox", "HBox"}},
-		{"fyne.scroll", []string{"fyne.scroll", "ScrollContainer"}},
-		{"fyne.padded", []string{"fyne.padded", "Padded"}},
-		{"fyne.center", []string{"fyne.center", "Center"}},
-		{"fyne.split", []string{"fyne.split", "HSplit"}},
-		{"fyne.border", []string{"fyne.border", "Border"}},
-		{"fyne.tabs", []string{"fyne.tabs", "AppTabs"}},
-		{"fyne.form", []string{"fyne.form", "Form"}},
-		{"fyne.toolbar", []string{"fyne.toolbar", "Toolbar"}},
-		{"fyne.action", []string{"fyne.action", "ToolbarAction"}},
-		{"fyne.do", []string{"fyne.do", "main event thread"}},
-		{"fyne.table", []string{"fyne.table", "Table"}},
-		{"fyne.showinfo", []string{"fyne.showinfo", "information dialog"}},
-		{"fyne.showerr", []string{"fyne.showerr", "error dialog"}},
-		{"fyne.confirm", []string{"fyne.confirm", "confirm dialog"}},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.topic, func(t *testing.T) {
-			text := h(tc.topic)
-			assertNotEmpty(t, tc.topic, text)
-			assertContains(t, tc.topic, text, tc.want...)
-		})
-	}
 }
 
 // ---------------------------------------------------------------------------

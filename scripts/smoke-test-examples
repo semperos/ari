@@ -1,13 +1,13 @@
 #!/usr/bin/env ruby
-# scripts/smoke-test — Launch each example and verify it starts without crashing.
+# scripts/smoke-test-examples — Run each example and verify it exits cleanly.
 #
-# Strategy: every example calls fyne.run[], which blocks until the window is
-# closed.  A process still alive after STARTUP_SECS seconds → started OK.
-# A process that exits within that window with a non-zero status → failed.
+# Strategy: examples are non-interactive scripts that run to completion.
+# A process that exits with status 0 → passed.
+# A process that exits with a non-zero status, or exceeds TIMEOUT_SECS → failed.
 #
 # Usage:
-#   scripts/smoke-test            # build ari first, then test
-#   scripts/smoke-test --no-build # skip build, use existing binary
+#   scripts/smoke-test-examples            # build ari first, then test
+#   scripts/smoke-test-examples --no-build # skip build, use existing binary
 
 require "tempfile"
 require "optparse"
@@ -15,7 +15,7 @@ require "optparse"
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-STARTUP_SECS = 3
+TIMEOUT_SECS  = 30
 POLL_INTERVAL = 0.1
 
 ROOT = File.expand_path("..", __dir__)
@@ -58,7 +58,7 @@ examples = Dir["examples/*.goal"].sort
 
 abort "No examples found in examples/" if examples.empty?
 
-puts "Smoke-testing #{examples.size} example(s) (startup window: #{STARTUP_SECS}s each)..."
+puts "Smoke-testing #{examples.size} example(s) (timeout: #{TIMEOUT_SECS}s each)..."
 puts
 
 passed = []
@@ -70,39 +70,36 @@ examples.each do |example|
 
   pid = spawn(ari, example, out: log, err: log)
 
-  # Poll until the process exits or the startup window expires.
-  deadline = Time.now + STARTUP_SECS
-  alive = true
+  # Poll until the process exits or the timeout expires.
+  deadline = Time.now + TIMEOUT_SECS
+  exit_status = nil
   while Time.now < deadline
     sleep POLL_INTERVAL
-    begin
-      Process.kill(0, pid)  # raises Errno::ESRCH if process is gone
-    rescue Errno::ESRCH
-      alive = false
+    result = Process.waitpid2(pid, Process::WNOHANG) rescue nil
+    if result
+      exit_status = result[1].exitstatus.to_i
       break
     end
   end
 
-  if alive
-    puts "  #{green("PASS")}  #{name}  (pid #{pid} — stopping)"
+  if exit_status.nil?
+    # Timed out — kill and record as failure.
     Process.kill("TERM", pid) rescue nil
     Process.wait(pid)         rescue nil
+    puts "  #{red("FAIL")}  #{name}  (timed out after #{TIMEOUT_SECS}s)"
+    log.rewind
+    log.read.each_line { |l| print "    #{l}" }
+    failed << name
+  elsif exit_status == 0
+    puts "  #{green("PASS")}  #{name}"
     passed << name
   else
-    _, status = Process.wait2(pid) rescue [nil, nil]
-    exit_code = status&.exitstatus.to_i
-
-    if exit_code == 0
-      puts "  #{green("PASS")}  #{name}  (exited 0 before timeout)"
-      passed << name
-    else
-      puts "  #{red("FAIL")}  #{name}  (exited #{exit_code})"
-      puts "    #{yellow("--- captured output ---")}"
-      log.rewind
-      log.read.each_line { |l| print "    #{l}" }
-      puts "    #{yellow("-----------------------")}"
-      failed << name
-    end
+    puts "  #{red("FAIL")}  #{name}  (exited #{exit_status})"
+    puts "    #{yellow("--- captured output ---")}"
+    log.rewind
+    log.read.each_line { |l| print "    #{l}" }
+    puts "    #{yellow("-----------------------")}"
+    failed << name
   end
 
   log.close!
@@ -120,4 +117,4 @@ if failed.any?
   exit 1
 end
 
-puts green("All examples started successfully.")
+puts green("All examples ran successfully.")

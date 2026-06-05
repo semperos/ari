@@ -1,6 +1,6 @@
 //go:build !js || !wasm
 
-// ari: a Goal interpreter with extensions for SQL, HTTP, and GUI (Fyne).
+// ari: a Goal interpreter with extensions for SQL and HTTP.
 package main
 
 import (
