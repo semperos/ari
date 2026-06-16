@@ -5,13 +5,16 @@ box:{x:?[(#"c"$x)>(width-2);trunc x;x];ct:#"c"$x
  tb:?[2!width;(((width-1)%2)*">")+"*"+((width-1)%2)*"<";((width%2)*">")+(width%2)*"<"]
  df:-2+width-ct;ls:">"+(_df%2)*" ";rs:((-_-df%2)*" ")+"<"
  tb+"\n"+ls+x+rs+"\n"+tb}
+idx::1;steps::()
 render:{[step]
- (text;code):rx#\n\)\n#\step;text:""^text;
- lines:=code;lines:lines[&~""~'lines]
- say "\n$rule\n$text\n"
+ (text;code):rx#\n\)\n#\step;text:""^text
+ lines:=code;lines:lines[&~""~'lines]; numsteps:#steps
+ steptxt:"($idx of $numsteps)"
+ steprule:"/=$steptxt"+"="*(width-"c"#steptxt)
+ say "\n$steprule\n$text\n"
  {print "  $x\n";res: 'eval x; print "$res\n"}'lines
  say"";say rq^(run next"" to proceed)^}
-idx::1;steps::();next:{?[idx=-1+#steps;[ 'eval *steps;say "$rule\nFinished lab '${main.labtitle}' (by ${main.labauthor})"];[idx::idx+1;render steps[idx]]]}
+next:{?[idx=-1+#steps;[ 'eval *steps;say "$rule\nFinished lab '${main.labtitle}' (by ${main.labauthor})"];[idx::idx+1;render steps[idx]]]}
 play:{[parts]pre:*parts;steps::parts; 'eval pre;title:"${main.labtitle} (by ${main.labauthor})";tb:box title;say "\n$tb\n";render steps[1]}
 start:{[labsrc]parts:parse labsrc;play parts}
 1
