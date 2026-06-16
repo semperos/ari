@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+ari -i -e "import[libs;\"\";\"lab\"];start@read \"$1\""
