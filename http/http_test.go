@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -750,6 +752,435 @@ func TestUnsupportedRequestOption(t *testing.T) {
 	msg := evalPanic(t, ctx, fmt.Sprintf("http.get[%q;opts]", ts.URL))
 	if !strings.Contains(msg, "unsupported request option") {
 		t.Errorf("unsupported request option: unexpected panic message: %q", msg)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// newClient builds an http.client from alternating key/value pairs and
+// assigns it to the "client" global. Values are goal.V.
+// ---------------------------------------------------------------------------
+
+func newClientWith(t *testing.T, ctx *goal.Context, kvs ...any) {
+	t.Helper()
+	keys := make([]string, 0, len(kvs)/2)
+	vals := make([]goal.V, 0, len(kvs)/2)
+	for i := 0; i < len(kvs); i += 2 {
+		k, ok := kvs[i].(string)
+		if !ok {
+			t.Fatalf("newClientWith: key %d must be a string", i)
+		}
+		v, ok := kvs[i+1].(goal.V)
+		if !ok {
+			t.Fatalf("newClientWith: value for %q must be a goal.V", k)
+		}
+		keys = append(keys, k)
+		vals = append(vals, v)
+	}
+	ctx.AssignGlobal("clientOpts", goal.NewD(goal.NewAS(keys), goal.NewAV(vals)))
+	client := eval(t, ctx, "http.client[clientOpts]")
+	ctx.AssignGlobal("client", client)
+}
+
+// ---------------------------------------------------------------------------
+// TestClientAuthTokenAlias – the client option AuthToken (alias of Token)
+// sets Authorization: Bearer on all requests.
+// ---------------------------------------------------------------------------
+
+func TestClientAuthTokenAlias(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	newClientWith(t, ctx, "AuthToken", goal.NewS("alias-token"))
+	eval(t, ctx, fmt.Sprintf("http.get[client;%q]", ts.URL))
+
+	if got := capt.headers.Get("Authorization"); got != "Bearer alias-token" {
+		t.Errorf("client AuthToken: Authorization %q, want %q", got, "Bearer alias-token")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestClientBasicAuth – the client option BasicAuth (alias of UserInfo)
+// sets Authorization: Basic on all requests.
+// ---------------------------------------------------------------------------
+
+func TestClientBasicAuth(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	newClientWith(t, ctx, "BasicAuth", strDict("Username", "bob", "Password", "hunter2"))
+	eval(t, ctx, fmt.Sprintf("http.get[client;%q]", ts.URL))
+
+	authHeader := capt.headers.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Basic ") {
+		t.Fatalf("client BasicAuth: expected Authorization: Basic …, got %q", authHeader)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(authHeader, "Basic "))
+	if err != nil {
+		t.Fatalf("client BasicAuth: base64 decode failed: %v", err)
+	}
+	if string(decoded) != "bob:hunter2" {
+		t.Errorf("client BasicAuth: decoded %q, want %q", string(decoded), "bob:hunter2")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestAuthScheme – per-request AuthScheme changes the Authorization
+// prefix used with AuthToken.
+// ---------------------------------------------------------------------------
+
+func TestRequestAuthScheme(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	ctx.AssignGlobal("opts", opts2(
+		"AuthScheme", goal.NewS("Token"),
+		"AuthToken", goal.NewS("xyz"),
+	))
+	eval(t, ctx, fmt.Sprintf("http.get[%q;opts]", ts.URL))
+
+	if got := capt.headers.Get("Authorization"); got != "Token xyz" {
+		t.Errorf("AuthScheme: Authorization %q, want %q", got, "Token xyz")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestQueryString – QueryString sets the raw URL query.
+// ---------------------------------------------------------------------------
+
+func TestRequestQueryString(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	ctx.AssignGlobal("opts", opts1("QueryString", goal.NewS("a=1&b=two")))
+	eval(t, ctx, fmt.Sprintf("http.get[%q;opts]", ts.URL))
+
+	if capt.query["a"] != "1" || capt.query["b"] != "two" {
+		t.Errorf("QueryString: server got query %v, want a=1 b=two", capt.query)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestCookies / TestClientCookies – Cookies dicts arrive as cookies.
+// ---------------------------------------------------------------------------
+
+func TestRequestCookies(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	ctx.AssignGlobal("opts", opts1("Cookies", strDict("session", "abc123")))
+	eval(t, ctx, fmt.Sprintf("http.get[%q;opts]", ts.URL))
+
+	if got := capt.headers.Get("Cookie"); !strings.Contains(got, "session=abc123") {
+		t.Errorf("request Cookies: Cookie header %q, want session=abc123", got)
+	}
+}
+
+func TestClientCookies(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	newClientWith(t, ctx, "Cookies", strDict("prefs", "dark"))
+	eval(t, ctx, fmt.Sprintf("http.get[client;%q]", ts.URL))
+
+	if got := capt.headers.Get("Cookie"); !strings.Contains(got, "prefs=dark") {
+		t.Errorf("client Cookies: Cookie header %q, want prefs=dark", got)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestHeaderVerbatim / TestClientHeaderVerbatim – HeaderVerbatim
+// headers reach the server with their values intact.
+// ---------------------------------------------------------------------------
+
+func TestRequestHeaderVerbatim(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	ctx.AssignGlobal("opts", opts1("HeaderVerbatim", strDict("X-Verbatim-Key", "vv")))
+	eval(t, ctx, fmt.Sprintf("http.get[%q;opts]", ts.URL))
+
+	if got := capt.headers.Get("X-Verbatim-Key"); got != "vv" {
+		t.Errorf("request HeaderVerbatim: got %q, want %q", got, "vv")
+	}
+}
+
+func TestClientHeaderVerbatim(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	newClientWith(t, ctx, "HeaderVerbatim", strDict("X-Client-Verbatim", "cv"))
+	eval(t, ctx, fmt.Sprintf("http.get[client;%q]", ts.URL))
+
+	if got := capt.headers.Get("X-Client-Verbatim"); got != "cv" {
+		t.Errorf("client HeaderVerbatim: got %q, want %q", got, "cv")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestMultipart – Files, MultipartFormData, and MultipartBoundary
+// produce a multipart/form-data POST containing the file and the fields.
+// ---------------------------------------------------------------------------
+
+func TestRequestMultipart(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "upload.txt")
+	if err := os.WriteFile(filePath, []byte("file-content-here"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx.AssignGlobal("opts", goal.NewD(
+		goal.NewAS([]string{"Files", "MultipartFormData", "MultipartBoundary"}),
+		goal.NewAV([]goal.V{
+			strDict("doc", filePath),
+			strDict("kind", "note"),
+			goal.NewS("ari-test-boundary"),
+		}),
+	))
+	eval(t, ctx, fmt.Sprintf("http.post[%q;opts]", ts.URL))
+
+	ct := capt.headers.Get("Content-Type")
+	if !strings.HasPrefix(ct, "multipart/form-data") {
+		t.Fatalf("multipart: Content-Type %q, want multipart/form-data", ct)
+	}
+	if !strings.Contains(ct, "ari-test-boundary") {
+		t.Errorf("multipart: Content-Type %q does not use custom boundary", ct)
+	}
+	if !strings.Contains(capt.body, "file-content-here") {
+		t.Errorf("multipart: body does not contain uploaded file content")
+	}
+	if !strings.Contains(capt.body, "note") {
+		t.Errorf("multipart: body does not contain MultipartFormData field value")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestOutput – Output saves the response body to a file (relative to
+// the client's OutputDirectory).
+// ---------------------------------------------------------------------------
+
+func TestRequestOutput(t *testing.T) {
+	ts, _ := newServer(t, 200, "saved-body")
+	ctx := newCtx(t)
+
+	dir := t.TempDir()
+	newClientWith(t, ctx, "OutputDirectory", goal.NewS(dir))
+
+	ctx.AssignGlobal("opts", opts1("Output", goal.NewS("resp.txt")))
+	eval(t, ctx, fmt.Sprintf("http.get[client;%q;opts]", ts.URL))
+
+	data, err := os.ReadFile(filepath.Join(dir, "resp.txt"))
+	if err != nil {
+		t.Fatalf("Output: reading saved file: %v", err)
+	}
+	if string(data) != "saved-body" {
+		t.Errorf("Output: file content %q, want %q", string(data), "saved-body")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestResponseBodyLimit – a response larger than ResponseBodyLimit
+// yields a Goal error value (not a panic).
+// ---------------------------------------------------------------------------
+
+func TestRequestResponseBodyLimit(t *testing.T) {
+	ts, _ := newServer(t, 200, strings.Repeat("x", 1024))
+	ctx := newCtx(t)
+
+	ctx.AssignGlobal("opts", opts1("ResponseBodyLimit", goal.NewI(16)))
+	v, err := ctx.Eval(fmt.Sprintf("http.get[%q;opts]", ts.URL))
+	if err != nil {
+		t.Fatalf("ResponseBodyLimit: unexpected eval error: %v", err)
+	}
+	if !v.IsError() {
+		t.Errorf("ResponseBodyLimit: expected Goal error value, got %s", v.Sprint(ctx, true))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestClientScheme – the client Scheme option is applied to scheme-less URLs.
+// ---------------------------------------------------------------------------
+
+func TestClientScheme(t *testing.T) {
+	ts, capt := newServer(t, 200, "")
+	ctx := newCtx(t)
+
+	newClientWith(t, ctx, "Scheme", goal.NewS("http"))
+	// "//127.0.0.1:port" – no scheme, so the client's Scheme applies.
+	eval(t, ctx, fmt.Sprintf("http.get[client;%q]", strings.TrimPrefix(ts.URL, "http:")+"/schemed"))
+
+	if capt.path != "/schemed" {
+		t.Errorf("Scheme: server got path %q, want /schemed", capt.path)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestClientOptionErrors – invalid values for the new client options panic
+// with informative messages.
+// ---------------------------------------------------------------------------
+
+func TestClientOptionErrors(t *testing.T) {
+	ctx := newCtx(t)
+
+	// Invalid proxy URL.
+	ctx.AssignGlobal("badProxy", opts1("Proxy", goal.NewS("not a proxy url")))
+	msg := evalPanic(t, ctx, "http.client[badProxy]")
+	if !strings.Contains(msg, "valid proxy URL") {
+		t.Errorf("bad Proxy: unexpected panic message: %q", msg)
+	}
+
+	// Nonexistent root-certificate file.
+	ctx.AssignGlobal("badCert", opts1("RootCertificate", goal.NewS("/no/such/file.pem")))
+	msg = evalPanic(t, ctx, "http.client[badCert]")
+	if !strings.Contains(msg, "RootCertificate") {
+		t.Errorf("bad RootCertificate: unexpected panic message: %q", msg)
+	}
+
+	// Cookies values must be strings.
+	ctx.AssignGlobal("badCookies", opts1("Cookies", opts1("session", goal.NewI(42))))
+	msg = evalPanic(t, ctx, "http.client[badCookies]")
+	if !strings.Contains(msg, "values must be strings") {
+		t.Errorf("bad Cookies: unexpected panic message: %q", msg)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestSRV – SRV requires a Domain key; a bogus domain surfaces as a
+// Goal error (failed DNS lookup), not a panic.
+// ---------------------------------------------------------------------------
+
+func TestRequestSRV(t *testing.T) {
+	ctx := newCtx(t)
+
+	// Missing Domain key panics at option-application time.
+	ctx.AssignGlobal("noDomain", opts1("SRV", strDict("Service", "web")))
+	msg := evalPanic(t, ctx, `http.get["http://example.invalid";noDomain]`)
+	if !strings.Contains(msg, "Domain") {
+		t.Errorf("SRV missing Domain: unexpected panic message: %q", msg)
+	}
+
+	// A guaranteed-nonexistent domain (.invalid TLD) fails the SRV lookup and
+	// returns a Goal error value.
+	ctx.AssignGlobal("opts", opts1("SRV", strDict("Service", "web", "Domain", "example.invalid")))
+	v, err := ctx.Eval(`http.get["http://placeholder";opts]`)
+	if err != nil {
+		t.Fatalf("SRV lookup: unexpected eval error: %v", err)
+	}
+	if !v.IsError() {
+		t.Errorf("SRV lookup for .invalid domain: expected Goal error value, got %s", v.Sprint(ctx, true))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestClientRetryAfterErrorCondition – with RetryAfterErrorCondition set,
+// error-status responses are retried RetryCount times.
+// ---------------------------------------------------------------------------
+
+func TestClientRetryAfterErrorCondition(t *testing.T) {
+	var hits int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits++
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(ts.Close)
+	ctx := newCtx(t)
+
+	newClientWith(t, ctx,
+		"RetryCount", goal.NewI(2),
+		"RetryAfterErrorCondition", goal.NewI(1),
+		"RetryWaitTimeMilli", goal.NewI(1),
+		"RetryMaxWaitTimeMilli", goal.NewI(2),
+	)
+	eval(t, ctx, fmt.Sprintf("http.get[client;%q]", ts.URL))
+
+	if hits != 3 {
+		t.Errorf("RetryAfterErrorCondition: server hit %d times, want 3 (1 + 2 retries)", hits)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestClientCertificateErrors – Certificate requires CertFile/KeyFile keys
+// pointing at readable PEM files.
+// ---------------------------------------------------------------------------
+
+func TestClientCertificateErrors(t *testing.T) {
+	ctx := newCtx(t)
+
+	// Missing KeyFile.
+	ctx.AssignGlobal("noKey", opts1("Certificate", strDict("CertFile", "/tmp/cert.pem")))
+	msg := evalPanic(t, ctx, "http.client[noKey]")
+	if !strings.Contains(msg, "CertFile") || !strings.Contains(msg, "KeyFile") {
+		t.Errorf("Certificate missing KeyFile: unexpected panic message: %q", msg)
+	}
+
+	// Nonexistent files.
+	ctx.AssignGlobal("badFiles", opts1("Certificate",
+		strDict("CertFile", "/no/such/cert.pem", "KeyFile", "/no/such/key.pem")))
+	msg = evalPanic(t, ctx, "http.client[badFiles]")
+	if !strings.Contains(msg, "Certificate") {
+		t.Errorf("Certificate bad files: unexpected panic message: %q", msg)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestClientOptionSmoke – client options without cheaply observable behavior
+// are accepted and requests still succeed.
+// ---------------------------------------------------------------------------
+
+func TestClientOptionSmoke(t *testing.T) {
+	for _, tc := range []struct {
+		key string
+		val goal.V
+	}{
+		{"AllowGetMethodPayload", goal.NewI(1)},
+		{"CloseConnection", goal.NewI(1)},
+		{"ContentLength", goal.NewI(1)},
+		{"DebugBodyLimit", goal.NewI(512)},
+		{"DigestAuth", strDict("Username", "u", "Password", "p")},
+		{"GenerateCurlOnDebug", goal.NewI(1)},
+		{"ResponseBodyLimit", goal.NewI(65536)},
+		{"UnescapeQueryParams", goal.NewI(1)},
+	} {
+		t.Run(tc.key, func(t *testing.T) {
+			ts, _ := newServer(t, 200, "ok")
+			ctx := newCtx(t)
+			newClientWith(t, ctx, tc.key, tc.val)
+			v := eval(t, ctx, fmt.Sprintf("http.get[client;%q]", ts.URL))
+			d := mustDict(t, ctx, v)
+			if mustI(t, dictField(t, d, "ok")) != 1 {
+				t.Errorf("client option %s: request failed", tc.key)
+			}
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TestRequestOptionSmoke – per-request options without cheaply observable
+// behavior are accepted and requests still succeed.
+// ---------------------------------------------------------------------------
+
+func TestRequestOptionSmoke(t *testing.T) {
+	for _, tc := range []struct {
+		key string
+		val goal.V
+	}{
+		{"ContentLength", goal.NewI(1)},
+		{"DigestAuth", strDict("Username", "u", "Password", "p")},
+		{"GenerateCurlOnDebug", goal.NewI(1)},
+		{"UnescapeQueryParams", goal.NewI(1)},
+	} {
+		t.Run(tc.key, func(t *testing.T) {
+			ts, _ := newServer(t, 200, "ok")
+			ctx := newCtx(t)
+			ctx.AssignGlobal("opts", opts1(tc.key, tc.val))
+			v := eval(t, ctx, fmt.Sprintf("http.get[%q;opts]", ts.URL))
+			d := mustDict(t, ctx, v)
+			if mustI(t, dictField(t, d, "ok")) != 1 {
+				t.Errorf("request option %s: request failed", tc.key)
+			}
+		})
 	}
 }
 

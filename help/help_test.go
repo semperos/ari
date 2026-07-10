@@ -77,6 +77,17 @@ func TestHTTPSection(t *testing.T) {
 		"http.request",
 		"AuthToken",
 		"QueryParam",
+		// Response dict keys as actually returned.
+		"statuscode",
+		"bodybytes",
+		// Per-request opts keys.
+		"Cookies",
+		"DigestAuth",
+		"Files",
+		"MultipartFormData",
+		"Output",
+		"QueryString",
+		"ResponseBodyLimit",
 	)
 }
 
@@ -123,8 +134,14 @@ func TestHTTPVerbEntries(t *testing.T) {
 		{"http.delete", []string{"http.delete", "DELETE"}},
 		{"http.head", []string{"http.head", "HEAD"}},
 		{"http.options", []string{"http.options", "OPTIONS"}},
-		{"http.request", []string{"http.request", "Method"}},
-		{"http.client", []string{"http.client", "BaseURL", "AuthToken", "RetryCount"}},
+		{"http.request", []string{"http.request", "Method", "bodybytes"}},
+		{"http.client", []string{
+			"http.client", "BaseURL", "AuthToken", "RetryCount",
+			// Full resty client option surface (spot-check).
+			"AllowGetMethodPayload", "Cookies", "DigestAuth", "Proxy",
+			"RetryWaitTimeMilli", "RootCertificate", "Scheme",
+			"TimeoutMilli", "TLSInsecureSkipVerify", "UnescapeQueryParams",
+		}},
 	}
 
 	for _, tc := range cases {
