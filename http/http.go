@@ -43,16 +43,34 @@
 //
 // # Per-request options (keys of the opts dict for named verbs and http.request)
 //
-//	AuthToken    s  – sets Authorization: Bearer <token>
-//	BasicAuth    d  – basic auth for this request; keys: Username, Password
-//	Body         s  – raw request body string
-//	ContentType  s  – shorthand for the Content-Type header
-//	Debug        i  – enable resty debug logging for this request (0/1)
-//	FormData     d  – form data (url-encoded); values: s or AS
-//	Header       d  – request headers; values: s or AS
-//	PathParams   d  – URL path params (URL-encoded); values must be strings
-//	QueryParam   d  – URL query parameters; values: s or AS
-//	RawPathParams d – URL path params (not URL-encoded); values must be strings
+//	AuthScheme          s  – auth scheme for this request (default "Bearer")
+//	AuthToken           s  – sets Authorization: <scheme> <token>
+//	BasicAuth           d  – basic auth for this request; keys: Username, Password
+//	Body                s  – raw request body (string or byte array)
+//	ContentLength       i  – set the Content-Length header (0/1)
+//	ContentType         s  – shorthand for the Content-Type header
+//	Cookies             d  – cookies for this request; cookie name → value (s)
+//	Debug               i  – enable resty debug logging for this request (0/1)
+//	DigestAuth          d  – digest auth; keys: Username, Password
+//	Files               d  – multipart file upload; form param → file path (s)
+//	FormData            d  – form data (url-encoded); values: s or AS
+//	GenerateCurlOnDebug i  – log an equivalent curl command in debug mode (0/1)
+//	Header              d  – request headers; values: s or AS
+//	HeaderVerbatim      d  – headers without canonicalisation; values: s or AS
+//	MultipartBoundary   s  – custom boundary for multipart requests
+//	MultipartFormData   d  – fields sent as multipart/form-data; values: s
+//	Output              s  – save the response body to this file path (the
+//	                        "body"/"bodybytes" of the result will be empty;
+//	                        relative paths go under the client's
+//	                        OutputDirectory)
+//	PathParams          d  – URL path params (URL-encoded); values must be strings
+//	QueryParam          d  – URL query parameters; values: s or AS
+//	QueryString         s  – raw query string, e.g. "a=1&b=2"
+//	RawPathParams       d  – URL path params (not URL-encoded); values must be strings
+//	ResponseBodyLimit   i  – max response body size in bytes (error if exceeded)
+//	SRV                 d  – resolve the host via a DNS SRV lookup; keys:
+//	                        Domain (required), Service (optional)
+//	UnescapeQueryParams i  – unescape (decode) query parameters (0/1)
 //
 // http.request opts also accepts:
 //
@@ -62,27 +80,59 @@
 //
 //	AllowGetMethodPayload  i  – allow a body on GET requests (0/1)
 //	AuthScheme             s  – auth header scheme prefix (default "Bearer")
+//	AuthToken              s  – default bearer token for every request
+//	                           (alias: Token)
 //	BaseURL                s  – base URL prepended to every request URL
+//	BasicAuth              d  – default basic auth; keys: Username, Password
+//	                           (alias: UserInfo)
+//	Certificate            d  – client TLS certificate; keys: CertFile, KeyFile
+//	                           (paths to PEM files)
+//	CloseConnection        i  – close the connection after each request (0/1)
+//	ContentLength          i  – set the Content-Length header (0/1)
+//	Cookies                d  – default cookies; cookie name → value (s)
 //	Debug                  i  – enable verbose resty debug logging (0/1)
+//	DebugBodyLimit         i  – max body size logged in debug mode (bytes)
+//	DigestAuth             d  – digest auth; keys: Username, Password
 //	DisableWarn            i  – suppress resty warning messages (0/1)
 //	FollowRedirects        i  – follow HTTP redirects (0/1, default 1)
 //	FormData               d  – default form data for every request
+//	GenerateCurlOnDebug    i  – log an equivalent curl command in debug mode (0/1)
 //	Header                 d  – default headers for every request
 //	HeaderAuthorizationKey s  – override the Authorization header name
+//	HeaderVerbatim         d  – default headers without canonicalisation
+//	OutputDirectory        s  – directory for responses saved via the
+//	                           per-request Output option
 //	PathParams             d  – default URL path params (URL-encoded)
+//	Proxy                  s  – proxy URL, e.g. "http://proxyserver:8080"
 //	QueryParam             d  – default query parameters for every request
-//	RawPathParams          d  – default URL path params (not URL-encoded)
-//	RetryCount             i  – number of automatic retries on failure
-//	RetryMaxWaitTimeMilli  i  – maximum retry back-off duration (ms)
-//	RetryResetReaders      i  – reset request readers between retries (0/1)
 //	RateLimitPerSecond     i  – max requests per second (leaky bucket); the
 //	                           limiter is called automatically before each
 //	                           request made through this client
+//	RawPathParams          d  – default URL path params (not URL-encoded)
+//	ResponseBodyLimit      i  – max response body size in bytes
+//	RetryAfterErrorCondition i – also retry when the response status is an
+//	                           error, i.e. 4xx or 5xx (0/1)
+//	RetryCount             i  – number of automatic retries on failure
+//	RetryMaxWaitTimeMilli  i  – maximum retry back-off duration (ms)
+//	RetryResetReaders      i  – reset request readers between retries (0/1)
 //	RetryWaitTimeMilli     i  – initial retry wait time (ms)
+//	RootCertificate        s  – path to a PEM file of trusted root certificates
+//	RootCertificatePEM     s  – PEM content of trusted root certificates
+//	Scheme                 s  – scheme applied to scheme-less request URLs
 //	TimeoutMilli           i  – request timeout in milliseconds
 //	TLSInsecureSkipVerify  i  – skip TLS certificate verification (0/1)
-//	Token                  s  – bearer token (sets the Authorization header)
-//	UserInfo               d  – basic auth; required keys: Username, Password
+//	Token                  s  – bearer token (alias of AuthToken)
+//	UnescapeQueryParams    i  – unescape (decode) query parameters (0/1)
+//	UserInfo               d  – basic auth; keys: Username, Password
+//	                           (alias of BasicAuth)
+//
+// Resty options whose values are Go functions or interfaces (middleware and
+// retry hooks, custom marshalers, loggers, transports, cookie jars, tracing)
+// are not exposed, since they cannot be expressed as Goal values. Options
+// that only affect resty's automatic (un)marshalling of Go structs
+// (Result, Error, ExpectContentType, ForceContentType, JSONEscapeHTML,
+// DoNotParseResponse) are likewise not exposed: request bodies are always
+// strings or byte arrays, and response bodies are always returned raw.
 //
 // # Response dict
 //
@@ -104,6 +154,7 @@ import (
 	"fmt"
 	nethttp "net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -447,6 +498,13 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 		}
 		cl.c.AuthScheme = s
 
+	case "AuthToken", "Token":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.Token = s
+
 	case "BaseURL":
 		s, err := stringArg(v, key)
 		if err != nil {
@@ -454,12 +512,85 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 		}
 		cl.c.BaseURL = s
 
+	case "BasicAuth", "UserInfo":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		username, password, err := usernamePassword(d, key)
+		if err != nil {
+			return err
+		}
+		cl.c.UserInfo = &resty.User{Username: username, Password: password}
+
+	case "Certificate":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		m, err := stringStringMap(d, key)
+		if err != nil {
+			return err
+		}
+		certFile, keyFile := m["CertFile"], m["KeyFile"]
+		if certFile == "" || keyFile == "" {
+			return fmt.Errorf("http option %q requires \"CertFile\" and \"KeyFile\" keys", key)
+		}
+		cert, cErr := tls.LoadX509KeyPair(certFile, keyFile)
+		if cErr != nil {
+			return fmt.Errorf("http option %q: %w", key, cErr)
+		}
+		cl.c.SetCertificates(cert)
+
+	case "CloseConnection":
+		b, err := boolArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetCloseConnection(b)
+
+	case "ContentLength":
+		b, err := boolArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetContentLength(b)
+
+	case "Cookies":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		cookies, err := toCookies(d, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetCookies(cookies)
+
 	case "Debug":
 		b, err := boolArg(v, key)
 		if err != nil {
 			return err
 		}
 		cl.c.Debug = b
+
+	case "DebugBodyLimit":
+		n, err := intArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetDebugBodyLimit(int64(n))
+
+	case "DigestAuth":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		username, password, err := usernamePassword(d, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetDigestAuth(username, password)
 
 	case "DisableWarn":
 		b, err := boolArg(v, key)
@@ -488,6 +619,17 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 		}
 		cl.c.FormData = uv
 
+	case "GenerateCurlOnDebug":
+		b, err := boolArg(v, key)
+		if err != nil {
+			return err
+		}
+		if b {
+			cl.c.EnableGenerateCurlOnDebug()
+		} else {
+			cl.c.DisableGenerateCurlOnDebug()
+		}
+
 	case "Header":
 		d, err := dictArg(v, key)
 		if err != nil {
@@ -506,6 +648,22 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 		}
 		cl.c.HeaderAuthorizationKey = s
 
+	case "HeaderVerbatim":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		if err := setVerbatimHeaders(cl.c.Header, d, key); err != nil {
+			return err
+		}
+
+	case "OutputDirectory":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetOutputDirectory(s)
+
 	case "PathParams":
 		d, err := dictArg(v, key)
 		if err != nil {
@@ -516,6 +674,17 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 			return err
 		}
 		cl.c.PathParams = m
+
+	case "Proxy":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		u, pErr := url.Parse(s)
+		if pErr != nil || u.Scheme == "" || u.Host == "" {
+			return fmt.Errorf("http option %q must be a valid proxy URL (e.g. \"http://proxyserver:8080\"), got %q", key, s)
+		}
+		cl.c.SetProxy(s)
 
 	case "QueryParam":
 		d, err := dictArg(v, key)
@@ -549,6 +718,22 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 		}
 		cl.c.RawPathParams = m
 
+	case "ResponseBodyLimit":
+		n, err := intArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetResponseBodyLimit(n)
+
+	case "RetryAfterErrorCondition":
+		b, err := boolArg(v, key)
+		if err != nil {
+			return err
+		}
+		if b {
+			cl.c.AddRetryAfterErrorCondition()
+		}
+
 	case "RetryCount":
 		n, err := intArg(v, key)
 		if err != nil {
@@ -577,6 +762,33 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 		}
 		cl.c.RetryWaitTime = time.Duration(n) * time.Millisecond
 
+	case "RootCertificate":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		// resty's SetRootCertificate only logs read failures; read the file
+		// here so a bad path surfaces as an error.
+		pem, rErr := os.ReadFile(s)
+		if rErr != nil {
+			return fmt.Errorf("http option %q: %w", key, rErr)
+		}
+		cl.c.SetRootCertificateFromString(string(pem))
+
+	case "RootCertificatePEM":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetRootCertificateFromString(s)
+
+	case "Scheme":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		cl.c.SetScheme(s)
+
 	case "TimeoutMilli":
 		n, err := intArg(v, key)
 		if err != nil {
@@ -589,25 +801,23 @@ func applyClientOption(cl *Client, key string, v goal.V) error { //nolint:gocogn
 		if err != nil {
 			return err
 		}
-		cl.c.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: b}) //nolint:gosec,lll // G402: InsecureSkipVerify is user-controlled
+		// Mutate the transport's TLS config in place so this option composes
+		// with RootCertificate/RootCertificatePEM regardless of dict order.
+		transport, tErr := cl.c.Transport()
+		if tErr != nil {
+			return fmt.Errorf("http option %q: %w", key, tErr)
+		}
+		if transport.TLSClientConfig == nil {
+			transport.TLSClientConfig = &tls.Config{}
+		}
+		transport.TLSClientConfig.InsecureSkipVerify = b
 
-	case "Token":
-		s, err := stringArg(v, key)
+	case "UnescapeQueryParams":
+		b, err := boolArg(v, key)
 		if err != nil {
 			return err
 		}
-		cl.c.Token = s
-
-	case "UserInfo":
-		d, err := dictArg(v, key)
-		if err != nil {
-			return err
-		}
-		username, password, err := usernamePassword(d, key)
-		if err != nil {
-			return err
-		}
-		cl.c.UserInfo = &resty.User{Username: username, Password: password}
+		cl.c.SetUnescapeQueryParams(b)
 
 	default:
 		return fmt.Errorf("http.client : unsupported option %q", key)
@@ -635,8 +845,16 @@ func augmentRequest(req *resty.Request, d *goal.D, verb string) error {
 	return nil
 }
 
-func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) error { //nolint:gocognit,funlen
+//nolint:gocognit,gocyclo,cyclop,funlen // exhaustive option switch
+func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) error {
 	switch key {
+	case "AuthScheme":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		req.SetAuthScheme(s)
+
 	case "AuthToken":
 		s, err := stringArg(v, key)
 		if err != nil {
@@ -665,6 +883,13 @@ func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) e
 			return fmt.Errorf("http.%s \"Body\" must be a string or byte array, got %q", verb, v.Type())
 		}
 
+	case "ContentLength":
+		b, err := boolArg(v, key)
+		if err != nil {
+			return err
+		}
+		req.SetContentLength(b)
+
 	case "ContentType":
 		s, err := stringArg(v, key)
 		if err != nil {
@@ -672,12 +897,45 @@ func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) e
 		}
 		req.SetHeader("Content-Type", s)
 
+	case "Cookies":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		cookies, err := toCookies(d, key)
+		if err != nil {
+			return err
+		}
+		req.SetCookies(cookies)
+
 	case "Debug":
 		b, err := boolArg(v, key)
 		if err != nil {
 			return err
 		}
 		req.Debug = b
+
+	case "DigestAuth":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		username, password, err := usernamePassword(d, key)
+		if err != nil {
+			return err
+		}
+		req.SetDigestAuth(username, password)
+
+	case "Files":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		m, err := stringStringMap(d, key)
+		if err != nil {
+			return err
+		}
+		req.SetFiles(m)
 
 	case "FormData":
 		d, err := dictArg(v, key)
@@ -690,6 +948,17 @@ func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) e
 		}
 		req.FormData = uv
 
+	case "GenerateCurlOnDebug":
+		b, err := boolArg(v, key)
+		if err != nil {
+			return err
+		}
+		if b {
+			req.EnableGenerateCurlOnDebug()
+		} else {
+			req.DisableGenerateCurlOnDebug()
+		}
+
 	case "Header":
 		d, err := dictArg(v, key)
 		if err != nil {
@@ -700,6 +969,40 @@ func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) e
 			return err
 		}
 		req.Header = h
+
+	case "HeaderVerbatim":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		if err := setVerbatimHeaders(req.Header, d, key); err != nil {
+			return err
+		}
+
+	case "MultipartBoundary":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		req.SetMultipartBoundary(s)
+
+	case "MultipartFormData":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		m, err := stringStringMap(d, key)
+		if err != nil {
+			return err
+		}
+		req.SetMultipartFormData(m)
+
+	case "Output":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		req.SetOutput(s)
 
 	case "PathParams":
 		d, err := dictArg(v, key)
@@ -723,6 +1026,13 @@ func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) e
 		}
 		req.QueryParam = uv
 
+	case "QueryString":
+		s, err := stringArg(v, key)
+		if err != nil {
+			return err
+		}
+		req.SetQueryString(s)
+
 	case "RawPathParams":
 		d, err := dictArg(v, key)
 		if err != nil {
@@ -733,6 +1043,39 @@ func applyRequestOption(req *resty.Request, key string, v goal.V, verb string) e
 			return err
 		}
 		req.RawPathParams = m
+
+	case "ResponseBodyLimit":
+		n, err := intArg(v, key)
+		if err != nil {
+			return err
+		}
+		req.SetResponseBodyLimit(n)
+
+	case "SRV":
+		d, err := dictArg(v, key)
+		if err != nil {
+			return err
+		}
+		m, err := stringStringMap(d, key)
+		if err != nil {
+			return err
+		}
+		for k := range m {
+			if k != "Service" && k != "Domain" {
+				return fmt.Errorf("http option %q: unsupported key %q (want \"Service\" and \"Domain\")", key, k)
+			}
+		}
+		if m["Domain"] == "" {
+			return fmt.Errorf("http option %q requires a \"Domain\" key (and optionally \"Service\")", key)
+		}
+		req.SetSRV(&resty.SRVRecord{Service: m["Service"], Domain: m["Domain"]})
+
+	case "UnescapeQueryParams":
+		b, err := boolArg(v, key)
+		if err != nil {
+			return err
+		}
+		req.SetUnescapeQueryParams(b)
 
 	default:
 		return fmt.Errorf("http.%s : unsupported request option %q", verb, key)
@@ -899,6 +1242,49 @@ func toHTTPHeader(d *goal.D, key string) (nethttp.Header, error) {
 		}
 	}
 	return h, nil
+}
+
+// toCookies converts a Goal dict with AS keys and S values into a slice of
+// http.Cookie values (cookie name → cookie value).
+func toCookies(d *goal.D, key string) ([]*nethttp.Cookie, error) {
+	kas, ok := d.KeyArray().(*goal.AS)
+	if !ok {
+		return nil, fmt.Errorf("http option %q: dict keys must be strings, got %q", key, d.KeyArray().Type())
+	}
+	cookies := make([]*nethttp.Cookie, 0, len(kas.Slice))
+	for i, k := range kas.Slice {
+		val := d.ValueArray().At(i)
+		s, ok := val.BV().(goal.S)
+		if !ok {
+			return nil, fmt.Errorf("http option %q: values must be strings, got %q for key %q", key, val.Type(), k)
+		}
+		// Secure/HttpOnly/SameSite are server-side cookie attributes; they
+		// are never transmitted in an outbound Cookie request header.
+		cookies = append(cookies, &nethttp.Cookie{Name: k, Value: string(s)}) //nolint:gosec // G124: see above
+	}
+	return cookies, nil
+}
+
+// setVerbatimHeaders writes a Goal dict of headers (values: s or AS) into h
+// without canonicalising the header names, mirroring resty's
+// SetHeaderVerbatim.
+func setVerbatimHeaders(h nethttp.Header, d *goal.D, key string) error {
+	kas, ok := d.KeyArray().(*goal.AS)
+	if !ok {
+		return fmt.Errorf("http option %q: dict keys must be strings, got %q", key, d.KeyArray().Type())
+	}
+	for i, k := range kas.Slice {
+		val := d.ValueArray().At(i)
+		switch hv := val.BV().(type) {
+		case goal.S:
+			h[k] = []string{string(hv)}
+		case *goal.AS:
+			h[k] = append([]string(nil), hv.Slice...)
+		default:
+			return fmt.Errorf("http option %q: values must be strings or string arrays, got %q", key, val.Type())
+		}
+	}
+	return nil
 }
 
 // usernamePassword extracts "Username" and "Password" string fields from a
