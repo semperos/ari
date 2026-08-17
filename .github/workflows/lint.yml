@@ -27,6 +27,6 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends libgl1-mesa-dev xorg-dev
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@bbd93eaebbb86a85c63086b0591011f846da5f1c
+        uses: golangci/golangci-lint-action@c3ef4a2b0b17fd487a99d100bbb7c8e88123811a
         with:
           version: v2.12.2
