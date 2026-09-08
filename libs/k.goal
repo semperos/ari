@@ -1,6 +1,6 @@
 / group X returns indices of X grouped by distinct values .
 group:{(&x!¿c)!=(!#x)!c:%x}
-/ by[X;Y] returns values X grouped by keys Y.
+/ by[X;Y] returns keys X grouped by values Y.
 by:{(&y!¿c)!=x!c:%y}
 / freq X returns count by distinct values.
 freq:{(&x!¿c)!=c:%x}

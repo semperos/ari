@@ -1,5 +1,5 @@
-/ by[c;f;t] groups table t by column(s) named c, using function f for computing results.
-/ Depending on f's rank, it is passed different arguments:
+/ by[c;f;t] groups table t by column(s) named by c, using function f for
+/ computing results. Depending on f's rank, it is passed different arguments:
 /   1) f[x] where x is a table of grouped columns;
 /   2) f[x;y] where x is the original table t, and y is a constant function
 /      returning grouping indices;
@@ -7,24 +7,28 @@
 /      returning grouping indices, and z the table with the grouping columns.
 / In the first two cases, if the result is a dict with generic values, it is
 / merged after the table with the grouping columns.
-by:{[c;f;t] by:%?["A"~@g:t c;{(1+|/'x)/x}@%'g;g]
-  m:{?[and["d"~@x;"A"~@.x];p.t[&¿p.by;p.c],x;x]}
-  ?[1~r:rt.rank f; m f[:[;by]='t[;({0}^c)^!t]]
-    2~r;           m f[t;:[;by]]
-                   f[t;:[;by];t[&¿by;c]]]}
-/ ij[c;t1;t2] returns the inner join of tables t1 and t2, using a single common
-/ column named c, and assuming t1 c contains distinct values. It gives t2
+by:{[c;f;t]n:%?["A"~@k:t c;(1+|/'n)/n:%'k;k]
+  m:{?[and["d"~@x;"A"~@.x];p.t[&¿p.n;p.c],x;x]}
+  ?[1~r:rt.rank f; m f[:[;n]='t[;({0}^c)^!t]]
+    2~r;           m f[t;:[;n]]
+                   f[t;:[;n];t[&¿n;c]]]}
+/ ij[c;t1;t2] returns the inner join of tables t1 and t2, using column(s) named
+/ by c. If t1 c contains duplicates, only first match is used. It gives t2
 / priority for any other common columns.
-ij:{[c;t1;t2]i:(k:t1 c)?t2 c; (((c=!:)^t1)@&i!m),(1;m:i<#k)#t2}
-/ join is a more general variant of ij that handles duplicate entries in the c
-/ column. Implementation is based on code shared by @Marshall on the matrix
-/ chat.
-join:{[c;t1;t2],/(t1;t2)@'{(i;j):(0,#x)_%x,y; (&(=j)@i;,/(=(!#j)!j)@i)}[t1 c;t2 c]}
-/ oj[c;t1;t2] returns the outer join of tables t1 and t2, using a single common
-/ column named c, and assuming t1 c contains distinct values. It gives t2
-/ priority for any other common columns. It uses zero-values, instead of
-/ nulls/NaNs, for missing fields in t1.
-oj:{[c;t1;t2]i:(t1 c)?t2 c; (((c=!:)^t1)i),t2}
+ij:{[c;t1;t2](k;l):?[1<#c; (0,#*k)_%(1+|/'n)/n:%'(k:t1 c),'t2 c; (t1 c:*c;t2 c)]
+  i:k?l; t1[i@j],t2[j:&i<#k;({1}#c)^!t2]}
+/ join is a more general variant of ij that handles duplicate entries in t1 c.
+/ Implementation is based on code shared by @Marshall on the matrix chat.
+join:{[c;t1;t2]
+  (i;j):?[1<#c; (0,#*k)_%(1+|/'n)/n:%'(k:t1 c),'t2 c; (0,#k)_%(k:t1 c),t2 c:*c]
+  t1[&(=j)i],t2@,/(=(!#j)!j)i}
+/ oj[c;t1;t2] returns the outer join of tables t1 and t2 using column(s) named
+/ by c. If t1 c contains duplicates, only first match is used. It gives t2
+/ priority for any other common columns and uses ""/0i/0n for missing fields in
+/ t1.
+oj:{[c;t1;t2](k;l):?[1<#c; (0,#*k)_%(1+|/'n)/n:%'(k:t1 c),'t2 c; (t1 c:*c;t2 c)]
+  j:&(#k)=i:k?l; fij:{[i;j|x]j or:x@i; @[x@i;j;:;?["I"~t:@x;0i;"N"~t;0n;*0#x]]}
+  (fij't1),t2}
 / flip[t] returns a transposed table where column names are given by the first
 / column, or column "key" if it exists (inspired by Lil's flip primitive).
 flip:{[t]("key"¿1_!t)and t:t[;"key",("key"=)^!t]; ..[key:1_!t],{(*'x)!1_'x}@+.t}
