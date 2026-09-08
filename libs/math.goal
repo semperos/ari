@@ -3,6 +3,8 @@ pi:π:atan[-1.0;0.0]
 gcd:{{?[0~y:x!y;x;o[y;x]]}[abs x;y]}
 / lcm[i;i] returns the lowest common multiple.
 lcm:{x*(-gcd[x;y])!y}
+/ cmb[X] returns all combination pairs from X; cmb[i] returns cmb[!i].
+cmb:{?[x~*x;(&|i:!x;,/(1_i)_`i);x o@#x]}
 / msum[i;N] returns the i-item moving sums (sums of the previous i items).
 msum:{s-(x#0)»s:+\y}
 / avg[N] returns the mean of a list.
@@ -13,6 +15,8 @@ avgs:{(+\x)%1+!#x}
 mavg:{msum[x;y]%(1+!x-1)»(#y)#x}
 / med[N] returns the median, averaging two middle values for even lengths.
 med:{?[2!n:#x:^x;"n"$x -2!n;(+/x -1 0+-2!n)%2]}
+/ qpi[i;Y] returns i-quantile partition grouping indices.
+qpi:{(-#y)!x*<<y}
 / var[N] returns the variance.
 var:{avg[x*x]-m*m:avg x}
 / dev[N] returns the standard deviation.
@@ -21,6 +25,4 @@ dev:{sqrt var x}
 cov:{avg[x*y]-avg[x]*avg y}
 / cor[N;N] returns the correlation.
 cor:{cov[x;y]%dev[x]*dev y}
-/ cmb[X] returns all combination pairs from X; cmb[i] returns cmb[!i].
-cmb:{?[x~*x;(&|i:!x;,/{(1_x)_`x}@i);x o@#x]}
 1
