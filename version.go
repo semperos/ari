@@ -2,4 +2,4 @@
 package ari
 
 // AriVersion is the current version of ari. Accessible at runtime via rt.get"v".
-const AriVersion = "v0.3.0"
+const AriVersion = "v0.4.0"
