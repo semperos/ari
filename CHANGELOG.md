@@ -1,5 +1,11 @@
 # vnext
 
+# v0.4.0 2026-09-09
+
+- Upgrade to [Goal 1.8.0](https://codeberg.org/anaseto/goal/src/branch/master/CHANGES.md?trans-rights=human-rights#v1-8-0-2026-09-01)
+- Increased coverage of resty client options for HTTP client and request functions.
+- In the repo, see labs and scripts/run-lab for a J-inspired lab system and some example labs.
+
 # v0.3.0 2026-06-04
 
 - Upgrade to [Goal 1.6.0](https://codeberg.org/anaseto/goal/src/commit/108ca158bcc18ef9265e786951ffce7021884089/CHANGES.md#v1-6-0-2026-05-04).
