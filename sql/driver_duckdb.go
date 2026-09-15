@@ -1,4 +1,4 @@
-// driver_duckdb.go registers the github.com/marcboeker/go-duckdb driver under
+// driver_duckdb.go registers the github.com/duckdb/duckdb-go/v2 driver under
 // the "duckdb" URI scheme. The blank import triggers the driver's init()
 // function, which calls database/sql.Register("duckdb", ...).
 //
@@ -9,4 +9,4 @@
 
 package sql
 
-import _ "github.com/marcboeker/go-duckdb" // registers the duckdb driver via its init() function
+import _ "github.com/duckdb/duckdb-go/v2" // registers the duckdb driver via its init() function
