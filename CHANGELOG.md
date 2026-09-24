@@ -1,5 +1,9 @@
 # vnext
 
+# v0.5.0 2026-09-24
+
+- Upgrade DuckDB driver to official github.com/duckdb/duckdb-go/v2 module, version v2.5.0.
+
 # v0.4.0 2026-09-09
 
 - Upgrade to [Goal 1.8.0](https://codeberg.org/anaseto/goal/src/branch/master/CHANGES.md?trans-rights=human-rights#v1-8-0-2026-09-01)
