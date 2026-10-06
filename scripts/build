@@ -3,7 +3,7 @@ set -e
 
 cd "$(dirname "$0")/.."
 
-# Run scripts/upgrade-goal first to refresh goallib/ from ../goal.
+# Run scripts/upgrade-goal first to refresh libs/ from the Goal module.
 echo "Building ari..."
 go build -o ari ./cmd/ari
 echo "Done: ./ari"
