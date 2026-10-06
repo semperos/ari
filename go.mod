@@ -3,7 +3,7 @@ module github.com/semperos/ari
 go 1.26.0
 
 require (
-	codeberg.org/anaseto/goal v1.8.0
+	codeberg.org/anaseto/goal v1.8.1
 	github.com/duckdb/duckdb-go/v2 v2.10506.0
 	github.com/go-resty/resty/v2 v2.17.2
 	go.uber.org/ratelimit v0.3.1
