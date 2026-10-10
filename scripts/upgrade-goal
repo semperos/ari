@@ -2,17 +2,17 @@
 set -e
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-GOAL="$REPO/../goal"
+cd "$REPO"
 
 # Upgrade Go-level dependency
 go get -u codeberg.org/anaseto/goal
 go mod tidy
 
-echo "Pulling goal repo..."
-git -C "$GOAL" pull --rebase --prune
-
-GOALSHA="$(git -C "$GOAL" rev-parse HEAD)"
-echo "Goal HEAD: $GOALSHA"
+# Use the exact module version pinned in go.mod, from the module cache.
+go mod download codeberg.org/anaseto/goal
+GOAL="$(go list -m -f '{{.Dir}}' codeberg.org/anaseto/goal)"
+GOALVERSION="$(go list -m -f '{{.Version}}' codeberg.org/anaseto/goal)"
+echo "Goal version: $GOALVERSION"
 
 echo "Syncing Goal standard library files into libs/ from $GOAL/lib ..."
 # Remove any previously-vendored Goal .goal files from libs/ by name before
@@ -22,5 +22,7 @@ find "$GOAL/lib" -type f -name '*.goal' | while read -r src; do
     rm -f "$REPO/libs/$(basename "$src")"
 done
 find "$GOAL/lib" -type f -name '*.goal' | xargs -I {} cp {} "$REPO/libs/"
+# Files in the module cache are read-only; make the copies writable.
+chmod u+w "$REPO"/libs/*.goal
 
-echo "Done. libs/ updated with Goal standard library files (commit $GOALSHA)."
+echo "Done. libs/ updated with Goal standard library files ($GOALVERSION)."
