@@ -1,0 +1,94 @@
+/ plot: terminal plotting via the kitty graphics protocol.
+/ Translated from https://codeberg.org/zoomlogo/kp/src/branch/main/plot.k
+/ (credits: toby (discord) for the plotting function).
+/ Axis specs are lo hi tk px (tk=tick step, px=pixel size); missing trailing
+/ values are 0n: ticks are skipped and px is derived from the other axis.
+
+/ kitty graphics protocol implementation
+b64s:r,(32+r:65+!26),(48+!10),43 47
+b64:{"c"$,/+b64s@64 64 64 64\256/x}
+
+img:{[w;h;d]?[cap;:last::(w;h;d);0]; say "\x1b_Ga=T,f=24,s=$w,v=$h;"+(b64 d)+"\x1b\\"}
+bmp:{w:#*y;h:#y;img[w;h;3#,x@,/y]}  / gray indexed images
+drw:{w:#*y;h:#y;img[w;h;+,/x@y]}    / color indexed images
+
+/ png encoding (stored deflate blocks, so no compression)
+X:2/~=/(8#2)\'!256 256                         / xor table: a xor b is X@b+256*a
+P:(32#2)\0xedb88320                            / crc32 polynomial bits
+T:+(4#256)\2/8{(~(,256#0),-1_x)=P*`x 31}/(32#2)\!256 / crc32 table (bytes msb first)
+crc:{255-{X@(T X@y+256*x 3)+256*0,3#x}/[255 255 255 255;x]}
+be4:(4#256)\
+adler:{A:1++\x; be4(65536*65521!+/A)+65521!*|A}
+zlib:{bs:(-(65535&#x))$x; 120 1,(,/{m:65535-n:#y; (x;256!n;-256!n;256!m;-256!m),y}'[(-1+#bs)=!#bs;bs]),adler x}
+chunk:{[t;b](be4@#b),c,crc c:("b"$t),b}
+enc:{[w;h;d]"b"$137 80 78 71 13 10 26 10,chunk["IHDR";(be4 w),(be4 h),8 2 0 0 0],chunk["IDAT";zlib@,/0,'(-3*w)$,/+d],chunk["IEND";!0]}
+
+/ png{plot call} returns the plot's PNG bytes instead of displaying it
+/   e.g. "sin.png" print plot.png{plot.func[-6.28 6.28 1.57;-1.5 1.5 1;sin]}
+cap:0
+png:{cap::1; r:.[x;,0;error]; cap::0; 'r; enc . last}
+
+/ global state for colors
+lumas:0 127 255
+colors:(0 0 0;127 127 127;255 0 0;0 255 0;0 0 255;255 255 0;255 0 255;0 255 255;255 255 255)
+
+/ bresenham line alg
+blp:{[h;x;y]
+ dp:abs y-x; s:</dp; ?[h<*|dp;:(x;y);0]
+ rv:?[s;|';::]
+ (x;y):r@<r:rv@(x;y)
+ dp:abs y-x; sy:-1 1@*|x<y; (dx;dy):dp
+ d:+/-1 2*dp
+ tk:{[y;sy;dx;dy;x]?[~(*x)<*y;x;x+(1;0;2*dy)+(0;sy;-2*dx)*(*|x)>0]}[y;sy;dx;dy]
+ pt:+-1_+tk\x,d
+ rv@pt}
+bla:{[h;x],/blp[h]'[1_x;-1_x]}
+
+/ get canvas
+canvas:{[x;y]
+ ax:"lo""hi""tk""px"!+{4#x,4#0n}'(x;y)                  / axes definitions
+ ?[&/nan ax..px;ax["px";1]:120.0;0]                      / default h if both w/h missing
+ px:|ax..px*(1%r),r:%/ax..hi-ax..lo; ax["px"]:"i"$_@[ax..px;i;:;px i:&nan ax..px] / calc w/h
+ ax["pu"]:(ax..px-1)%ax..hi-ax..lo                       / compute px per unit
+ u2p:{"i"$_(x..pu)*y-x..lo}; p2u:{(x..lo)+y%x..pu}       / map px<>units
+ cnv:(*ax..px)#,(*|ax..px)#0; (X;Y):(ax 0;ax 1); fix:"i"$    / canvas
+ set:{[ax;i;cnv;x]?[|/(x<0),x>ax..px-1;cnv;.[cnv;x;:;i]]}[ax]
+ cnv[u2p[X;0]]:Y..px#1; cnv:.[cnv;(*;u2p[Y;0]);:;1]      / draw axes
+ tk:ax..tk*{x+!1+y-x}'[fix ax..lo%t;fix ax..hi%t:1.0 nan ax..tk] / axis ticks
+ cross:{+(x;y)@'!#'(x;y)}
+ ?[nan X..tk;0;cnv:set[1]/[cnv;cross[u2p[X;tk 0];u2p[Y;0]+3-!7]]]
+ ?[nan Y..tk;0;cnv:set[1]/[cnv;cross[u2p[X;0]+3-!7;u2p[Y;tk 1]]]]
+ (set;ax;cnv;u2p;p2u)}
+
+/ plot function
+func:{[x;y;f]
+ (set;ax;cnv;u2p;p2u):canvas[x;y]; (X;Y):(ax 0;ax 1)
+ cnv:set[2]/[cnv;bla[Y..px]@x,'u2p[Y]@f'p2u[X]@x:!X..px]
+ bmp[lumas;|+cnv]}
+
+/ plot discrete points (xs;ys)
+points:{[x;y;p]
+ (set;ax;cnv;u2p;p2u):canvas[x;y]; (X;Y):(ax 0;ax 1)
+ cnv:set[2]/[cnv;+(u2p[X;*p];u2p[Y;*|p])]
+ bmp[lumas;|+cnv]}
+
+/ plot a continuous curve
+curve:{[x;y;p]
+ (set;ax;cnv;u2p;p2u):canvas[x;y]; (X;Y):(ax 0;ax 1)
+ cnv:set[2]/[cnv;bla[Y..px]@+(u2p[X;*p];u2p[Y;*|p])]
+ bmp[lumas;|+cnv]}
+
+/ plot continuous values from a table (dict of columns, first is x)
+table:{[x;y;t]
+ (set;ax;cnv;u2p;p2u):canvas[x;y]; (X;Y):(ax 0;ax 1)
+ hz:u2p[X]@*t; t:1_.t; n:#t
+ cnv:|/{[f;h;i;cnv;x]f[i]/[cnv;bla[h]@x]}[set;Y..px]'[2+!n;n#,cnv;{x,'y}[hz]'u2p[Y]'t]
+ drw[colors;|+cnv]}
+
+/ plot functions from a list
+funcs:{[x;y;f]
+ (set;ax;cnv;u2p;p2u):canvas[x;y]; (X;Y):(ax 0;ax 1)
+ ps:{x,'y}[x]'u2p[Y]'{x y}[;p2u[X]@x:!X..px]'f; n:#f
+ cnv:|/{[f;h;i;cnv;x]f[i]/[cnv;bla[h]@x]}[set;Y..px]'[2+!n;n#,cnv;ps]
+ drw[colors;|+cnv]}
+1

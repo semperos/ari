@@ -1,0 +1,90 @@
+/ Tests for libs/plot.goal - terminal plots via the kitty graphics protocol.
+import "plot"
+
+/ --- plot.b64 (base64 of 24-bit pixels given as r g b rows) ---
+tt.t{"TWFu"~plot.b64@+,77 97 110}
+tt.t{"TWFuAQID"~plot.b64@+(77 97 110;1 2 3)}
+
+/ --- plot.blp/bla (bresenham lines) ---
+tt.t{(0 0;1 0;2 1;3 1;4 2;5 2)~plot.blp[100;0 0;5 2]}
+tt.t{(0 0;0 1;1 2;1 3;2 4;2 5)~plot.blp[100;0 0;2 5]}
+tt.t{(0 0;1 0;2 1;3 1;4 2;5 2)~plot.blp[100;5 2;0 0]} / points are sorted
+tt.t{(0 0;0 200)~plot.blp[100;0 0;0 200]} / too steep: endpoints only
+tt.t{8~#plot.bla[100;(0 0;3 1;4 4)]}
+
+/ --- plot.canvas ---
+(set;ax;cnv;u2p;p2u):plot.canvas[-6.28 6.28 1.57;-1.5 1.5 1]
+tt.t{502 120~ax..px}                     / width derived from default height
+tt.t{502 120~(#cnv;#*cnv)}
+tt.t{250~u2p[ax 0;0]}
+tt.t{1~cnv[u2p[ax 0;0];7]}               / y axis drawn
+
+/ --- plots ---
+/ Plots are rendered to PNG and decoded back to pixels for checking; set
+/ VERBOSE (to anything but "" or "0") to also display them in the terminal.
+verbose:{?["e"~@x;0;~x in "" "0"]}@env"VERBOSE"
+draw:{[t;f]and[verbose;say " $t";f 0]; unpng@plot.png f}
+/ unpng decodes plot.png's stored-block PNGs into h rows of w (r g b) pixels
+unpng:{b:"b"$x; (w;h;n):256/'b 16 20 33+`!4
+ d:b 43+!n-6; d:d@&4<65540!!#d            / drop zlib header, adler, block headers
+ -3$'1_'(-1-3*w)$d}                       / drop row filter bytes
+px:{[im;x;y](im@(#im)-1+y)@'x}            / pixels at canvas coords (y up)
+frac:{(+/x)%#x}
+/ maps for an axis spec: (x units->px;y units->px;x px->units;(w;h))
+maps:{[x;y](;ax;;u2p;p2u):plot.canvas[x;y]; (u2p[ax 0];u2p[ax 1];p2u[ax 0];ax..px)}
+(red;green;blue;white):(255 0 0;0 255 0;0 0 255;255 255 255)
+
+(ux;uy;xu;wh):maps[-6.28 6.28 1.57;-1.5 1.5 1]; xs:!*wh
+im:draw["sin";{plot.func[-6.28 6.28 1.57;-1.5 1.5 1;sin]}]
+tt.t{(|wh)~(#im;#*im)}
+tt.t{&/{&/x=*x}',/im}                     / grayscale
+tt.t{&/(,//im)in 0 127 255}
+tt.t{&/white~´px[im;xs;uy sin xu xs]}    / curve at sin x in every column
+tt.t{&/(*'px[im;xs;(#xs)#uy 0])in 127 255} / x axis (or curve where it crosses)
+tt.t{0.05>frac 0<*+,/im}                  / mostly background
+im:draw["{(sin x)%cos x}";{plot.func[-6.28 6.28 1.57;-1.5 1.5 1;{(sin x)%cos x}]}]
+ys:uy{(sin x)%cos x}xu xs; ok:(ys>-1)&ys<*|wh
+tt.t{&/white~´px[im;xs@&ok;ys@&ok]}        / visible part of tan x
+im:draw["{+/(sin k*x)%k:1+2*!5}";{plot.func[-6.28 6.28 1.57;-1.5 1.5 1;{+/(sin k*x)%k:1+2*!5}]}]
+tt.t{&/white~´px[im;xs;uy({+/(sin k*x)%k:1+2*!5}'xu xs)]}
+
+(ux;uy;xu;wh):maps[-6.28 6.28 1.57;-1.5 1.5 0.5]; xs:!*wh
+im:draw["funcs";{plot.funcs[-6.28 6.28 1.57;-1.5 1.5 0.5;({sin x};{cos x};{(sin x)%cos x})]}]
+tt.t{0.9<frac red~´px[im;xs;uy sin xu xs]}  / one color per function, except
+tt.t{0.9<frac green~´px[im;xs;uy cos xu xs]} / where curves overlap
+ys:uy{(sin x)%cos x}xu xs; ok:(ys>-1)&ys<*|wh
+tt.t{0.9<frac blue~´px[im;xs@&ok;ys@&ok]}
+
+(ux;uy;xu;wh):maps[-2 2 0.1 256;-2 2 0.1]
+n:5; c:{(cos x;sin x)}6.28318*(!n+1)%n
+im:draw["curve";{plot.curve[-2 2 0.1 256;-2 2 0.1;c]}]
+tt.t{&/white~´px[im;ux c 0;uy c 1]}       / pentagon vertices
+(mx;my):(ux 0.5*+/c[0;0 1];uy 0.5*+/c[1;0 1]); (dx;dy):-1+!3 3
+tt.t{|/white~´px[im;mx+dx;my+dy]}         / edge passes by the midpoint
+tt.t{~white~*px[im;,ux 0.5;,uy 0.5]}       / interior is not filled
+
+(ux;uy;xu;wh):maps[-2 2 0.5 256;-2 2 0.5]
+rt.seed 42; p:1.5*sin 2$10000?30
+im:draw["points";{plot.points[-2 2 0.5 256;-2 2 0.5;p]}]
+tt.t{&/white~´px[im;ux p 0;uy p 1]}
+tt.t{(#?+(ux p 0;uy p 1))=+/white~´,/im} / nothing else is white
+
+(ux;uy;xu;wh):maps[-0.5 4;-4 4]
+v:(!256)%64; t:..[x:v;y:sin v;z:cos v;t:(sin v)%cos v]
+im:draw["table";{plot.table[-0.5 4;-4 4;t]}]
+tt.t{67 120~wh}                            / width from aspect of the units
+tt.t{0.8<frac red~´px[im;ux v;uy sin v]}  / tan x ~ sin x near 0, drawn on top
+tt.t{0.9<frac green~´px[im;ux v;uy cos v]}
+ys:uy(sin v)%cos v; ok:(ys>-1)&ys<*|wh
+tt.t{0.9<frac blue~´px[im;(ux v)@&ok;ys@&ok]}
+
+/ --- plot.png (PNG bytes instead of terminal output) ---
+tt.t{174 66 96 130~plot.crc"b"$"IEND"}                 / 0xae426082
+tt.t{17 230 3 152~plot.adler"b"$"Wikipedia"}           / 0x11e60398
+p:plot.png{plot.func[-6.28 6.28 1.57;-1.5 1.5 1;sin]}
+tt.t{"\x89PNG\r\n\x1a\n"~p[0;8]}
+tt.t{(,/+(4#256)\502 120)~"b"$p[16;8]}                   / IHDR width, height
+tt.t{180918~&p}                                        / 3 stored deflate blocks
+tt.t{24308~&plot.png{plot.table[-0.5 4;-4 4;t]}} / 1 block
+tt.t{"e"~@plot.png{plot.func[0 1;0 1;{error"boom"}]}}
+tt.t{0~plot.cap}                                       / output restored after an error
