@@ -1,5 +1,12 @@
 # vnext
 
+# v0.5.1 2026-10-21
+
+- Security: built with Go 1.26.10, which distrusts the compromised eMudhra intermediate CA certificates in `crypto/x509` ([GO-2026-6809](https://pkg.go.dev/vuln/GO-2026-6809), CVE-2026-111943). This affects TLS verification for the HTTP client. Upgraded `golang.org/x/net` to v0.61.0.
+- Upgraded to [Goal 1.8.1](https://codeberg.org/anaseto/goal/src/branch/master/CHANGES.md).
+- New `plot` library (`libs import"plot"`) for basic plots, in the terminal via the kitty graphics protocol and as PNGs. Translated from [`plot.k`](https://codeberg.org/zoomlogo/kp/src/branch/main/plot.k).
+- Dependency bumps: DuckDB driver v2.10506.0, modernc.org/sqlite v1.60.1.
+
 # v0.5.0 2026-09-24
 
 - Upgrade DuckDB driver to official github.com/duckdb/duckdb-go/v2 module, version v2.5.0.
