@@ -7,7 +7,7 @@ require (
 	github.com/duckdb/duckdb-go/v2 v2.20000.0
 	github.com/go-resty/resty/v2 v2.17.2
 	go.uber.org/ratelimit v0.3.1
-	modernc.org/sqlite v1.61.0
+	modernc.org/sqlite v1.61.1
 )
 
 require (
